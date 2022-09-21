@@ -15,7 +15,6 @@ project_maker = "model_w.project_maker.__main__:__main__"
 [tool.poetry.dependencies]
 python = "^3.10"
 rich = "^12.5.1"
-lark = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
 black = "^22.8.0"

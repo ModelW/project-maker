@@ -1,285 +1,127 @@
-from lark import Token, Tree
+from io import StringIO
 
-from model_w.project_maker.template import parse_text
+from model_w.project_maker.template import (
+    Context,
+    File,
+    IfBlock,
+    Line,
+    Ref,
+    Text,
+    parse_line,
+    parse_text,
+)
 
 
 def test_parse_line():
-    assert parse_text("foo\nbar\nbaz") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "foo")])],
-            ),
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "bar")])],
-            ),
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "baz")])],
-            ),
-        ],
-    )
-    assert parse_text("foo\nbar\nbaz\n") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "foo")])],
-            ),
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "bar")])],
-            ),
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "baz")])],
-            ),
-        ],
-    )
-
-    assert parse_text("foo") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [Tree(Token("RULE", "line_content"), [Token("TEXT", "foo")])],
-            ),
-        ],
-    )
+    assert [*parse_line("foo")] == [Text("foo")]
+    assert [*parse_line("___foo___")] == [Ref(["foo"])]
+    assert [*parse_line("___foo__bar__baz___")] == [Ref(["foo", "bar", "baz"])]
+    assert [*parse_line("hello ___foo___")] == [Text("hello "), Ref(["foo"])]
+    assert [*parse_line("___foo___ stuff")] == [Ref(["foo"]), Text(" stuff")]
+    assert [*parse_line("hello ___foo___ stuff")] == [
+        Text("hello "),
+        Ref(["foo"]),
+        Text(" stuff"),
+    ]
 
 
-def test_parse_reference():
-    assert parse_text("___foo___\n") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [
-                    Tree(
-                        Token("RULE", "line_content"),
-                        [
-                            Tree(
-                                Token("RULE", "inline_ref"),
-                                [
-                                    Token("REF_DELIM", "___"),
-                                    Tree(
-                                        Token("RULE", "reference"),
-                                        [Token("KEY", "foo")],
-                                    ),
-                                    Token("REF_DELIM", "___"),
-                                ],
-                            )
-                        ],
-                    )
-                ],
+def test_parse_if():
+    code = """## IF foo
+yolo
+## ENDIF
+"""
+
+    assert parse_text(StringIO(code)) == File(
+        lines=[
+            IfBlock(
+                condition=Ref(path=["foo"]),
+                content=File(lines=[Line(content=[Text(text="yolo\n")])]),
             )
-        ],
+        ]
     )
-    assert parse_text("___foo_bar__baz___\n") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [
-                    Tree(
-                        Token("RULE", "line_content"),
-                        [
-                            Tree(
-                                Token("RULE", "inline_ref"),
-                                [
-                                    Token("REF_DELIM", "___"),
-                                    Tree(
-                                        Token("RULE", "reference"),
-                                        [
-                                            Token("KEY", "foo_bar"),
-                                            Token("KEY", "baz"),
-                                        ],
-                                    ),
-                                    Token("REF_DELIM", "___"),
-                                ],
-                            )
-                        ],
-                    )
-                ],
-            )
-        ],
-    )
-    assert parse_text("___foo__bar__baz___\n") == Tree(
-        Token("RULE", "file"),
-        [
-            Tree(
-                Token("RULE", "line"),
-                [
-                    Tree(
-                        Token("RULE", "line_content"),
-                        [
-                            Tree(
-                                Token("RULE", "inline_ref"),
-                                [
-                                    Token("REF_DELIM", "___"),
-                                    Tree(
-                                        Token("RULE", "reference"),
-                                        [
-                                            Token("KEY", "foo"),
-                                            Token("KEY", "bar"),
-                                            Token("KEY", "baz"),
-                                        ],
-                                    ),
-                                    Token("REF_DELIM", "___"),
-                                ],
-                            )
-                        ],
-                    )
-                ],
-            )
-        ],
+
+    code = """# Some code
+
+from ___my_app___ import yolo
+
+apps = [
+    "foo",
+    "bar",
+    ## IF foo
+    "baz"
+    ## IF bar
+    "bloop"
+    ## ENDIF
+    ## ENDIF
+]
+"""
+
+    assert parse_text(StringIO(code)) == File(
+        lines=[
+            Line(content=[Text(text="# Some code\n")]),
+            Line(content=[Text(text="\n")]),
+            Line(
+                content=[
+                    Text(text="from "),
+                    Ref(path=["my_app"]),
+                    Text(text=" import yolo\n"),
+                ]
+            ),
+            Line(content=[Text(text="\n")]),
+            Line(content=[Text(text="apps = [\n")]),
+            Line(content=[Text(text='    "foo",\n')]),
+            Line(content=[Text(text='    "bar",\n')]),
+            IfBlock(
+                condition=Ref(path=["foo"]),
+                content=File(
+                    lines=[
+                        Line(content=[Text(text='    "baz"\n')]),
+                        IfBlock(
+                            condition=Ref(path=["bar"]),
+                            content=File(
+                                lines=[Line(content=[Text(text='    "bloop"\n')])]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            Line(content=[Text(text="]\n")]),
+        ]
     )
 
 
-def test_parse_mixed():
-    assert (
-        parse_text(
-            """#!/usr/bin/python
+def test_execute():
+    code = """# Some code
 
-import foo
-import bar
-import ___project__name___
+from ___my_app___ import yolo
 
-___project__name___
+apps = [
+    "foo",
+    "bar",
+    ## IF foo__bar
+    "baz",
+    ## IF bar
+    "bloop",
+    ## ENDIF
+    ## ENDIF
+]
+"""
+    output = """# Some code
 
-my_thing = "___project__NAME___" 
-    """
-        )
-        == Tree(
-            Token("RULE", "file"),
-            [
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [Token("TEXT", "#!/usr/bin/python")],
-                        )
-                    ],
-                ),
-                Tree(Token("RULE", "line"), []),
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Token("TEXT", "import foo"),
-                            ],
-                        )
-                    ],
-                ),
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Token("TEXT", "import bar"),
-                            ],
-                        )
-                    ],
-                ),
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Token("TEXT", "import "),
-                            ],
-                        ),
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Tree(
-                                    Token("RULE", "inline_ref"),
-                                    [
-                                        Token("REF_DELIM", "___"),
-                                        Tree(
-                                            Token("RULE", "reference"),
-                                            [
-                                                Token("KEY", "project"),
-                                                Token("KEY", "name"),
-                                            ],
-                                        ),
-                                        Token("REF_DELIM", "___"),
-                                    ],
-                                )
-                            ],
-                        ),
-                    ],
-                ),
-                Tree(Token("RULE", "line"), []),
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Tree(
-                                    Token("RULE", "inline_ref"),
-                                    [
-                                        Token("REF_DELIM", "___"),
-                                        Tree(
-                                            Token("RULE", "reference"),
-                                            [
-                                                Token("KEY", "project"),
-                                                Token("KEY", "name"),
-                                            ],
-                                        ),
-                                        Token("REF_DELIM", "___"),
-                                    ],
-                                )
-                            ],
-                        )
-                    ],
-                ),
-                Tree(Token("RULE", "line"), []),
-                Tree(
-                    Token("RULE", "line"),
-                    [
-                        Tree(Token("RULE", "line_content"), [Token("TEXT", "my")]),
-                        Tree(Token("RULE", "line_content"), [Token("TEXT", "_")]),
-                        Tree(
-                            Token("RULE", "line_content"), [Token("TEXT", 'thing = "')]
-                        ),
-                        Tree(
-                            Token("RULE", "line_content"),
-                            [
-                                Tree(
-                                    Token("RULE", "inline_ref"),
-                                    [
-                                        Token("REF_DELIM", "___"),
-                                        Tree(
-                                            Token("RULE", "reference"),
-                                            [
-                                                Token("KEY", "project"),
-                                                Token("KEY", "NAME"),
-                                            ],
-                                        ),
-                                        Token("REF_DELIM", "___"),
-                                    ],
-                                )
-                            ],
-                        ),
-                        Tree(Token("RULE", "line_content"), [Token("TEXT", '" ')]),
-                    ],
-                ),
-                Tree(
-                    Token("RULE", "line"),
-                    [Tree(Token("RULE", "line_content"), [Token("TEXT", "    ")])],
-                ),
-            ],
-        )
+from yolo import yolo
+
+apps = [
+    "foo",
+    "bar",
+    "baz",
+]
+"""
+
+    context = Context(
+        {
+            "my_app": "yolo",
+            "foo": dict(bar=True),
+        }
     )
 
-def test_filter():
-    pass
+    assert parse_text(StringIO(code)).execute(context) == output
