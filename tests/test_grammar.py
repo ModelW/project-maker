@@ -1,14 +1,16 @@
 from io import StringIO
 
 from model_w.project_maker.template import (
+    Block,
     Context,
-    File,
     IfBlock,
     Line,
     Ref,
     Text,
     parse_line,
     parse_text,
+    render,
+    render_line,
 )
 
 
@@ -31,11 +33,11 @@ yolo
 ## ENDIF
 """
 
-    assert parse_text(StringIO(code)) == File(
+    assert parse_text(StringIO(code)) == Block(
         lines=[
             IfBlock(
                 condition=Ref(path=["foo"]),
-                content=File(lines=[Line(content=[Text(text="yolo\n")])]),
+                content=Block(lines=[Line(content=[Text(text="yolo\n")])]),
             )
         ]
     )
@@ -56,7 +58,7 @@ apps = [
 ]
 """
 
-    assert parse_text(StringIO(code)) == File(
+    assert parse_text(StringIO(code)) == Block(
         lines=[
             Line(content=[Text(text="# Some code\n")]),
             Line(content=[Text(text="\n")]),
@@ -73,12 +75,12 @@ apps = [
             Line(content=[Text(text='    "bar",\n')]),
             IfBlock(
                 condition=Ref(path=["foo"]),
-                content=File(
+                content=Block(
                     lines=[
                         Line(content=[Text(text='    "baz"\n')]),
                         IfBlock(
                             condition=Ref(path=["bar"]),
-                            content=File(
+                            content=Block(
                                 lines=[Line(content=[Text(text='    "bloop"\n')])]
                             ),
                         ),
@@ -125,3 +127,11 @@ apps = [
     )
 
     assert parse_text(StringIO(code)).execute(context) == output
+
+
+def test_render():
+    assert render("___foo___", dict(foo=42)) == "42"
+
+
+def test_render_line():
+    assert render_line("___foo___", dict(foo=42)) == "42"
