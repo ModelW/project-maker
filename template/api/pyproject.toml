@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "__project_name__"
+version = "0.1.0"
+description = ""
+authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
+license = "Proprietary"
+
+[tool.poetry.dependencies]
+python = "~3.10"
+modelw-preset-django = {extras = [
+    "celery",
+    "channels",
+], version = "^2022.10.0-beta.2"}
+
+[tool.poetry.dev-dependencies]
+black = "*"
+isort = "*"
+ipython = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
