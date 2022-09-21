@@ -135,3 +135,4 @@ def test_render():
 
 def test_render_line():
     assert render_line("___foo___", dict(foo=42)) == "42"
+    assert render_line("___bar___", dict(foo=42)) == ""
