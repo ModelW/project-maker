@@ -4,7 +4,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "__project_name__.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "___project_name__snake___.settings")
 
 
 def make_app(django_app):
@@ -18,7 +18,7 @@ def make_app(django_app):
         Output of get_asgi_application()
     """
 
-    from __project_name__.django.routing import websocket_urlpatterns
+    from ___project_name__snake___.django.routing import websocket_urlpatterns
 
     return ProtocolTypeRouter(
         {

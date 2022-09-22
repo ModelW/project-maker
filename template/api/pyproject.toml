@@ -1,16 +1,21 @@
 [tool.poetry]
-name = "__project_name__"
+name = "___project_name__snake___"
 version = "0.1.0"
 description = ""
 authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
 license = "Proprietary"
+
+packages = [
+    {include = "___project_name__snake___", from = "src"},
+]
 
 [tool.poetry.dependencies]
 python = "~3.10"
 modelw-preset-django = {extras = [
     "celery",
     "channels",
-], version = "^2022.10.0-beta.2"}
+], version = "2022.10.0b5", allow-prereleases = true}
+drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
 
 [tool.poetry.dev-dependencies]
 black = "*"
