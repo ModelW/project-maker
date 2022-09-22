@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Mapping, Sequence
 
-from model_w.project_maker.template import render, render_line
+from ..errors import ProjectMakerError
+from ..template import render, render_line
 
 
 class BaseComponent:
@@ -10,11 +11,14 @@ class BaseComponent:
     docstring).
     """
 
-    def accept(self, path: Path):
+    def accept(self, path: Path, context: Mapping):
         raise NotImplementedError
 
     def context(self, path: Path, context: Mapping) -> Mapping:
         return context
+
+    def post_process(self, root: Path, path: Path, context: Mapping) -> None:
+        pass
 
 
 class YesComponent(BaseComponent):
@@ -22,7 +26,7 @@ class YesComponent(BaseComponent):
     A test component that will accept all files.
     """
 
-    def accept(self, path: Path):
+    def accept(self, path: Path, context: Mapping):
         return True
 
 
@@ -58,6 +62,9 @@ class Maker:
             Context to be used in template
         """
 
+        if target.exists() and (not target.is_dir() or [*target.iterdir()]):
+            raise ProjectMakerError(f"Target {target} is not empty or is not a dir")
+
         for file in source.glob("**/*"):
             if not file.is_file():
                 continue
@@ -65,11 +72,16 @@ class Maker:
             for component in self.components:
                 sub_path = file.relative_to(source)
 
-                if component.accept(sub_path):
+                if component.accept(sub_path, context):
                     file_context, target_path = self.prepare_target(
                         component, context, sub_path, target
                     )
                     self.render_file(file, file_context, target_path)
+                    component.post_process(
+                        target,
+                        target_path.relative_to(target),
+                        file_context,
+                    )
                     continue
 
     def prepare_target(self, component, context, sub_path, target):
@@ -116,5 +128,5 @@ class Maker:
                 t.write(target_content)
         except UnicodeDecodeError:
             with open(file, mode="rb") as f, open(target_path, "wb") as t:
-                while buf := f.read(1024 ** 2):
+                while buf := f.read(1024**2):
                     t.write(buf)

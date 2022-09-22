@@ -2,7 +2,7 @@
 name = "___project_name__snake___"
 version = "0.1.0"
 description = ""
-authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
+authors = ["TBD <tbd@tbd.com>"]
 license = "Proprietary"
 
 packages = [
@@ -12,9 +12,13 @@ packages = [
 [tool.poetry.dependencies]
 python = "~3.10"
 modelw-preset-django = {extras = [
+    ## IF api__celery
     "celery",
+    ## ENDIF
+    ## IF api__channels
     "channels",
-], version = "2022.10.0b5", allow-prereleases = true}
+    ## ENDIF
+], version = "~2022.10.0b6", allow-prereleases = true}
 drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
 
 [tool.poetry.dev-dependencies]

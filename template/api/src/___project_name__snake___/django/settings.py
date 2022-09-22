@@ -38,7 +38,9 @@ with EnvManager(ModelWDjango()) as env:
     ROOT_URLCONF = "___project_name__snake___.django.urls"
 
     WSGI_APPLICATION = "___project_name__snake___.django.wsgi.application"
+    ## IF api__channels
     ASGI_APPLICATION = "___project_name__snake___.django.asgi.application"
+    ## ENDIF
 
     # ---
     # Auth
