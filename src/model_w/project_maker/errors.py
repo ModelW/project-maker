@@ -1,0 +1,2 @@
+class ProjectMakerError(Exception):
+    pass

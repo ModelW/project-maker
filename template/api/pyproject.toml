@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "___project_name__snake___"
+version = "0.1.0"
+description = ""
+authors = ["TBD <tbd@tbd.com>"]
+license = "Proprietary"
+
+packages = [
+    {include = "___project_name__snake___", from = "src"},
+]
+
+[tool.poetry.dependencies]
+python = "~3.10"
+modelw-preset-django = {extras = [
+    ## IF api__celery
+    "celery",
+    ## ENDIF
+    ## IF api__channels
+    "channels",
+    ## ENDIF
+], version = "~2022.10.0b6", allow-prereleases = true}
+drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
+
+[tool.poetry.dev-dependencies]
+black = "*"
+isort = "*"
+ipython = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
