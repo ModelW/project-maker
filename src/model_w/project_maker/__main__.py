@@ -149,7 +149,7 @@ def main(argv: Optional[Sequence[str]] = None):
     )
 
     maker.make(
-        Path(__file__).parent.parent.parent.parent / "template",
+        Path(__file__).parent / "template",
         create_path,
         context,
     )
