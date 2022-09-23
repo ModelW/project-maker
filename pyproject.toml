@@ -4,7 +4,6 @@ version = "1.0.0a2"
 packages = [
     {  include = "model_w/project_maker", from = "src" }
 ]
-include = ["template"]
 
 description = "A tool to create Model-W-compliant projects"
 authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
