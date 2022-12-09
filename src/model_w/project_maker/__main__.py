@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import shlex
+import shutil
 import string
 from argparse import ArgumentParser
 from dataclasses import dataclass
@@ -29,6 +30,27 @@ class Args(NamedTuple):
 
 def sigterm_handler(_, __):
     raise SystemExit(1)
+
+
+def check_binaries():
+    """
+    Checks that the required binaries are installed. Otherwise the process will
+    fail down the stream and that'll be sad.
+    """
+
+    binaries = {"npm", "node", "git", "git-flow"}
+    missing = set()
+
+    for binary in binaries:
+        if not shutil.which(binary):
+            missing.add(binary)
+
+    if missing:
+        rich_print(
+            f"[red]Missing binaries: {', '.join(missing)}. Please make sure "
+            f"to install them before running this script[/red]"
+        )
+        exit(1)
 
 
 def keys_text(choices, labels):
@@ -151,6 +173,7 @@ def make(maker: Maker, create_path: Path, context):
 
 
 def main(argv: Optional[Sequence[str]] = None):
+    check_binaries()
     args = parse_args(argv)
 
     rich_print("[white bold on blue]\n  === Model W Project Maker ===  \n")

@@ -1,4 +1,5 @@
 from pathlib import Path
+from subprocess import PIPE, Popen
 from typing import Mapping, Sequence
 
 from ..errors import ProjectMakerError
@@ -34,6 +35,21 @@ class YesComponent(BaseComponent):
 
     def accept(self, path: Path, context: Mapping):
         return True
+
+
+class Exec:
+    """
+    A shortcut to execute Git commands below
+    """
+
+    def __init__(self, cwd: str | Path):
+        self.cwd = Path(cwd)
+
+    def exec(self, cmd: Sequence[str]):
+        p = Popen(cmd, cwd=self.cwd, stdout=PIPE, stderr=PIPE)
+
+        if p.wait() != 0:
+            raise ProjectMakerError(f"Failed to execute {cmd}: {p.stderr.read().decode()}")
 
 
 class Maker:
@@ -97,6 +113,33 @@ class Maker:
         finally:
             for component in self.components:
                 component.stop()
+
+        self.init_git(target)
+
+    def init_git(self, target):
+        """
+        Runs the equivalent of "git init" and "git flow init -d" in the target
+        folder. Since we want to keep on with the standard branch names that
+        other projects are using, we unfold manually what git-flow-init would
+        do, with hardcoded values.
+        """
+
+        e = Exec(target)
+        e.exec(["git", "init", "-b", "master"])
+        e.exec(["git", "config", "gitflow.branch.master", "master"])
+        e.exec(["git", "config", "gitflow.branch.develop", "develop"])
+        e.exec(["git", "symbolic-ref", "HEAD", "refs/heads/master"])
+        e.exec(["git", "commit", "--allow-empty", "--quiet", "-m", "Initial commit"])
+        e.exec(["git", "branch", "--no-track", "develop", "master"])
+        e.exec(["git", "checkout", "-q", "develop"])
+        e.exec(["git", "config", "gitflow.prefix.feature", "feature/"])
+        e.exec(["git", "config", "gitflow.prefix.bugfix", "bugfix/"])
+        e.exec(["git", "config", "gitflow.prefix.release", "release/"])
+        e.exec(["git", "config", "gitflow.prefix.hotfix", "hotfix/"])
+        e.exec(["git", "config", "gitflow.prefix.support", "support/"])
+        e.exec(["git", "config", "gitflow.prefix.versiontag", ""])
+        e.exec(["git", "config", "gitflow.path.hooks", ".git/hooks"])
+        e.exec(["git", "add", "-A"])
 
     def prepare_target(self, component, context, sub_path, target):
         """
