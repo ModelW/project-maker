@@ -28,9 +28,9 @@ def test_parse_line():
 
 
 def test_parse_if():
-    code = """## IF foo
+    code = """# :: IF foo
 yolo
-## ENDIF
+# :: ENDIF
 """
 
     assert parse_text(StringIO(code)) == Block(
@@ -49,12 +49,12 @@ from ___my_app___ import yolo
 apps = [
     "foo",
     "bar",
-    ## IF foo
+    # :: IF foo
     "baz"
-    ## IF bar
+    # :: IF bar
     "bloop"
-    ## ENDIF
-    ## ENDIF
+    # :: ENDIF
+    # :: ENDIF
 ]
 """
 
@@ -100,12 +100,12 @@ from ___my_app___ import yolo
 apps = [
     "foo",
     "bar",
-    ## IF foo__bar
+    # :: IF foo__bar
     "baz",
-    ## IF bar
+    # :: IF bar
     "bloop",
-    ## ENDIF
-    ## ENDIF
+    # :: ENDIF
+    # :: ENDIF
 ]
 """
     output = """# Some code
@@ -126,6 +126,32 @@ apps = [
         }
     )
 
+    assert parse_text(StringIO(code)).execute(context) == output
+
+
+def test_alt_syntax():
+    assert [*parse_line("~~~foo~~~")] == [Ref(["foo"])]
+
+    code = """[tool.poetry]
+name = "~~~project_name__snake~~~"
+version = "0.1.0"
+description = ""
+authors = ["TBD <tbd@tbd.com>"]
+license = "Proprietary"
+"""
+    output = """[tool.poetry]
+name = "foo_bar"
+version = "0.1.0"
+description = ""
+authors = ["TBD <tbd@tbd.com>"]
+license = "Proprietary"
+"""
+
+    context = Context(
+        {
+            "project_name": {"snake": "foo_bar"},
+        }
+    )
     assert parse_text(StringIO(code)).execute(context) == output
 
 

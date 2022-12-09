@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "___project_name__snake___"
+name = "~~~project_name__snake~~~"
 version = "0.1.0"
 description = ""
-authors = ["TBD <tbd@tbd.com>"]
+authors = ["___dev_id___"]
 license = "Proprietary"
 
 packages = [
@@ -12,19 +12,26 @@ packages = [
 [tool.poetry.dependencies]
 python = "~3.10"
 modelw-preset-django = {extras = [
-    ## IF api__celery
+    # :: IF api__celery
     "celery",
-    ## ENDIF
-    ## IF api__channels
+    # :: ENDIF
+    # :: IF api__channels
     "channels",
-    ## ENDIF
-], version = "~2022.10.0b6", allow-prereleases = true}
+    # :: ENDIF
+    # :: IF api__wagtail
+    "wagtail",
+    # :: ENDIF
+], version = "~2022.10.0b8", allow-prereleases = true}
 drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
 
 [tool.poetry.dev-dependencies]
 black = "*"
 isort = "*"
 ipython = "*"
+
+[tool.isort]
+profile = "black"
+known_first_party = "___project_name__snake___"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

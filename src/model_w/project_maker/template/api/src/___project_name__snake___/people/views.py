@@ -25,6 +25,7 @@ class MeViewSet(viewsets.GenericViewSet):
             return AuthUserSerializer
 
     @extend_schema(
+        operation_id="get_current_user",
         responses=PolymorphicProxySerializer(
             component_name="User",
             resource_type_field_name="is_authenticated",
@@ -33,7 +34,7 @@ class MeViewSet(viewsets.GenericViewSet):
                 "false": AnonUserSerializer,
             },
             many=False,
-        )
+        ),
     )
     def list(self, request: Request) -> Response:
         """
@@ -51,6 +52,7 @@ class MeViewSet(viewsets.GenericViewSet):
 
         return Response(data)
 
+    @extend_schema("login")
     def create(self, request: Request) -> Response:
         """
         Call this to login. It will implicitly logout if logged in already.
@@ -67,6 +69,7 @@ class MeViewSet(viewsets.GenericViewSet):
 
         return self.list(request)  # noqa
 
+    @extend_schema("logout")
     @action(methods=["post"], detail=False)
     def logout(self, request: Request) -> Response:
         """

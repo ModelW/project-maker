@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
+import shlex
+import shutil
+import string
+import subprocess
 from argparse import ArgumentParser
+from dataclasses import dataclass
 from os import getenv
 from pathlib import Path
+from queue import Queue
+from random import SystemRandom
 from signal import SIGTERM, signal
 from sys import stderr
+from threading import Thread
+from time import sleep
 from typing import NamedTuple, Optional, Sequence
 
 from black import Mode, TargetVersion
@@ -12,7 +21,7 @@ from rich import print as rich_print
 from rich.prompt import Confirm, Prompt
 
 from .errors import ProjectMakerError
-from .maker import ApiComponent, Maker
+from .maker import ApiComponent, CommonComponent, FrontComponent, Maker
 from .namer import generate_declinations
 
 
@@ -22,6 +31,52 @@ class Args(NamedTuple):
 
 def sigterm_handler(_, __):
     raise SystemExit(1)
+
+
+def check_binaries():
+    """
+    Checks that the required binaries are installed. Otherwise the process will
+    fail down the stream and that'll be sad.
+    """
+
+    binaries = {"npm", "node", "git", "git-flow"}
+    missing = set()
+
+    for binary in binaries:
+        if not shutil.which(binary):
+            missing.add(binary)
+
+    if missing:
+        rich_print(
+            f"[red]Missing binaries: {', '.join(missing)}. Please make sure "
+            f"to install them before running this script[/red]"
+        )
+        exit(1)
+
+
+def exec_get_stdout(args):
+    """
+    Executes a command and returns its output
+    """
+
+    return subprocess.run(
+        args,
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.strip()
+
+
+def get_developer_identity() -> str:
+    """
+    Returns the developer's identity, which is the name and email address of the
+    git user.
+    """
+
+    name = exec_get_stdout(["git", "config", "user.name"]) or '???'
+    email = exec_get_stdout(["git", "config", "user.email"]) or '???@???.?'
+
+    return f"{name} <{email}>"
 
 
 def keys_text(choices, labels):
@@ -58,15 +113,105 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> Args:
     return Args(**parser.parse_args(argv).__dict__)
 
 
+def generate_random_key(length: int = 50):
+    """
+    Generates the Django SECRET_KEY setting.
+
+    Parameters
+    ----------
+    length
+        The length of the key to generate.
+    """
+
+    return "".join(
+        SystemRandom().choice(string.ascii_letters + string.digits)
+        for _ in range(length)
+    )
+
+
+def make(maker: Maker, create_path: Path, context):
+    running = True
+    queue = Queue()
+    tick_counter = 0
+
+    class Tick:
+        """
+        Used by the display thread to notify the main thread to re-draw a new moon
+        """
+
+    @dataclass
+    class Done:
+        """
+        Sent when the venv creation is done (either successfully or as a failure).
+        The builder is there to be able to run commands afterwards.
+        """
+
+        success: bool
+
+    def tick():
+        while running:
+            queue.put(Tick())
+            sleep(0.1)
+
+    def install():
+        try:
+            maker.make(
+                Path(__file__).parent / "template",
+                create_path,
+                context,
+            )
+        except Exception:
+            queue.put(Done(False))
+            raise
+        else:
+            queue.put(Done(True))
+
+    def print_tick():
+        nonlocal tick_counter
+        moons = "🌑🌒🌓🌔🌕🌖🌗🌘"
+
+        stderr.write(
+            "".join(
+                [
+                    "\r",
+                    moons[tick_counter % len(moons)],
+                    " Working... ",
+                ]
+            )
+        )
+
+        tick_counter += 1
+
+    Thread(target=tick).start()
+    Thread(target=install).start()
+
+    while running and (msg := queue.get()):
+        if isinstance(msg, Tick):
+            print_tick()
+        elif isinstance(msg, Done) and msg.success:
+            running = False
+            stderr.write("\r")
+            rich_print("[green bold]All clean and tidy, you can code!")
+        elif isinstance(msg, Done) and not msg.success:
+            running = False
+            stderr.write("\rSorry, something went wrong\n")
+            exit(1)
+
+
 def main(argv: Optional[Sequence[str]] = None):
+    check_binaries()
     args = parse_args(argv)
 
     rich_print("[white bold on blue]\n  === Model W Project Maker ===  \n")
 
+    key = generate_random_key()
+
     context = dict(
+        secret_key=shlex.quote(f"{key[:25]}wesh{key[25:]}"),
         front={},
         api={},
         project_name={},
+        dev_id=get_developer_identity(),
     )
 
     accept_name = False
@@ -97,6 +242,11 @@ def main(argv: Optional[Sequence[str]] = None):
         context["api"]["celery"] = Confirm.ask("Do you expect using Celery queue?")
         context["api"]["channels"] = Confirm.ask(
             "Are you fancy enough to use WebSockets?"
+        )
+
+    if context["api"]["wagtail"]:
+        context["cms_prefix"] = Prompt.ask(
+            "What is the URL prefix for the CMS admin?", default="wubba-lubba-dub-dub"
         )
 
     components = keys_text(
@@ -140,21 +290,21 @@ def main(argv: Optional[Sequence[str]] = None):
                 black_mode=Mode(target_versions={TargetVersion.PY310}),
                 isort_config=Config(
                     profile="black",
+                    quiet=True,
                     known_first_party=[
                         context["project_name"]["snake"],
                     ],
+                    src_paths=[create_path / "api" / "src"],
                 ),
             ),
+            FrontComponent(),
+            CommonComponent(),
         ]
     )
 
-    maker.make(
-        Path(__file__).parent / "template",
-        create_path,
-        context,
-    )
+    print()
 
-    rich_print("[green bold]Done!")
+    make(maker, create_path, context)
 
 
 def __main__():
