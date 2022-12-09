@@ -29,6 +29,9 @@ with EnvManager(ModelWDjango()) as env:
         "drf_spectacular_sidecar",
         "___project_name__snake___.core",
         "___project_name__snake___.people",
+        # :: IF api__wagtail
+        "___project_name__snake___.cms",
+        # :: ENDIF
     ]
 
     # ---
@@ -38,9 +41,9 @@ with EnvManager(ModelWDjango()) as env:
     ROOT_URLCONF = "___project_name__snake___.django.urls"
 
     WSGI_APPLICATION = "___project_name__snake___.django.wsgi.application"
-    ## IF api__channels
+    # :: IF api__channels
     ASGI_APPLICATION = "___project_name__snake___.django.asgi.application"
-    ## ENDIF
+    # :: ENDIF
 
     # ---
     # Auth
@@ -70,3 +73,13 @@ with EnvManager(ModelWDjango()) as env:
         "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
         "REDOC_DIST": "SIDECAR",
     }
+
+    # :: IF api__wagtail
+    # ---
+    # Wagtail
+    # ---
+
+    WAGTAIL_SITE_NAME = "___project_name__natural_double_quoted___"
+    WAGTAILIMAGES_IMAGE_MODEL = "cms.CustomImage"
+    WAGTAILDOCS_DOCUMENT_MODEL = "cms.CustomDocument"
+    # :: ENDIF

@@ -1,0 +1,25 @@
+{% load i18n %}
+{% get_current_language as lang %}
+<!DOCTYPE html>
+<html lang="{{ lang }}" {% block html_attrs %}{% endblock %}>
+    <head>
+        {% if page.seo_title %}
+            <title>{{ page.seo_title }}</title>
+        {% else %}
+            <title>{{ page.title }}</title>
+        {% endif %}
+
+        {% if page.search_description %}
+            <meta
+                hid="description"
+                name="description"
+                content="{{ page.search_description }}"
+            />
+        {% endif %}
+
+        {% block head_bottom %}{% endblock %}
+    </head>
+    <body>
+        {% block content %}{% endblock %}
+    </body>
+</html>

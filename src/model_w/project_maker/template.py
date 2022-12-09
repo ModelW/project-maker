@@ -2,9 +2,10 @@ import re
 from io import StringIO
 from typing import Iterator, Mapping, NamedTuple, Optional, Sequence, TextIO
 
-CONTROL_BLOCK_START = re.compile(r"^\s*(##|////)\s*")
+CONTROL_BLOCK_START = re.compile(r"^\s*(#|//) ::\s*")
 INLINE_REF = re.compile(
-    r"___(?P<ref>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*(__([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)___"
+    r"___(?P<ref1>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*(__([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)___"
+    r"|~~~(?P<ref2>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*(__([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)~~~"
 )
 WS = re.compile(r"\s+")
 
@@ -151,7 +152,7 @@ def parse_line(line: str) -> Iterator[Text | Ref]:
         if before:
             yield Text(before)
 
-        yield Ref(m.group("ref").split("__"))
+        yield Ref((m.group("ref1") or m.group("ref2")).split("__"))
 
         last_pos = m.end()
 

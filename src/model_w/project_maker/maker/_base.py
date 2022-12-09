@@ -20,6 +20,12 @@ class BaseComponent:
     def post_process(self, root: Path, path: Path, context: Mapping) -> None:
         pass
 
+    def start(self) -> None:
+        """Hook to start resources needed for the component"""
+
+    def stop(self) -> None:
+        """Hook to stop the resources that were stopped"""
+
 
 class YesComponent(BaseComponent):
     """
@@ -65,24 +71,32 @@ class Maker:
         if target.exists() and (not target.is_dir() or [*target.iterdir()]):
             raise ProjectMakerError(f"Target {target} is not empty or is not a dir")
 
-        for file in source.glob("**/*"):
-            if not file.is_file():
-                continue
-
+        try:
             for component in self.components:
-                sub_path = file.relative_to(source)
+                component.start()
 
-                if component.accept(sub_path, context):
-                    file_context, target_path = self.prepare_target(
-                        component, context, sub_path, target
-                    )
-                    self.render_file(file, file_context, target_path)
-                    component.post_process(
-                        target,
-                        target_path.relative_to(target),
-                        file_context,
-                    )
+            for file in source.rglob("*"):
+                if not file.is_file():
                     continue
+
+                for component in self.components:
+                    sub_path = file.relative_to(source)
+
+                    if component.accept(sub_path, context):
+                        file_context, target_path = self.prepare_target(
+                            component, context, sub_path, target
+                        )
+                        self.render_file(file, file_context, target_path)
+                        component.post_process(
+                            target,
+                            target_path.relative_to(target),
+                            file_context,
+                        )
+                        continue
+
+        finally:
+            for component in self.components:
+                component.stop()
 
     def prepare_target(self, component, context, sub_path, target):
         """

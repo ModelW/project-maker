@@ -117,6 +117,9 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# mkdocs documentation
+/site
+
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -136,7 +139,7 @@ cython_debug/
 # ---
 
 # Logs
-/src/model_w/project_maker/template/front/logs
+/front/logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -233,10 +236,3 @@ sw.*
 
 # dotenv environment variables file
 .env
-
-# ---
-# Template lockfiles
-# ---
-
-/src/model_w/project_maker/template/front/package-lock.json
-/src/model_w/project_maker/template/api/poetry.lock
