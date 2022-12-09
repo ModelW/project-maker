@@ -2,7 +2,7 @@
 name = "~~~project_name__snake~~~"
 version = "0.1.0"
 description = ""
-authors = ["TBD <tbd@tbd.com>"]
+authors = ["___dev_id___"]
 license = "Proprietary"
 
 packages = [
@@ -18,11 +18,11 @@ modelw-preset-django = {extras = [
     # :: IF api__channels
     "channels",
     # :: ENDIF
+    # :: IF api__wagtail
+    "wagtail",
+    # :: ENDIF
 ], version = "~2022.10.0b8", allow-prereleases = true}
 drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
-# :: IF api__wagtail
-wagtail = "~4.0"
-# :: ENDIF
 
 [tool.poetry.dev-dependencies]
 black = "*"

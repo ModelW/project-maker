@@ -2,6 +2,7 @@
 import shlex
 import shutil
 import string
+import subprocess
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from os import getenv
@@ -51,6 +52,31 @@ def check_binaries():
             f"to install them before running this script[/red]"
         )
         exit(1)
+
+
+def exec_get_stdout(args):
+    """
+    Executes a command and returns its output
+    """
+
+    return subprocess.run(
+        args,
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.strip()
+
+
+def get_developer_identity() -> str:
+    """
+    Returns the developer's identity, which is the name and email address of the
+    git user.
+    """
+
+    name = exec_get_stdout(["git", "config", "user.name"]) or '???'
+    email = exec_get_stdout(["git", "config", "user.email"]) or '???@???.?'
+
+    return f"{name} <{email}>"
 
 
 def keys_text(choices, labels):
@@ -185,6 +211,7 @@ def main(argv: Optional[Sequence[str]] = None):
         front={},
         api={},
         project_name={},
+        dev_id=get_developer_identity(),
     )
 
     accept_name = False
