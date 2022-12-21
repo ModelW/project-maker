@@ -236,3 +236,5 @@ sw.*
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
