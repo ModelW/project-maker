@@ -6,7 +6,7 @@ authors = ["___dev_id___"]
 license = "Proprietary"
 
 packages = [
-    {include = "___project_name__snake___", from = "src"},
+    {include = "___project_name__snake___"},
 ]
 
 [tool.poetry.dependencies]
