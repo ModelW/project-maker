@@ -1,4 +1,5 @@
 {
+    "name": "___project_name__snake___",
     "private": true,
     "scripts": {
         "dev": "nuxt",
