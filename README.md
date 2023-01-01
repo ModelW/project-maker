@@ -124,3 +124,14 @@ The default configuration, which depends a lot on the proxy configuration in
 Wagtail URLs through the front-end, the proxy will be invoked when necessary and
 JS code will be run otherwise. The live previews work perfectly well and it's up
 to you to keep it working.
+
+## Contributing
+
+If you're developing this package and you want to make a release, you can simply
+run:
+
+```bash
+make release VERSION=<version>
+```
+
+Then you'll still need to push the branches and tags.
