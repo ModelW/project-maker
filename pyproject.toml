@@ -8,6 +8,20 @@ packages = [
 description = "A tool to create Model-W-compliant projects"
 authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
 license = "WTFPL"
+homepage = "https://github.com/ModelW/project-maker"
+repository = "https://github.com/ModelW/project-maker"
+documentation = "https://github.com/ModelW/project-maker"
+readme = "README.md"
+keywords = ["model-w", "django", "nuxt", "boilerplate", "template"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Utilities",
+]
 
 [tool.poetry.scripts]
 project_maker = "model_w.project_maker.__main__:__main__"
