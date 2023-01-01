@@ -21,6 +21,9 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
+    # :: IF api__wsgi
+    "gunicorn",
+    # :: ENDIF
 ], version = "~2022.10.0b8", allow-prereleases = true}
 drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
 

@@ -243,6 +243,7 @@ def main(argv: Optional[Sequence[str]] = None):
         context["api"]["channels"] = Confirm.ask(
             "Are you fancy enough to use WebSockets?"
         )
+        context["api"]["wsgi"] = not context["api"]["channels"]
 
     if context["api"]["wagtail"]:
         context["cms_prefix"] = Prompt.ask(
