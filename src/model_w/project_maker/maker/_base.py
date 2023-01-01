@@ -49,7 +49,9 @@ class Exec:
         p = Popen(cmd, cwd=self.cwd, stdout=PIPE, stderr=PIPE)
 
         if p.wait() != 0:
-            raise ProjectMakerError(f"Failed to execute {cmd}: {p.stderr.read().decode()}")
+            raise ProjectMakerError(
+                f"Failed to execute {cmd}: {p.stderr.read().decode()}"
+            )
 
 
 class Maker:

@@ -73,8 +73,8 @@ def get_developer_identity() -> str:
     git user.
     """
 
-    name = exec_get_stdout(["git", "config", "user.name"]) or '???'
-    email = exec_get_stdout(["git", "config", "user.email"]) or '???@???.?'
+    name = exec_get_stdout(["git", "config", "user.name"]) or "???"
+    email = exec_get_stdout(["git", "config", "user.email"]) or "???@???.?"
 
     return f"{name} <{email}>"
 
