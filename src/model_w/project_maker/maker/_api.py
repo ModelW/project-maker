@@ -67,7 +67,6 @@ def make_path_specs() -> pathspec.PathSpec:
         lines.extend(f)
 
     lines.append("poetry.lock")
-    lines.append("api/src/___project_name__snake___/people/migrations/0001_initial.py")
 
     return pathspec.PathSpec.from_lines("gitwildmatch", lines)
 
@@ -79,6 +78,27 @@ class ApiComponent(BaseComponent):
         self.black_mode = black_mode
         self.isort_config = isort_config
 
+        self.wagtail_ignore = pathspec.PathSpec.from_lines(
+            "gitwildmatch",
+            [
+                "/api/___project_name__snake___/apps/cms/",
+            ],
+        )
+        self.channels_ignore = pathspec.PathSpec.from_lines(
+            "gitwildmatch",
+            [
+                "/api/___project_name__snake___/apps/realtime/",
+                "/api/___project_name__snake___/django/routing.py",
+                "/api/___project_name__snake___/django/asgi.py",
+            ],
+        )
+        self.celery_ignore = pathspec.PathSpec.from_lines(
+            "gitwildmatch",
+            [
+                "/api/___project_name__snake___/django/celery.py",
+            ],
+        )
+
     def accept(self, path: Path, context: Mapping):
         if not context["api"]["enable"]:
             return False
@@ -86,26 +106,16 @@ class ApiComponent(BaseComponent):
         if self.path_specs.match_file(path):
             return False
 
-        try:
-            sub_path = path.relative_to("api/src/___project_name__snake___")
-        except ValueError:
-            sub_path = None
-
         if not context["api"]["channels"]:
-            if any(
-                [
-                    sub_path == Path("django/routing.py"),
-                    sub_path == Path("django/asgi.py"),
-                ]
-            ):
+            if self.channels_ignore.match_file(path):
                 return False
 
         if not context["api"]["celery"]:
-            if sub_path == Path("django/celery.py"):
+            if self.celery_ignore.match_file(path):
                 return False
 
         if not context["api"]["wagtail"]:
-            if sub_path and Path("cms") in sub_path.parents:
+            if self.wagtail_ignore.match_file(path):
                 return False
 
         return True
@@ -133,4 +143,8 @@ class ApiComponent(BaseComponent):
 
         if file_path.name == ".env-template":
             new_path = file_path.parent / ".env"
-            file_path.rename(new_path)
+
+            with open(new_path, "w", encoding="utf-8") as f, open(
+                file_path, encoding="utf-8"
+            ) as g:
+                f.write(g.read())

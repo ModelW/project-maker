@@ -96,6 +96,12 @@ class FrontComponent(BaseComponent):
 
         if file_path.name == ".env-template":
             new_path = file_path.parent / ".env"
+
+            with open(file_path, encoding="utf-8") as f, open(
+                new_path, "w", encoding="utf-8"
+            ) as g:
+                g.write(f.read())
+
             file_path.rename(new_path)
             file_path = new_path
 

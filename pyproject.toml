@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "modelw-project-maker"
-version = "2022.10.0b2"
+version = "2023.1.0b1"
 packages = [
     {  include = "model_w/project_maker", from = "src" }
 ]

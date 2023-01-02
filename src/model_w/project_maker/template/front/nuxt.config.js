@@ -93,6 +93,8 @@ export default {
 
     modules: ["@nuxtjs/proxy", "@nuxtjs/axios", "@nuxtjs/sentry", "vlang/nuxt"],
 
+    plugins: ["~/plugins/axios"],
+
     axios: {
         proxy: true,
     },

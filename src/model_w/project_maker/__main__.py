@@ -204,6 +204,11 @@ def main(argv: Optional[Sequence[str]] = None):
 
     rich_print("[white bold on blue]\n  === Model W Project Maker ===  \n")
 
+    rich_print(
+        f"[gold3]Your dev dir is [bold]{args.dev_dir}[/bold]. You can change "
+        f"it with the [bold]MODEL_W_DEV_DIR[/bold] environment variable.\n"
+    )
+
     key = generate_random_key()
 
     context = dict(
@@ -234,6 +239,8 @@ def main(argv: Optional[Sequence[str]] = None):
         accept_name = Confirm.ask("Fine for you?", default=True)
         print()
 
+    context["project_title"] = context["project_name"]["natural"]
+
     context["front"]["enable"] = Confirm.ask("Will you have a front-end?", default=True)
     context["api"]["enable"] = Confirm.ask("Will you have a back-end?", default=True)
 
@@ -243,6 +250,7 @@ def main(argv: Optional[Sequence[str]] = None):
         context["api"]["channels"] = Confirm.ask(
             "Are you fancy enough to use WebSockets?"
         )
+        context["api"]["wsgi"] = not context["api"]["channels"]
 
     if context["api"]["wagtail"]:
         context["cms_prefix"] = Prompt.ask(

@@ -21,7 +21,10 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-], version = "~2022.10.0b8", allow-prereleases = true}
+    # :: IF api__wsgi
+    "gunicorn",
+    # :: ENDIF
+], version = "~2023.1.0b1"}
 drf-spectacular = {extras = ["sidecar"], version = "^0.24.0"}
 
 [tool.poetry.dev-dependencies]

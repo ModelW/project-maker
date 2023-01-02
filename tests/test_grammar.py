@@ -133,7 +133,7 @@ def test_alt_syntax():
     assert [*parse_line("~~~foo~~~")] == [Ref(["foo"])]
 
     code = """[tool.poetry]
-name = "~~~project_name__snake~~~"
+name = "~~~project_name~~snake~~~"
 version = "0.1.0"
 description = ""
 authors = ["TBD <tbd@tbd.com>"]
