@@ -204,6 +204,11 @@ def main(argv: Optional[Sequence[str]] = None):
 
     rich_print("[white bold on blue]\n  === Model W Project Maker ===  \n")
 
+    rich_print(
+        f"[gold3]Your dev dir is [bold]{args.dev_dir}[/bold]. You can change "
+        f"it with the [bold]MODEL_W_DEV_DIR[/bold] environment variable.\n"
+    )
+
     key = generate_random_key()
 
     context = dict(
