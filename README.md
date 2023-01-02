@@ -75,6 +75,11 @@ Thus one of the first things you should do is to go check in the `people` app's
 models the custom `User` model that is provided by default in this template.
 Modify it to your needs.
 
+> **Note** &mdash; If you modify the User model and you are not satisfied with
+> the initial migration then you can delete it and create it anew. The only
+> thing is that you'll have to manually add `CreateExtension("citext")` on top
+> of the operations list in the `0001_initial.py` migration file.
+
 If you've enabled Wagtail, the same applies for the `Image` and `Document`
 models present in the `cms` app.
 

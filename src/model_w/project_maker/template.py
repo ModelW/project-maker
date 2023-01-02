@@ -4,10 +4,11 @@ from typing import Iterator, Mapping, NamedTuple, Optional, Sequence, TextIO
 
 CONTROL_BLOCK_START = re.compile(r"^\s*(#|//) ::\s*")
 INLINE_REF = re.compile(
-    r"___(?P<ref1>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*(__([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)___"
-    r"|~~~(?P<ref2>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*(__([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)~~~"
+    r"___(?P<ref1>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*((__|~~)([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)___"
+    r"|~~~(?P<ref2>([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*((__|~~)([a-zA-Z-])([a-zA-Z0-9-]|_(?!_))*)*)~~~"
 )
 WS = re.compile(r"\s+")
+SEP = re.compile(r"__|~~")
 
 
 class ParseError(ValueError):
@@ -152,7 +153,7 @@ def parse_line(line: str) -> Iterator[Text | Ref]:
         if before:
             yield Text(before)
 
-        yield Ref((m.group("ref1") or m.group("ref2")).split("__"))
+        yield Ref(SEP.split(m.group("ref1") or m.group("ref2")))
 
         last_pos = m.end()
 
@@ -185,7 +186,7 @@ def parse_block(bl: BlockLine, text: TextIO) -> IfBlock:
         try:
             lines.append(decompose_line(line, text))
         except EndBlock:
-            return IfBlock(Ref(bl.args.split("__")), Block(lines))
+            return IfBlock(Ref(SEP.split(bl.args)), Block(lines))
 
 
 def detect_block_line(line: str) -> Optional[BlockLine]:

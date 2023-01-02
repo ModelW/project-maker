@@ -239,6 +239,8 @@ def main(argv: Optional[Sequence[str]] = None):
         accept_name = Confirm.ask("Fine for you?", default=True)
         print()
 
+    context["project_title"] = context["project_name"]["natural"]
+
     context["front"]["enable"] = Confirm.ask("Will you have a front-end?", default=True)
     context["api"]["enable"] = Confirm.ask("Will you have a back-end?", default=True)
 

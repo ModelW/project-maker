@@ -27,11 +27,13 @@ with EnvManager(ModelWDjango()) as env:
     INSTALLED_APPS = [
         "drf_spectacular",
         "drf_spectacular_sidecar",
-        "___project_name__snake___.core",
-        "___project_name__snake___.people",
-        # :: IF api__wagtail
-        "___project_name__snake___.cms",
+        # :: IF api__channels
+        "___project_name__snake___.apps.realtime",
         # :: ENDIF
+        # :: IF api__wagtail
+        "___project_name__snake___.apps.cms",
+        # :: ENDIF
+        "___project_name__snake___.apps.people",
     ]
 
     # ---
