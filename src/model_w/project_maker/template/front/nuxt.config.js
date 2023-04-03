@@ -78,7 +78,11 @@ export default {
                 name: "viewport",
                 content: "width=device-width, initial-scale=1",
             },
-            { hid: "description", name: "description", content: "" },
+            {
+                hid: "description",
+                name: "description",
+                content: "___project_name__natural_double_quoted___",
+            },
             { name: "format-detection", content: "telephone=no" },
         ],
     },
