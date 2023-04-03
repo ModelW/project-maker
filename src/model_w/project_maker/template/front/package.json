@@ -10,18 +10,18 @@
         "lint": "npm run lint:js"
     },
     "dependencies": {
-        "@nuxt/types": "~2.15.7",
+        "@nuxt/types": "~2.16.3",
         "@nuxtjs/axios": "~5.13.6",
         "@nuxtjs/proxy": "~2.1.0",
-        "@nuxtjs/sentry": "~6.0.0",
+        "@nuxtjs/sentry": "~6.0.3",
         "@nuxtjs/svg": "~0.4.0",
         "@nuxtjs/toast": "~3.3.1",
-        "@vueuse/core": "~9.4.0",
-        "core-js": "~3.25.2",
-        "jsdom": "~20.0.3",
-        "nuxt": "~2.15.7",
-        "sass": "~1.55.0",
-        "sass-loader": "~10.3.1",
+        "@vueuse/core": "~9.13.0",
+        "core-js": "~3.29.1",
+        "jsdom": "~21.1.1",
+        "nuxt": "~2.16.3",
+        "sass": "~1.60.0",
+        "sass-loader": "~10.4.1",
         "vlang": "~0.6.0",
         "vue": "~2.7.14",
         "vue-server-renderer": "~2.7.14",
@@ -29,13 +29,13 @@
         "wasync": "~0.1.1"
     },
     "devDependencies": {
-        "@babel/eslint-parser": "~7.19.1",
+        "@babel/eslint-parser": "~7.21.3",
         "@nuxtjs/eslint-config": "~6.0.1",
         "@nuxtjs/eslint-module": "~3.1.0",
         "eslint": "~7.32.0",
-        "eslint-config-prettier": "~8.5.0",
+        "eslint-config-prettier": "~8.8.0",
         "eslint-plugin-nuxt": "~2.0.0",
         "eslint-plugin-vue": "~7.20.0",
-        "prettier": "~2.7.1"
+        "prettier": "~2.8.7"
     }
 }
