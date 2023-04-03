@@ -4,7 +4,9 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "___project_name__snake___.django.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "___project_name__snake___.django.settings"
+)
 
 
 def make_app(django_app):
