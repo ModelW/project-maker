@@ -7,8 +7,8 @@
 </template>
 
 <script>
-import ServerTemplatedComponent from "~/components/ServerTemplatedComponent";
-import Title1 from "~/components/blocks/Title1";
+import ServerTemplatedComponent from "~/components/server-templated-component";
+import Title1 from "~/components/blocks/title-1";
 
 /**
  * Put here all the components that you might want to render

@@ -78,7 +78,7 @@ class FrontComponent(BaseComponent):
             return False
 
         if not context["api"]["wagtail"]:
-            if path.name in {"*.vue", "ServerTemplatedComponent.vue"}:
+            if path.name in {"*.vue", "server-templated-component.vue"}:
                 return False
         else:
             if path.name == "no-wagtail-index.vue":

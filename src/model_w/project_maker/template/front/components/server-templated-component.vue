@@ -103,6 +103,8 @@ export default {
         },
     },
 
+    emits: ["head"],
+
     computed: {
         /**
          * Extracts all the information from the HTML provided as props:
