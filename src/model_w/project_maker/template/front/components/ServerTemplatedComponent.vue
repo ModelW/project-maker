@@ -59,6 +59,7 @@ function elementToDict(el) {
 }
 
 const propWhitelist = [
+    "onMounted",
     "mounted",
     "beforeMount",
     "beforeCreate",
@@ -328,8 +329,8 @@ export default {
      * exactly by the HTML code of the content without any superfluous wrapping
      * div.
      */
-    render(createElement) {
-        return createElement(this.dynamicComponent);
+    render() {
+        return h(this.dynamicComponent);
     },
 };
 </script>
