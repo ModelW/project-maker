@@ -16,9 +16,10 @@ function addForwardedHost(proxyReq: any, req: any) {
 
 export default (
     defineModelWConfig({
-            siteName: process.env.SITE_NAME,
+            siteName: "___project_name__snake___",
             apiURL: process.env.API_URL,
             sentryDSN: process.env.SENTRY_DSN,
+            sentryEnvironment: process.env.SENTRY_ENVIRONMENT,
             ENV: process.env.ENV,
             meta: [
                     { charset: "utf-8" },
