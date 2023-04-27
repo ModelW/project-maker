@@ -10,7 +10,7 @@
         "lint": "npm run lint:js"
     },
     "dependencies": {
-        "@model-w/preset-nuxt3": "~0.1.8",
+        "@model-w/preset-nuxt3": "~1.0.0",
         "@nuxt/types": "~2.16.3",
         "@vueuse/core": "~10.0.2",
         "core-js": "~3.30.1",
