@@ -1,24 +1,21 @@
 <template>
     <ServerTemplatedComponent
-        v-if="useRuntimeConfig().public.serverTemplatedComponents"
         :content="html"
         :components-defs="defs"
         @head="receiveHeadData"
     />
-    <Page v-else :draft="isPreview" />
 </template>
 
 <script>
+import { defineNuxtComponent } from "nuxt/app";
 import ServerTemplatedComponent from "~/components/ServerTemplatedComponent.vue";
-import Page from "~/components/wagtail/Page.vue";
 import Title1 from "~/components/blocks/Title1.vue";
-import InputText from "~/components/blocks/InputText.vue";
+
 /**
  * Put here all the components that you might want to render
  */
 const DEFS = {
-  Title1,
-  InputText
+    Title1,
 };
 
 /**
@@ -31,7 +28,6 @@ const DEFS = {
 export default defineNuxtComponent({
     components: {
         ServerTemplatedComponent,
-        Page,
     },
 
     /**
@@ -113,7 +109,7 @@ export default defineNuxtComponent({
         const route = $router.currentRoute.value;
         return await getAsyncData(
             $axios,
-            process.browser ? undefined : $config.apiURL,
+            process.browser ? undefined : $config.apiUrl,
             route.path,
             route.query
         );
@@ -163,10 +159,6 @@ export default defineNuxtComponent({
          */
         receiveHeadData(head) {
             this.headData = head;
-
-            // if (head.lang) {
-            //     this.$vlang.setLocale(head.lang);
-            // }
         },
     },
 });

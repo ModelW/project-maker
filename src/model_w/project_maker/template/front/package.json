@@ -2,28 +2,27 @@
     "name": "___project_name__snake___",
     "private": true,
     "scripts": {
-        "dev": "nuxt",
         "build": "nuxt build",
-        "start": "nuxt start",
+        "dev": "nuxt dev",
         "generate": "nuxt generate",
-        "lint:js": "eslint --ext \".js,.vue\" --ignore-path .gitignore .",
-        "lint": "npm run lint:js"
+        "preview": "nuxt preview",
+        "postinstall": "nuxt prepare"
     },
     "dependencies": {
-        "@model-w/preset-nuxt3": "~0.1.8",
-        "@nuxt/types": "~2.16.3",
-        "@vueuse/core": "~10.0.2",
-        "core-js": "~3.30.1",
-        "vue-server-renderer": "~2.7.14",
-        "wasync": "~0.1.1"
+        "@model-w/axios": "0.x || 1.x",
+        "@model-w/preset-nuxt3": "0.x || 1.x",
+        "@model-w/proxy": "0.x || 1.x",
+        "@model-w/sentry": "1.x",
+        "@vuelidate/core": "2.0.x",
+        "@vuelidate/validators": "2.0.x",
+        "http-proxy-middleware": "^2.0.6",
+        "nuxt": "3.4.x",
+        "prettier": "^2.8.8",
+        "sass": "1.62.x",
+        "vite-svg-loader": "4.0.x",
+        "vue": "3.2.x"
     },
     "devDependencies": {
-        "@babel/eslint-parser": "~7.21.3",
-        "@nuxtjs/eslint-config": "~12.0.0",
-        "@nuxtjs/eslint-module": "~4.0.2",
-        "eslint-config-prettier": "~8.8.0",
-        "eslint-plugin-nuxt": "~4.0.0",
-        "eslint-plugin-vue": "~9.11.0",
-        "prettier": "~2.8.7"
+        "prettier": "*"
     }
 }
