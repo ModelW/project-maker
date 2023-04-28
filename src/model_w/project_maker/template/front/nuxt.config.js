@@ -1,6 +1,7 @@
+import { resolve } from "node:path";
 import { envManager, defineModelWConfig } from "@model-w/preset-nuxt3";
 
-export default envManager((env) => {
+const config = envManager((env) => {
     return defineModelWConfig(env, {
         siteName: "___project_name__snake___",
         head: {
@@ -15,3 +16,13 @@ export default envManager((env) => {
         },
     });
 });
+
+config.vite = {
+    resolve: {
+        alias: {
+            vue: resolve(__dirname, "node_modules/vue/dist/vue.esm-bundler.js"),
+        },
+    },
+};
+
+export default config;
