@@ -16,8 +16,9 @@
         "@vuelidate/core": "2.0.x",
         "@vuelidate/validators": "2.0.x",
         "http-proxy-middleware": "^2.0.6",
+        "jsdom": "21.1.x",
         "nuxt": "3.4.x",
-        "prettier": "^2.8.8",
+        "nuxt-runtime-compiler": "1.2.x",
         "sass": "1.62.x",
         "vite-svg-loader": "4.0.x",
         "vue": "3.2.x"
