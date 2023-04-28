@@ -1,7 +1,6 @@
-import { resolve } from "node:path";
 import { envManager, defineModelWConfig } from "@model-w/preset-nuxt3";
 
-const config = envManager((env) => {
+export default envManager((env) => {
     return defineModelWConfig(env, {
         siteName: "___project_name__snake___",
         head: {
@@ -14,15 +13,6 @@ const config = envManager((env) => {
                 { name: "format-detection", content: "telephone=no" },
             ],
         },
+        cmsAlias: "___cms_prefix___",
     });
 });
-
-config.vite = {
-    resolve: {
-        alias: {
-            vue: resolve(__dirname, "node_modules/vue/dist/vue.esm-bundler.js"),
-        },
-    },
-};
-
-export default config;
