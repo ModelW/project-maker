@@ -39,15 +39,15 @@ function elementToDict(el) {
 }
 
 const propWhitelist = [
-    "onMounted",
-    "mounted",
-    "beforeMount",
     "beforeCreate",
     "created",
+    "beforeMount",
+    "mounted",
     "beforeUpdate",
     "updated",
-    "beforeDestroy",
-    "destroyed",
+    "beforeUnmount",
+    "unmounted",
+    "setup",
     "data",
     "computed",
     "watch",
