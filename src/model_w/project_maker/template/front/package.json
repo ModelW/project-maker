@@ -9,9 +9,9 @@
         "postinstall": "nuxt prepare"
     },
     "dependencies": {
-        "@model-w/axios": "0.x || 1.x",
-        "@model-w/preset-nuxt3": "0.x || 1.x",
-        "@model-w/proxy": "0.x || 1.x",
+        "@model-w/axios": "1.x",
+        "@model-w/preset-nuxt3": "1.x",
+        "@model-w/proxy": "1.x",
         "@model-w/sentry": "1.x",
         "@vuelidate/core": "2.0.x",
         "@vuelidate/validators": "2.0.x",
