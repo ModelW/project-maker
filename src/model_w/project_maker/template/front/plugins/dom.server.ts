@@ -1,3 +1,4 @@
+import { defineNuxtPlugin } from "nuxt/app";
 import { JSDOM } from "jsdom";
 
 /**
@@ -9,7 +10,7 @@ import { JSDOM } from "jsdom";
  * @param html {string} HTML code you want to parse
  * @return {Document}
  */
-function htmlToDom(html) {
+function htmlToDom(html): Document {
     const { document: mockDocument } = new JSDOM(html).window;
     return mockDocument;
 }

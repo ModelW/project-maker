@@ -1,3 +1,5 @@
+import { defineNuxtPlugin } from "nuxt/app";
+
 /**
  * Converts HTML source code into DOM-like content.
  *
@@ -7,7 +9,7 @@
  * @param html {string} HTML code you want to parse
  * @return {Document}
  */
-export function htmlToDom(html) {
+export function htmlToDom(html): Document {
     const parser = new DOMParser();
     return parser.parseFromString(html, "text/html");
 }
