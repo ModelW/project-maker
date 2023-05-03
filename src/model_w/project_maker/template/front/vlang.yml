@@ -1,8 +1,0 @@
-locales:
-    - en
-
-i18n_directory: ./i18n
-
-outputs: []
-
-inputs: []

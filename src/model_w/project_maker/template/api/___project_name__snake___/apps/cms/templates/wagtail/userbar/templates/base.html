@@ -1,0 +1,36 @@
+{% load wagtailadmin_tags i18n %}
+<!-- Wagtail user bar embed code -->
+<div class="wagtail-userbar-reset">
+    <div class="wagtail-userbar wagtail-userbar--{{ position|default:'bottom-right' }}" data-wagtail-userbar>
+        <link rel="stylesheet" href="{% versioned_static 'wagtailadmin/css/userbar.css' %}">
+        <div class="wagtail-userbar-nav">
+            <button aria-controls="wagtail-userbar-items"
+                    aria-haspopup="true"
+                    class="wagtail-userbar-trigger"
+                    id="wagtail-userbar-trigger"
+                    data-wagtail-userbar-trigger
+                    onclick="location.href = '/___cms_prefix___/pages/{{ page.id }}/edit/'">
+                {% block branding_logo %}
+                    <div style="display: none">
+                        <svg>
+                            <defs>
+                                {% include "wagtail/userbar/icons/wagtail.svg" %}
+                                {% include "wagtail/userbar/icons/folder-open-inverse.svg" %}
+                                {% include "wagtail/userbar/icons/edit.svg" %}
+                                {% include "wagtail/userbar/icons/plus.svg" %}
+                                {% include "wagtail/userbar/icons/tick.svg" %}
+                                {% include "wagtail/userbar/icons/cross.svg" %}
+                            </defs>
+                        </svg>
+                    </div>
+                    <svg class="wagtail-userbar-icon" aria-hidden="true">
+                        <use href="#icon-wagtail-icon"></use>
+                    </svg>
+                {% endblock %}
+                <span class="wagtail-userbar-help-text">{% trans 'View Wagtail quick actions' %}</span>
+                <input value="{{ request }}" hidden>
+            </button>
+        </div>
+    </div>
+</div>
+<!-- end Wagtail user bar embed code -->

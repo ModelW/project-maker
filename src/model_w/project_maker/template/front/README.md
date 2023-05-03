@@ -15,15 +15,12 @@ const user = await $axios.$get("/back/api/me/");
 Doing so will make sure that the call works both on server-side and client-side
 (as we're working with a SSR app here).
 
-The plugin found in [`plugins/axios.js`](./plugins/axios.js) will take care of
-adding the CSRF tokens so that Django doesn't go crazy.
-
 # :: IF api~~wagtail
 
 ## Wagtail
 
 The content pages are served by Wagtail on the Django side. This behavior is
-handled by the [catch-all page](./pages/*.vue) which will:
+handled by the [catch-all page](./pages/[...wagtail].vue) which will:
 
 1. Call the Wagtail API for the page we're trying to get
 2. If there is any error (404, 500, ...) the error will be rendered as a Nuxt
@@ -41,6 +38,6 @@ must:
 2. In the component's default, add a `selector` property that will be used to
    find in the server-generated HTML the location(s) where this component needs
    to be inserted.
-3. Add this component to [`*.vue`](./pages/*.vue) in the `DEFS` constants.
+3. Add this component to [`[...wagtail].vue`](./pages/[...wagtail].vue) in the `DEFS` constants.
 
 # :: ENDIF
