@@ -8,7 +8,7 @@
 export function camelToSnake(tagName) {
     return tagName
         .split(/(?=[A-Z])/)
-        .filter((x) => x)
+        .filter((x) => !!x)
         .join("-")
         .toLowerCase();
 }
@@ -23,26 +23,6 @@ export function camelToSnake(tagName) {
  */
 export function extractSelector(selector) {
     return (dom) => dom.querySelector(selector);
-}
-
-/**
- * Converts HTML source code into DOM-like content.
- *
- * On the server this uses the JSDOM lib while on the browser it uses the real
- * DOM API.
- *
- * @param html {string} HTML code you want to parse
- * @return {Document}
- */
-export function htmlToDom(html) {
-    if (process.client) {
-        const parser = new DOMParser();
-        return parser.parseFromString(html, "text/html");
-    } else {
-        const { JSDOM } = require("jsdom");
-        const { document: mockDocument } = new JSDOM(html).window;
-        return mockDocument;
-    }
 }
 
 /**
@@ -113,7 +93,8 @@ export default {
          * - Also extracts meta-information from the head (see extractHead())
          */
         templates() {
-            const dom = htmlToDom(this.content);
+            const { $htmlToDom } = useNuxtApp();
+            const dom = $htmlToDom(this.content);
 
             const { contentExtract, components } = this.extractTemplates(dom);
             const head = this.extractHead(dom);
