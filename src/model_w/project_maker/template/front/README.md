@@ -38,6 +38,7 @@ must:
 2. In the component's default, add a `selector` property that will be used to
    find in the server-generated HTML the location(s) where this component needs
    to be inserted.
-3. Add this component to [`[...wagtail].vue`](./pages/[...wagtail].vue) in the `DEFS` constants.
+3. Add this component to [`[...wagtail].vue`](./pages/[...wagtail].vue) in the
+   `DEFS` constants.
 
 # :: ENDIF
