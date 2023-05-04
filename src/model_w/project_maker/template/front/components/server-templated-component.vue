@@ -39,20 +39,51 @@ function elementToDict(el) {
 }
 
 const propWhitelist = [
-    "onMounted",
-    "mounted",
-    "beforeMount",
+    /**
+    * These are options that comes from the optionApi
+    * that comes with the standard lifecycle of Vue2 and also part of vue3
+    * you can review it in this link https://vuejs.org/api/options-lifecycle.html
+    */
     "beforeCreate",
     "created",
+    "beforeMount",
+    "mounted",
     "beforeUpdate",
     "updated",
-    "beforeDestroy",
-    "destroyed",
+    "beforeUnmount",
+    "unmounted",
+    "setup",
     "data",
     "computed",
     "watch",
     "methods",
     "props",
+    "errorCaptured",
+    "serverPrefetch",
+    /**
+    * These are the methods needed for the composition api,
+    * they help to improve SSR and load speed of the pages.
+    * You can see more information in the next link:
+    * https://vuejs.org/api/composition-api-lifecycle.html#ondeactivated
+    */
+    "onMounted",
+    "onUpdated",
+    "onUnmounted",
+    "onBeforeMount",
+    "onBeforeUpdate",
+    "onBeforeUnmount",
+    "onErrorCaptured",
+    "onActivated",
+    "onDeactivated",
+    /**
+     * The following ones are only for development porpoise
+     */
+    "onRenderTracked",
+    "onRenderTriggered",
+    /**
+     * This is only SSR method
+     */
+    "onServerPrefetch"
 ];
 
 export default {
