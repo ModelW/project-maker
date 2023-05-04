@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@model-w/axios": "1.x",
-        "@model-w/preset-nuxt3": "1.x",
+        "@model-w/preset-nuxt3": "2.x",
         "@model-w/proxy": "2.x",
         "@model-w/sentry": "1.x",
         "@vuelidate/core": "2.0.x",
