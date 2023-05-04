@@ -8,7 +8,7 @@
 export function camelToSnake(tagName) {
     return tagName
         .split(/(?=[A-Z])/)
-        .filter((x) => x)
+        .filter((x) => !!x)
         .join("-")
         .toLowerCase();
 }
@@ -26,26 +26,6 @@ export function extractSelector(selector) {
 }
 
 /**
- * Converts HTML source code into DOM-like content.
- *
- * On the server this uses the JSDOM lib while on the browser it uses the real
- * DOM API.
- *
- * @param html {string} HTML code you want to parse
- * @return {Document}
- */
-export function htmlToDom(html) {
-    if (process.client) {
-        const parser = new DOMParser();
-        return parser.parseFromString(html, "text/html");
-    } else {
-        const { JSDOM } = require("jsdom");
-        const { document: mockDocument } = new JSDOM(html).window;
-        return mockDocument;
-    }
-}
-
-/**
  * Returns all attributes from a DOM-like element as a dictionary
  */
 function elementToDict(el) {
@@ -59,19 +39,51 @@ function elementToDict(el) {
 }
 
 const propWhitelist = [
-    "mounted",
-    "beforeMount",
+    /**
+    * These are options that comes from the optionApi
+    * that comes with the standard lifecycle of Vue2 and also part of vue3
+    * you can review it in this link https://vuejs.org/api/options-lifecycle.html
+    */
     "beforeCreate",
     "created",
+    "beforeMount",
+    "mounted",
     "beforeUpdate",
     "updated",
-    "beforeDestroy",
-    "destroyed",
+    "beforeUnmount",
+    "unmounted",
+    "setup",
     "data",
     "computed",
     "watch",
     "methods",
     "props",
+    "errorCaptured",
+    "serverPrefetch",
+    /**
+    * These are the methods needed for the composition api,
+    * they help to improve SSR and load speed of the pages.
+    * You can see more information in the next link:
+    * https://vuejs.org/api/composition-api-lifecycle.html#ondeactivated
+    */
+    "onMounted",
+    "onUpdated",
+    "onUnmounted",
+    "onBeforeMount",
+    "onBeforeUpdate",
+    "onBeforeUnmount",
+    "onErrorCaptured",
+    "onActivated",
+    "onDeactivated",
+    /**
+     * The following ones are only for development porpoise
+     */
+    "onRenderTracked",
+    "onRenderTriggered",
+    /**
+     * This is only SSR method
+     */
+    "onServerPrefetch"
 ];
 
 export default {
@@ -103,6 +115,8 @@ export default {
         },
     },
 
+    emits: ["head"],
+
     computed: {
         /**
          * Extracts all the information from the HTML provided as props:
@@ -112,7 +126,8 @@ export default {
          * - Also extracts meta-information from the head (see extractHead())
          */
         templates() {
-            const dom = htmlToDom(this.content);
+            const { $htmlToDom } = useNuxtApp();
+            const dom = $htmlToDom(this.content);
 
             const { contentExtract, components } = this.extractTemplates(dom);
             const head = this.extractHead(dom);
@@ -328,8 +343,8 @@ export default {
      * exactly by the HTML code of the content without any superfluous wrapping
      * div.
      */
-    render(createElement) {
-        return createElement(this.dynamicComponent);
+    render() {
+        return h(this.dynamicComponent);
     },
 };
 </script>
