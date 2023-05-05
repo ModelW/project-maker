@@ -106,9 +106,6 @@ class FrontComponent(BaseComponent):
             ) as g:
                 g.write(f.read())
 
-            file_path.rename(new_path)
-            file_path = new_path
-
         if not re.compile(
             r".*\.([jt]sx?|json|md|vue|php|html?|svelte|ya?ml|(s?c|le)ss)$",
             re.IGNORECASE,
