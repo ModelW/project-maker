@@ -60,6 +60,7 @@ const propWhitelist = [
     "props",
     "errorCaptured",
     "serverPrefetch",
+    "components",
     /**
      * These are the methods needed for the composition api,
      * they help to improve SSR and load speed of the pages.
