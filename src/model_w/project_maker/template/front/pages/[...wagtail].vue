@@ -1,165 +1,172 @@
 <template>
     <ServerTemplatedComponent
-        :content="html"
+        :content="html as string"
         :components-defs="defs"
         @head="receiveHeadData"
     />
 </template>
 
-<script>
-import { defineNuxtComponent } from "nuxt/app";
-import ServerTemplatedComponent from "~/components/server-templated-component.vue";
-import Title1 from "~/components/blocks/title-1.vue";
+<script setup lang="ts">
+import Title1 from "@/components/blocks/title-1.vue";
+import { MetaObject } from "@nuxt/schema";
+import type { NuxtError } from "#app";
+import type { FetchResponse } from "ofetch";
 
-/**
- * Put here all the components that you might want to render
- */
-const DEFS = {
+const defs = {
     Title1,
 };
 
+const REDIRECT_CODE = [301, 302, 307, 308];
+
+const html = ref<string>("<!DOCTYPE html><html lang='en'></html>");
+
 /**
- * This is the "fall-back" page which will try to fetch and render a page from
- * the underlying Wagtail hosted in the API. Everything here is a sane default,
- * however you might want to customize it depending on your use.
- *
- * The thing you'll want to customize the most is most likely the defs list!
+ * Just the raw HTTP query to get the response from Django. If we're on the
+ * server, we're adding the appropriate headers so that the authentication and
+ * other security measures can be passed along (which allows for previews to
+ * work).
  */
-export default defineNuxtComponent({
-    components: {
-        ServerTemplatedComponent,
-    },
+async function fetchDjangoPage(): Promise<FetchResponse<string>> {
+    const headers: Record<string, string> = {
+        "X-Reach-API": "yes",
+    };
 
-    /**
-     * This is in charge of getting the HTML from the server.
-     *
-     * Basically we're expecting a 200 status code. If that's the case, the
-     * content should be HTML and we'll work with that.
-     *
-     * If not we try to figure out what is going on. If we've got a redirection
-     * then we translate the redirection into Nuxt. Otherwise we just forward
-     * the error. It's up to the implementer to handle errors 404, 500, etc.
-     *
-     * Let's note that this works slightly different depending on if we're
-     * running on the server side or the client side. Indeed, on the server
-     * you'll have a `$config.apiUrl` value which allows to hit directly the
-     * internal API URL, while on the client this value will be undefined and
-     * we'll hit the URL relatively to the root path using the `x-reach-api`
-     * header to tell the proxy to get this page from the API for us.
-     */
-    async asyncData({ $axios, $config, $router, ssrContext }) {
-        async function getAsyncData($axios, baseURL, path, query) {
-            try {
-                const headers = ssrContext?.event.node.req.headers ?? {};
-                headers["x-reach-api"] = "yes";
-                return {
-                    html: await $axios.$get(path, {
-                        baseURL,
-                        headers,
-                        maxRedirects: 0,
-                        params: query,
-                        validateStatus(status) {
-                            return status === 200;
-                        },
-                    }),
-                };
-            } catch (e) {
-                const { response: res } = e;
+    if (process.server) {
+        const proxyHeaders = useRequestHeaders([
+            "cookie",
+            "origin",
+            "referrer",
+            "x-csrftoken",
+        ]);
+        Object.assign(headers, proxyHeaders);
 
-                if (res) {
-                    const isRedirect = [301, 302, 307, 308].includes(
-                        res.status
-                    );
-                    const location = res.headers.location;
+        const hostCandidates = useRequestHeaders(["host", "x-forwarded-host"]);
+        const host =
+            hostCandidates["x-forwarded-host"] || hostCandidates["host"];
 
-                    if (isRedirect) {
-                        if (location) {
-                            return await getAsyncData(
-                                $axios,
-                                baseURL,
-                                location,
-                                query
-                            );
-                        } else {
-                            // $sentry.captureException(e);
-                            return createError({
-                                statusCode: res.status,
-                                message: "Invalid redirect",
-                            });
-                        }
-                    } else {
-                        // $sentry.captureException(e);
-                        return createError({
-                            statusCode: res.status,
-                            message: res.statusText,
-                        });
-                    }
-                } else {
-                    // $sentry.captureException(e);
-                    // eslint-disable-next-line
-                    console.error(e);
-                    return createError({
-                        statusCode: 500,
-                        message: "Unknown error",
-                    });
-                }
-            }
+        if (host) {
+            headers["X-Forwarded-Host"] = host;
         }
+    }
 
-        const route = $router.currentRoute.value;
-        return await getAsyncData(
-            $axios,
-            process.browser ? undefined : $config.apiUrl,
-            route.path,
-            route.query
-        );
-    },
+    return await $fetch.raw(useRoute().fullPath, {
+        baseURL: process.browser ? undefined : useNuxtApp().$config.apiUrl,
+        headers,
+        redirect: "manual",
+    });
+}
 
-    data() {
-        return {
-            /**
-             * HTML code of the page
-             */
-            html: "",
+/**
+ * Depending on the response, we'll either return the HTML to be used to render
+ * the page or throw an error:
+ *
+ * - If it's a redirect, the error will have the status code of the redirect
+ *   and contain a location in the data field. The goal is that the setup
+ *   function can then navigate to that location.
+ * - Otherwise it's any kind of error and we'll re-throw it from the setup
+ *   function so that the error page is triggered.
+ */
+function decideResponseStrategy(resp: FetchResponse<string>) {
+    if (200 <= resp.status && resp.status < 300) {
+        const html = resp._data;
 
-            /**
-             * Head data extracted from the template's head
-             */
-            headData: {},
-        };
-    },
+        if (html) {
+            return {
+                html,
+            };
+        } else {
+            throw createError({
+                statusCode: 500,
+                message: "Empty response",
+            });
+        }
+    } else if (REDIRECT_CODE.includes(resp.status)) {
+        const location = resp.headers.get("location");
+
+        if (location) {
+            throw createError({
+                statusCode: resp.status,
+                message: "Redirect",
+                data: { location },
+            });
+        } else {
+            throw createError({
+                statusCode: 500,
+                message: "Invalid redirect",
+            });
+        }
+    } else {
+        throw createError({
+            statusCode: resp.status,
+            message: resp.statusText,
+        });
+    }
+}
+
+/**
+ * This is in charge of getting the HTML from the server.
+ *
+ * Basically we're expecting a 200 status code. If that's the case, the
+ * content should be HTML and we'll work with that.
+ *
+ * If not we try to figure out what is going on. If we've got a redirection
+ * then we translate the redirection into Nuxt. Otherwise we just forward
+ * the error. It's up to the implementer to handle errors 404, 500, etc.
+ *
+ * Let's note that those actions will be decided inside here but the action
+ * will be taken from the setup function because Nuxt is made in a very logical
+ * way apparently.
+ *
+ * Let's note that this works slightly different depending on if we're
+ * running on the server side or the client side. Indeed, on the server
+ * you'll have a `$config.apiUrl` value which allows to hit directly the
+ * internal API URL, while on the client this value will be undefined and
+ * we'll hit the URL relatively to the root path using the `x-reach-api`
+ * header to tell the proxy to get this page from the API for us.
+ */
+async function getServerData() {
+    const resp = await fetchDjangoPage();
+    return decideResponseStrategy(resp);
+}
+
+const {
+    /**
+     * HTML from the server, if any
+     */
+    data,
 
     /**
-     * Propagates the head data from the template into Nuxt's head system
+     * Error that happened during async fetch, if any
      */
-    head() {
-        return this.headData ?? {};
-    },
+    error: fetchError
+} = await useAsyncData("html", getServerData);
 
-    computed: {
-        /**
-         * Exposes the defs
-         */
-        defs() {
-            return DEFS;
-        },
+if (fetchError.value) {
+    const error = fetchError.value as any as Error | NuxtError;
 
-        /**
-         * Whether the page is a draft
-         */
-        isPreview() {
-            return this.$route.path.replace(/^\/$/, "").endsWith("/preview");
-        },
-    },
+    if ("statusCode" in error && REDIRECT_CODE.includes(error.statusCode)) {
+        await navigateTo(error.data.location, {
+            redirectCode: error.statusCode,
+        });
+    } else {
+        throw error;
+    }
+}
 
-    methods: {
-        /**
-         * This serves to receive updates about the head data extracted by
-         * ServerTemplatedComponent
-         */
-        receiveHeadData(head) {
-            this.headData = head;
-        },
-    },
-});
+if (
+    typeof data.value === "object" &&
+    data.value !== null &&
+    "html" in data.value &&
+    typeof data.value.html === "string"
+) {
+    html.value = data.value.html;
+}
+
+/**
+ * Receiver for the head data from the parsed component, which allows to have
+ * the proper meta info at SSR time.
+ */
+function receiveHeadData(head: MetaObject) {
+    useHead(head);
+}
 </script>
