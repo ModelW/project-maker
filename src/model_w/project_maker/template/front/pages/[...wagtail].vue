@@ -138,7 +138,7 @@ const {
     /**
      * Error that happened during async fetch, if any
      */
-    error: fetchError
+    error: fetchError,
 } = await useAsyncData("html", getServerData);
 
 if (fetchError.value) {
