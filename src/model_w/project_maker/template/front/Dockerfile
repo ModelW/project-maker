@@ -1,4 +1,4 @@
-FROM modelw/base:2023.04
+FROM modelw/base:2023.07
 
 COPY --chown=user package.json package-lock.json ./
 
