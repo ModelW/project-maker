@@ -26,7 +26,7 @@ handled by the [catch-all page](./pages/[...wagtail].vue) which will:
 2. If there is any error (404, 500, ...) the error will be rendered as a Nuxt
    error. The same goes with redirections.
 3. If the page is found, it will be rendered using the
-   [`ServerTemplatedComponent`](./components/ServerTemplatedComponent.vue)
+   [`ServerTemplatedComponent`](./components/server-templated-component.vue)
    component. It lets you declare Vue components that have their JS and CSS
    (non-scoped) declared in a `.vue` file but the template coming from the
    server.
