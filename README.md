@@ -6,7 +6,7 @@ This project maker is the simplest way to start a
 The goal is to be extremely simple:
 
 ```bash
-curl -s https://pypi.run/modelw-project-maker/model_w.project_maker | python3.10
+curl -s https://pypi.run/modelw-project-maker/model_w.project_maker | python3.11
 ```
 
 This will ask you a few questions and create the project's directory for you.
