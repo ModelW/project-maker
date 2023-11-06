@@ -27,7 +27,7 @@ modelw-preset-django = {extras = [
 ], version = ">=2023.7.0,<2023.8.0", allow-prereleases = true}
 drf-spectacular = {extras = ["sidecar"], version = "^0.26.2"}
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "*"
 isort = "*"
 ipython = "*"
