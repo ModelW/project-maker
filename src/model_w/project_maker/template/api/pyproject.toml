@@ -32,9 +32,23 @@ black = "*"
 isort = "*"
 ipython = "*"
 
+[tool.poetry.group.test.dependencies]
+psutil = "^5.9.8"
+pytest = "^8.1.1"
+pytest-bdd = "^7.0.1"
+pytest-django = "^4.8.0"
+pytest-html = "^4.1.1"
+pytest-playwright = "^0.4.4"
+
 [tool.isort]
 profile = "black"
 known_first_party = "___project_name__snake___"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "___project_name__snake___.django.settings"
+python_files = ["test_*.py", "*_test.py"]
+django_debug_mode = true
+addopts = ["--exitfirst", "--screenshot", "only-on-failure", "--full-page-screenshot", "--html=bdd/report/results/report.html"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
