@@ -1,9 +1,9 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from wagtail.core.models import Page
 from wagtail.documents.models import AbstractDocument
 from wagtail.images.models import AbstractImage, AbstractRendition
 from wagtail.images.models import Image as DefaultImage
+from wagtail.models import Page
 
 
 class CustomImage(AbstractImage):
