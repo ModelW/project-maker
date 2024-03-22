@@ -1,6 +1,6 @@
 <template>
     <ServerTemplatedComponent
-        :content="html as string"
+        :content="html"
         :components-defs="defs"
         @head="receiveHeadData"
     />
@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import Title1 from "@/components/blocks/title-1.vue";
-import { MetaObject } from "@nuxt/schema";
+import type { MetaObject } from "@nuxt/schema";
 import type { NuxtError } from "#app";
 import type { FetchResponse } from "ofetch";
 
@@ -57,6 +57,19 @@ async function fetchDjangoPage(): Promise<FetchResponse<string>> {
 }
 
 /**
+ * When we receive a redirect status from Wagtail, we throw an error with data.location
+ * to know where to `navigateTo()`.
+ */
+interface WagtailRedirectData {
+    location: string;
+}
+
+/** The error type expected when a redirect status is returned from the server */
+interface WagtailRedirect extends NuxtError {
+    data: WagtailRedirectData;
+}
+
+/**
  * Depending on the response, we'll either return the HTML to be used to render
  * the page or throw an error:
  *
@@ -84,7 +97,7 @@ function decideResponseStrategy(resp: FetchResponse<string>) {
         const location = resp.headers.get("location");
 
         if (location) {
-            throw createError({
+            throw createError<WagtailRedirectData>({
                 statusCode: resp.status,
                 message: "Redirect",
                 data: { location },
@@ -129,23 +142,14 @@ async function getServerData() {
     return decideResponseStrategy(resp);
 }
 
-const {
-    /**
-     * HTML from the server, if any
-     */
-    data,
-
-    /**
-     * Error that happened during async fetch, if any
-     */
-    error: fetchError,
-} = await useAsyncData("html", getServerData);
+/** Fetch data and error from the server, if any. */
+const { data, error: fetchError } = await useAsyncData("html", getServerData);
 
 if (fetchError.value) {
-    const error = fetchError.value as any as Error | NuxtError;
+    const error = fetchError.value;
 
     if ("statusCode" in error && REDIRECT_CODE.includes(error.statusCode)) {
-        await navigateTo(error.data.location, {
+        await navigateTo((error as WagtailRedirect).data.location, {
             redirectCode: error.statusCode,
         });
     } else {
