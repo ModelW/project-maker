@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ("title", models.CharField(max_length=255, verbose_name="title")),
                 (
                     "file",
-                    models.ImageField(
+                    wagtail.images.models.WagtailImageField(
                         height_field="height",
                         upload_to=wagtail.images.models.get_upload_to,
                         verbose_name="file",
@@ -198,7 +198,7 @@ class Migration(migrations.Migration):
                 ("filter_spec", models.CharField(db_index=True, max_length=255)),
                 (
                     "file",
-                    models.ImageField(
+                    wagtail.images.models.WagtailImageField(
                         height_field="height",
                         upload_to=wagtail.images.models.get_rendition_upload_to,
                         width_field="width",
