@@ -77,20 +77,22 @@ def pytest_bdd_before_scenario(
     reporter.increment_scenario()
 
 
-def pytest_bdd_before_step(
+def pytest_bdd_before_step_call(
     request: pytest.FixtureRequest,
     feature: Feature,
     scenario: Scenario,
     step: Step,
     step_func: Callable[..., Any],
+    step_func_args: dict[str, Any],
 ) -> None:
     """
-    Called before step function is set up.
+    Called before step function is executed.
     We use this to keep track of which step we are currently executing,
     so we can add the correct additional data to the correct step in
     the report.
     """
     reporter.increment_step()
+    get_datatable_from_step(step.name, step_func_args)
 
 
 def pytest_bdd_after_step(
@@ -110,7 +112,6 @@ def pytest_bdd_after_step(
     if it's a vertical or horizontal datatable.  Therefore, we expect the step
     argument to be called "datatable" or "datatable_vertical".
     """
-    get_datatable_from_step(step.name, step_func_args)
 
 
 def pytest_bdd_after_scenario(
@@ -150,8 +151,6 @@ def pytest_bdd_step_error(
     screenshot_bytes = page.screenshot(full_page=True)
     png = base64.b64encode(screenshot_bytes).decode()
     reporter.attach(png, "image/png")
-
-    get_datatable_from_step(step.name, step_func_args)
 
 
 @pytest.hookimpl(trylast=True)
