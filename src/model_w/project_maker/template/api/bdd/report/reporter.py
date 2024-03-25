@@ -107,6 +107,26 @@ class Step:
         }
 
 
+@dataclass
+class Scenario:
+    """
+    Represents a scenario in a feature to update the name of the scenario created by pytest-bdd.
+    For example, adding the browser/device to the scenario name.
+    """
+
+    feature_index: int
+    scenario_index: int
+    name: str = ""
+
+    def to_json(self) -> dict:
+        """
+        Converts the scenario to a JSON object
+        """
+        return {
+            "name": self.name,
+        }
+
+
 class Reporter(metaclass=utils.SingletonMeta):
     """
     Represents the reporter (singleton) for all features
@@ -125,6 +145,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         self.embeddings: List[StepEmbedding] = []
         self.additional_steps: List[Step] = []
         self.existing_steps: List[Step] = []
+        self.existing_scenarios: List[Scenario] = []
         self.feature_uri: str = ""
         self.current_feature_index: int = RESET_INDEX
         self.current_scenario_index: int = RESET_INDEX
@@ -134,7 +155,7 @@ class Reporter(metaclass=utils.SingletonMeta):
 
     def start(self) -> None:
         """
-        Starts the reporter
+        Starts the reporter or does nothing if it is already running
         """
         self.is_running = True
 
@@ -150,6 +171,22 @@ class Reporter(metaclass=utils.SingletonMeta):
             step_index=self.current_step_index,
         )
         self.embeddings.append(embedding)
+
+    def update_existing_scenario(self, name: str, page: Page) -> None:
+        """
+        Adds an existing scenario to the report with data to be modified at
+        the end of the session.  ie. adding the browser/device to the scenario name.
+        """
+
+        browser_name = page.context.browser.browser_type.name
+        viewport = page.viewport_size
+
+        scenario = Scenario(
+            feature_index=self.current_feature_index,
+            scenario_index=self.current_scenario_index,
+            name=f"{name} [{browser_name}@{viewport['width']}x{viewport['height']}]",
+        )
+        self.existing_scenarios.append(scenario)
 
     def update_existing_step(
         self, name: str, arguments: Optional[List[str]] = None
@@ -305,7 +342,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         with open(self.json_report_path, "w") as file:
             json.dump(report, file, indent=4)
 
-    def insert_existing_steps_into_json(self) -> None:
+    def update_existing_steps_in_json(self) -> None:
         """
         Merges the data stored in the existing steps to the cucumber report
         For example, prettifying datatables etc.
@@ -321,6 +358,22 @@ class Reporter(metaclass=utils.SingletonMeta):
             if existing_step.arguments:
                 step["name"] = existing_step.name
                 step.setdefault("arguments", []).append(existing_step.arguments)
+
+        with open(self.json_report_path, "w") as file:
+            json.dump(report, file, indent=4)
+
+    def update_existing_scenarios_in_json(self) -> None:
+        """
+        Merges the data stored in the existing scenarios to the cucumber report
+        For example, adding the browser/device to the scenario name.
+        """
+        with open(self.json_report_path, "r") as file:
+            report = json.load(file)
+
+        for existing_scenario in self.existing_scenarios:
+            feature: dict = report[existing_scenario.feature_index]
+            scenario: dict = feature["elements"][existing_scenario.scenario_index]
+            scenario["name"] = existing_scenario.name
 
         with open(self.json_report_path, "w") as file:
             json.dump(report, file, indent=4)

@@ -9,6 +9,7 @@ import base64
 from typing import Any, Callable
 
 import pytest
+from playwright.sync_api import Page
 from pytest_bdd.parser import Feature, Scenario, Step
 from slugify import slugify
 
@@ -75,6 +76,13 @@ def pytest_bdd_before_scenario(
         reporter.increment_feature()
 
     reporter.increment_scenario()
+
+    page: Page = request.getfixturevalue("page")
+
+    reporter.update_existing_scenario(
+        name=scenario.name,
+        page=page,
+    )
 
 
 def pytest_bdd_before_step_call(
@@ -164,7 +172,8 @@ def pytest_sessionfinish(
     to include, and generating a HTML version.
     """
     if reporter.is_running:
-        reporter.insert_existing_steps_into_json()
+        reporter.update_existing_steps_in_json()
+        reporter.update_existing_scenarios_in_json()
         reporter.insert_embeddings_into_report()
         reporter.insert_additional_steps_into_report()
         reporter.generate_html_report()
