@@ -52,24 +52,31 @@ Feature: ...
 Scenario: ...
 ```
 
+To quicken the process while creating tests, you can skip the front's
+`npm run build` stage with `SKIPBUILD=1 pytest`
+
 ## Data creation
 
 An important part of testing is having the right data to test on. Here, we can
 take advantage of having Django as a test runner, and create data as we need it.
 
 Data creation is going to be fairly project-specific, but generally speaking,
-you will pick out the specific models that need to be created for your test.
-Create them in a given step.
+you will pick out the specific models that need to be created for your test and
+create them in a [given](./step_definitions/common_given.py) step.
 
 For example, `Given I am a manager in business` could be a step definition that
-creates a business, fleet, and any other required models, and a user with a
-manager role.
+creates a business, fleet, a user with a manager role, and any other required
+models.
 
-To make this easier, it's important to consider what we're testing. If we are
-testing that a manager can see a business settings page, we can use a tool like
-`model-bakery` to automatically create the data we want, and only specify that
-the user is manager. ie. `baker.make("user", role="manager")`. The business,
-fleet and all other required fields are automatically taken care of.
+Where creating data is fairly complex with many models requiring lots of other
+models to work, we can use a tool like
+[model-bakery](https://model-bakery.readthedocs.io/en/latest/) to automatically
+create the data (including foreign relationship models). For example, if we are
+testing a user with a profile type of manager, we need only specify the
+following: `baker.make("user", profile__role="manager")`, and the associated
+related models are automatically created, with any non-specified required fields
+filled with random data. This also helps with maintenance, as updating models,
+has less impact, than creating the test data manually.
 
 ### Data creation recipe
 

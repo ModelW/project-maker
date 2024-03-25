@@ -39,6 +39,7 @@ pytest-bdd = "^7.0.1"
 pytest-django = "^4.8.0"
 pytest-html = "^4.1.1"
 pytest-playwright = "^0.4.4"
+node_edge = "^0.1.0"
 
 [tool.isort]
 profile = "black"
@@ -48,7 +49,7 @@ known_first_party = "___project_name__snake___"
 DJANGO_SETTINGS_MODULE = "___project_name__snake___.django.settings"
 python_files = ["test_*.py", "*_test.py"]
 django_debug_mode = true
-addopts = ["--exitfirst", "--screenshot", "only-on-failure", "--full-page-screenshot", "--html=bdd/report/results/report.html"]
+addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--video", "on", "--full-page-screenshot", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
