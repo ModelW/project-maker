@@ -9,6 +9,8 @@ import re
 from playwright.sync_api import ConsoleMessage, Page, expect
 from pytest_bdd import parsers, then
 
+from . import utils
+
 
 @then(parsers.cfparse('the text "{text}" should be the colour "{colour}"'))
 def text_should_be_colour(page: Page, text: str, colour: str):
@@ -39,9 +41,11 @@ def at_exact_url(url: str, page: Page):
     Checks the current URL for an exact match
 
     Example:
+    ```gherkin
         Then I should be at the URL "https://example.com"
         Then I should be at the URL "http://localhost:3000/me"
         Then I should be at the URL "http://localhost:3000/me?q=1"
+    ```
     """
     expect(page).to_have_url(url)
 
@@ -52,9 +56,11 @@ def at_partial_url(url: str, page: Page):
     Checks the current URL for a partial match
 
     Example:
+    ```gherkin
         Then I should be at a URL with "example.com"
         Then I should be at a URL with "me"
         Then I should be at a URL with "q=1"
+    ```
     """
     expect(page).to_have_url(re.compile(f".*{url}.*"))
 
@@ -101,3 +107,34 @@ def should_see_no_console_errors(page: Page, console: ConsoleMessage):
     """
     errors = [msg.text for msg in console if msg.type == "error"]
     assert not errors, f"Console errors: {errors}"
+
+
+@then(parsers.cfparse("I should see the following Django admin models:\n{datatable}"))
+def should_see_admin_models(page: Page, datatable):
+    """
+    Checks the page for the expected admin models
+
+    Example:
+    ```gherkin
+        Then I should see the following admin models:
+            | Group name                       | Model name    |
+            | Authentication and Authorization | Groups        |
+            | Celery Results                   | Group Results |
+    ```
+    """
+    datatable = utils.parse_datatable_string(datatable)
+    for row in datatable:
+        group_name = row["Group name"]
+        model_name = row["Model name"]
+
+        # Find the caption element with the specified text
+        group_caption = page.locator("caption").get_by_text(group_name)
+        expect(group_caption).to_be_visible()
+
+        # Find the parent table element containing the caption
+        model_table = page.locator("table").filter(has=group_caption)
+        expect(model_table).to_be_visible()
+
+        # Find the model element within the table
+        model_element = model_table.locator("a").get_by_text(model_name)
+        expect(model_element).to_be_visible()

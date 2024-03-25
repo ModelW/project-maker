@@ -93,3 +93,23 @@ def fill_in_form_with_data(page: Page, datatable: str):
     for key, value in data.items():
         page.get_by_test_id(key).fill(value)
     page.get_by_test_id("submit").click()
+
+
+@when(parsers.cfparse("I log in with {username} and {password}"))
+def log_in_with_username_and_password(username: str, password: str, page: Page):
+    """
+    Logs in with the username and password provided
+
+    Example:
+        When I log in with admin and password
+    """
+    page.locator('input[name="username"]').fill(username)
+    page.locator('input[name="password"]').fill(password)
+
+    input_submit = page.locator('input[type="submit"]')
+    button_submit = page.locator('button[type="submit"]')
+
+    if input_submit.is_visible():
+        input_submit.click()
+    else:
+        button_submit.click()

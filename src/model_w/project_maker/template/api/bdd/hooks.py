@@ -12,9 +12,40 @@ import pytest
 from pytest_bdd.parser import Feature, Scenario, Step
 from slugify import slugify
 
+from .report import utils as report_utils
 from .report.reporter import Reporter
+from .step_definitions import utils as step_utils
 
 reporter = Reporter()
+
+
+def get_datatable_from_step(step_name: str, step_func_args: Callable[..., Any]):
+    """
+    Extracts the datatable from the step function arguments to display
+    it in the report nicely.
+
+    We simply detect via a `\\n` in the step name, which only occurs when
+    a datatable is present, but to get the correct orientation
+    of the datatable, we use the step function argument name to detect it.
+
+    If the argument is called `datatable_vertical`, we know it's a vertical
+    datatable, otherwise it's a horizontal datatable.
+
+    This way, if the naming convention is ignored, we still get OK results,
+    just the header styling of table.
+    """
+
+    datatable_vertical = step_func_args.get("datatable_vertical")
+
+    datatable = step_utils.get_datatable_from_step_name(step_name)
+
+    if datatable:
+        step_name = step_name.split("\n")[0]
+        datatable = step_utils.parse_datatable_string(
+            datatable, vertical=bool(datatable_vertical)
+        )
+        step_args = report_utils.datatable_to_arguments(datatable)
+        reporter.update_existing_step(name=step_name, arguments=step_args)
 
 
 def pytest_sessionstart() -> None:
@@ -72,7 +103,14 @@ def pytest_bdd_after_step(
 ) -> None:
     """
     Called after step function is executed.
+    We use this to prettify the datatable into a standard format cucumber json
+    understands, but pytest-bdd does not currently support.
+
+    In order to style the direction of the datatable correctly, we need to know
+    if it's a vertical or horizontal datatable.  Therefore, we expect the step
+    argument to be called "datatable" or "datatable_vertical".
     """
+    get_datatable_from_step(step.name, step_func_args)
 
 
 def pytest_bdd_after_scenario(
@@ -113,6 +151,8 @@ def pytest_bdd_step_error(
     png = base64.b64encode(screenshot_bytes).decode()
     reporter.attach(png, "image/png")
 
+    get_datatable_from_step(step.name, step_func_args)
+
 
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(
@@ -125,6 +165,7 @@ def pytest_sessionfinish(
     to include, and generating a HTML version.
     """
     if reporter.is_running:
+        reporter.insert_existing_steps_into_json()
         reporter.insert_embeddings_into_report()
         reporter.insert_additional_steps_into_report()
         reporter.generate_html_report()

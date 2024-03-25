@@ -5,8 +5,11 @@ These are the common given steps that can be used in scenarios.
 """
 
 import httpx
+from django.contrib.auth.models import AbstractBaseUser
 from playwright.sync_api import Page
 from pytest_bdd import given, parsers
+
+from . import utils
 
 
 @given(parsers.cfparse('I am at the URL "{url}"'))
@@ -83,3 +86,27 @@ def logged_in_as_django_admin(page: Page, front_server):
     page.locator('input[name="username"]').fill("good@user.com")
     page.locator('input[name="password"]').fill("correct")
     page.locator('input[type="submit"]').click()
+
+
+@given(parsers.cfparse("I am the following user:\n{datatable_vertical}"))
+def the_following_user(datatable_vertical: str, django_user_model: AbstractBaseUser):
+    """
+    Create a user with the given details
+
+    Note: we accept an is_admin field to create a superuser
+
+    Example:
+    ```gherkin
+        Given I am the following user:
+            | email    | good2@user.com |
+            | password | correct        |
+    ```
+    """
+    datatable = utils.parse_datatable_string(datatable_vertical, vertical=True)
+
+    is_superuser = utils.cast_to_bool(datatable.pop("is_admin", ""))
+
+    if is_superuser:
+        django_user_model.objects.create_superuser(**datatable)
+    else:
+        django_user_model.objects.create_user(**datatable)

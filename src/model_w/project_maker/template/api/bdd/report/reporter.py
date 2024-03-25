@@ -7,8 +7,18 @@ to any step in a scenario.  Furthermore, it can be used to attach logs or any ot
 data to a step, which can be used to check the state of the application at any step
 in the flow.
 For example, checking the data layer at a certain point in the scenario.
+This is done by using the `report` fixture and calling `attach` or `attach_screenshot`
+methods.
 
-Also, videos and screenshots that Playwright generates are attached to the report.
+Also, the videos and screenshots that Playwright generates are attached to the report,
+respecting the playwright config that has been set.
+ie. `--video --screenshot` flags in the `pytest` command / pyproject.toml.
+
+The idea is to keep track of the current pytest-bdd feature, scenario, and step index by
+incrementing them in the appropriate pytest-bdd `hooks.py` and then at the end of the 
+session, inserting them into the created JSON.
+
+Finally, the JSON is converted to HTML using the `cucumber-html-reporter` npm package.
 """
 
 import base64
@@ -64,11 +74,15 @@ class Step:
     Represents a step in a scenario, which is useful for adding steps not supported in pytest-bdd such as Before and After.
 
     See: https://javadoc.io/doc/net.masterthought/cucumber-reporting/5.5.3/net/masterthought/cucumber/json/Step.html
+
+    This is used to add additional steps to the report, such as Before and After steps, and also existing steps, to change
+    properties such as name (to add the browser/device) or to prettify the data tables, so they can be read.
     """
 
     feature_index: int
     scenario_index: int
-    media_directory: Path
+    step_index: Optional[int] = None
+    media_directory: Optional[Path] = None
 
     hidden: bool = True
     keyword: str = ""
@@ -110,6 +124,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         self.is_running = False
         self.embeddings: List[StepEmbedding] = []
         self.additional_steps: List[Step] = []
+        self.existing_steps: List[Step] = []
         self.feature_uri: str = ""
         self.current_feature_index: int = RESET_INDEX
         self.current_scenario_index: int = RESET_INDEX
@@ -135,6 +150,25 @@ class Reporter(metaclass=utils.SingletonMeta):
             step_index=self.current_step_index,
         )
         self.embeddings.append(embedding)
+
+    def update_existing_step(
+        self, name: str, arguments: Optional[List[str]] = None
+    ) -> None:
+        """
+        Adds an existing step to the report with data to be modified at
+        the end of the session.  ie. formatting datatables.
+
+        Args:
+            arguments: The arguments of the step (used for prettifying data tables)
+        """
+        step = Step(
+            feature_index=self.current_feature_index,
+            scenario_index=self.current_scenario_index,
+            step_index=self.current_step_index,
+            name=name,
+            arguments=arguments,
+        )
+        self.existing_steps.append(step)
 
     def add_after_step(
         self,
@@ -259,13 +293,34 @@ class Reporter(metaclass=utils.SingletonMeta):
             report = json.load(file)
 
         for step in self.additional_steps:
-            feature = report[step.feature_index]
-            scenario = feature["elements"][step.scenario_index]
+            feature: dict = report[step.feature_index]
+            scenario: dict = feature["elements"][step.scenario_index]
+            steps: List[dict] = scenario["steps"]
 
             if step.keyword == "Before":
-                scenario["steps"].insert(0, step.to_json())
+                steps.insert(0, step.to_json())
             else:
-                scenario["steps"].append(step.to_json())
+                steps.append(step.to_json())
+
+        with open(self.json_report_path, "w") as file:
+            json.dump(report, file, indent=4)
+
+    def insert_existing_steps_into_json(self) -> None:
+        """
+        Merges the data stored in the existing steps to the cucumber report
+        For example, prettifying datatables etc.
+        """
+        with open(self.json_report_path, "r") as file:
+            report = json.load(file)
+
+        for existing_step in self.existing_steps:
+            feature: dict = report[existing_step.feature_index]
+            scenario: dict = feature["elements"][existing_step.scenario_index]
+            step: dict = scenario["steps"][existing_step.step_index]
+
+            if existing_step.arguments:
+                step["name"] = existing_step.name
+                step.setdefault("arguments", []).append(existing_step.arguments)
 
         with open(self.json_report_path, "w") as file:
             json.dump(report, file, indent=4)
@@ -356,6 +411,8 @@ class Reporter(metaclass=utils.SingletonMeta):
         return (
             f"Reporter - Running: {self.is_running}, "
             f"Embeddings: {len(self.embeddings)}, "
+            f"Additional Steps: {len(self.additional_steps)}, "
+            f"Existing Steps: {len(self.existing_steps)}, "
             f"JSON Report Path: {self.json_report_path}, "
             f"HTML Report Path: {self.html_report_path}"
         )
