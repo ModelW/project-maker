@@ -5,6 +5,7 @@ This file tests the utility functions that the tester may need.
 import pytest
 
 from .fixtures import utils as fixtures_utils
+from .report import utils as report_utils
 from .step_definitions import utils as step_def_utils
 
 # Uses the global pytestmark variable to add the bdd_utils marker to all tests in this file.
@@ -69,6 +70,25 @@ def test_should_get_nuxt_3_server_url_ipv6():
 
 def test_should_return_none_when_no_match():
     assert fixtures_utils.get_nuxt_3_server_url("Local: http://localhost:3000/") is None
+
+
+#########################
+# REPORTING UTILS TESTS #
+#########################
+
+
+def test_should_get_singleton_instance():
+    class MyClass(metaclass=report_utils.SingletonMeta):
+        """A class that should only have one instance."""
+
+        def __init__(self, hello: str = None):
+            self.hello = hello
+
+    instance1 = MyClass("world")
+
+    assert instance1 is MyClass()
+    assert instance1.hello == "world"
+    assert MyClass().hello == "world"
 
 
 ###############################
