@@ -95,10 +95,10 @@ def front_build(front_dir: Path, front_env) -> None:
     Builds the front-end
 
     Note: As sometimes you want a test to run quickly without the build
-          rather long stage, you can set the environment variable FRONTBUILD=0
+          rather long stage, you can set the environment variable SKIPBUILD=1
     """
 
-    if os.environ.get("FRONTBUILD", "1") != "0":
+    if os.environ.get("SKIPBUILD", "0") != "1":
         logger.info("Running npm run build")
         subprocess.run(
             ["npm", "run", "build"],
