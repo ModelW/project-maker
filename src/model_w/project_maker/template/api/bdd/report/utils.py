@@ -1,3 +1,6 @@
+from typing import List, TypedDict
+
+
 class SingletonMeta(type):
     """
     A General purpose singleton class.
@@ -24,3 +27,52 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+
+class DatatableRow(TypedDict):
+    cells: List[str]
+
+
+class ReportDatatable(TypedDict):
+    rows: List[DatatableRow]
+
+
+def datatable_to_arguments(
+    datatable: dict[str, str] | list[dict[str, str]]
+) -> ReportDatatable:
+    """
+    Converts a datatable to a format that can be displayed nicely in the report.
+    The standard format for a datatable is a dictionary of rows and cells.
+
+    Note: We can accept horizontal and vertical datatables.
+          A vertical datatable is a dictionary of key-value pairs.
+          A horizontal datatable is a list of dictionaries.
+
+    Example:
+    ```gherkin
+        Given the following vertical datatable:
+        | key1    | value1  |
+        | key2    | value2  |
+    ```
+    Example:
+    ```gherkin
+        Given the following horizontal datatable:
+        | key1   | key2   |
+        | value1 | value2 |
+    ```
+
+    Args:
+        datatable (dict[str, str] | list[dict[str, str]]): The datatable to convert
+
+    Returns:
+        dict[rows:
+    """
+
+    if isinstance(datatable, dict):
+        keys = list(datatable.keys())
+        values = list(datatable.values())
+        rows = [{"cells": keys}, {"cells": values}]
+    else:
+        rows = [{"cells": list(row.keys())} for row in datatable[:1]]
+        rows.extend([{"cells": list(row.values())} for row in datatable])
+    return {"rows": rows}

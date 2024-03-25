@@ -91,6 +91,35 @@ def test_should_get_singleton_instance():
     assert MyClass().hello == "world"
 
 
+def test_vertical_datatable_to_arguments():
+    datatable = {
+        "key1": "value1",
+        "key2": "value2",
+    }
+    expected = {
+        "rows": [
+            {"cells": ["key1", "key2"]},
+            {"cells": ["value1", "value2"]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
+def test_horizontal_datatable_to_arguments():
+    datatable = [
+        {"key1": "value1", "key2": "value2"},
+        {"key1": "value3", "key2": "value4"},
+    ]
+    expected = {
+        "rows": [
+            {"cells": ["key1", "key2"]},
+            {"cells": ["value1", "value2"]},
+            {"cells": ["value3", "value4"]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
 ###############################
 # STEP DEFINITION UTILS TESTS #
 ###############################
@@ -250,3 +279,39 @@ def test_should_parse_datatable_with_empty_values_vertically():
         )
         == {"id": "1", "name": "foo", "age": "", "foo": "bar"}
     )
+
+
+def test_get_datatable_from_step():
+    step_name = (
+        "Given the following vertical datatable:\n| key1 | value1 |\n| key2 | value2 |"
+    )
+    assert (
+        step_def_utils.get_datatable_from_step_name(step_name)
+        == "| key1 | value1 |\n| key2 | value2 |"
+    )
+
+
+def test_get_datatable_from_step_without_datatable():
+    step_name = "Given I am logged in as a CMS admin"
+    assert step_def_utils.get_datatable_from_step_name(step_name) is None
+
+
+def test_cast_to_bool_true():
+    assert step_def_utils.cast_to_bool("True") is True
+    assert step_def_utils.cast_to_bool("true") is True
+    assert step_def_utils.cast_to_bool("yes") is True
+    assert step_def_utils.cast_to_bool("y") is True
+    assert step_def_utils.cast_to_bool("1") is True
+
+
+def test_cast_to_bool_false():
+    assert step_def_utils.cast_to_bool("False") is False
+    assert step_def_utils.cast_to_bool("false") is False
+    assert step_def_utils.cast_to_bool("no") is False
+    assert step_def_utils.cast_to_bool("n") is False
+    assert step_def_utils.cast_to_bool("0") is False
+    assert step_def_utils.cast_to_bool("") is False
+
+
+def test_cast_to_bool_invalid():
+    pytest.raises(ValueError, step_def_utils.cast_to_bool, "invalid")
