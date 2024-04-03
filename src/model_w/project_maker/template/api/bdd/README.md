@@ -22,10 +22,13 @@ The recipe for creating BDD tests is:
 1. Create a feature file (using existing step definitions, if possible)
 2. Create any missing step definitions
 3. Add any missing data-testid attributes to elements in your source code
-4. Run using `pytest`.
+4. Run using `pytest`. (Use `--exitfirst` to fail immediately if one test fails)
 
 Note: If you need to debug the site under test, run `PWDEBUG=1 pytest`, and you
 can use Playwright's debugger.
+
+To quicken the process while creating tests, you can skip the front's
+`npm run build` stage with `SKIPBUILD=1 pytest`
 
 Some reasonable defaults have been set in [pyproject.toml](../pyproject.toml),
 however, any options can be set in the terminal when running pytest. See the
@@ -35,7 +38,9 @@ well as `pytest --help`.
 ## Usage
 
 To run only certain tests, use `-m` and the list of tags to run (separated with
-`and`).
+`and`). See the
+[pytest-bdd docs](https://pytest-bdd.readthedocs.io/en/stable/#organizing-your-scenarios)
+for info.
 
 ```bash
 pytest -m current
@@ -141,7 +146,8 @@ has less impact, than creating the test data manually.
 -   How do I write non-BDD unit tests?
 
     -   API: Simply make a file beginning with test\_ or ending with \_test, and
-        write your test as pytest recommends.
+        write your test as pytest recommends. See [test_utils.py](test_utils.py)
+        for an example.
 
     ```python
     # test_maths.py
