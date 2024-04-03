@@ -1,3 +1,4 @@
+from html import unescape
 from typing import List, TypedDict
 
 
@@ -69,10 +70,14 @@ def datatable_to_arguments(
     """
 
     if isinstance(datatable, dict):
-        keys = list(datatable.keys())
-        values = list(datatable.values())
+        keys = [unescape(key) for key in datatable.keys()]
+        values = [unescape(value) for value in datatable.values()]
         rows = [{"cells": keys}, {"cells": values}]
     else:
-        rows = [{"cells": list(row.keys())} for row in datatable[:1]]
-        rows.extend([{"cells": list(row.values())} for row in datatable])
+        rows = [
+            {"cells": [unescape(key) for key in row.keys()]} for row in datatable[:1]
+        ]
+        rows.extend(
+            [{"cells": [unescape(key) for key in row.values()]} for row in datatable]
+        )
     return {"rows": rows}

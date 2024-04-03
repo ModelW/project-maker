@@ -120,6 +120,57 @@ def test_horizontal_datatable_to_arguments():
     assert report_utils.datatable_to_arguments(datatable) == expected
 
 
+def test_datatable_to_arguments_with_empty_values():
+    datatable = [
+        {"key1": "value1", "key2": ""},
+        {"key1": "", "key2": "value2"},
+    ]
+    expected = {
+        "rows": [
+            {"cells": ["key1", "key2"]},
+            {"cells": ["value1", ""]},
+            {"cells": ["", "value2"]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
+def test_datatable_to_arguments_with_empty_values_vertically():
+    datatable = {
+        "key1": "value1",
+        "key2": "",
+    }
+    expected = {
+        "rows": [
+            {"cells": ["key1", "key2"]},
+            {"cells": ["value1", ""]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
+def test_datatable_to_arguments_with_escaped_pipes():
+    datatable = [{"key &verbar; 1": "value &verbar; 1"}]
+    expected = {
+        "rows": [
+            {"cells": ["key | 1"]},
+            {"cells": ["value | 1"]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
+def test_datatable_to_arguments_with_escaped_pipes_vertically():
+    datatable = {"key &verbar; 1": "value &verbar; 1"}
+    expected = {
+        "rows": [
+            {"cells": ["key | 1"]},
+            {"cells": ["value | 1"]},
+        ]
+    }
+    assert report_utils.datatable_to_arguments(datatable) == expected
+
+
 ###############################
 # STEP DEFINITION UTILS TESTS #
 ###############################
