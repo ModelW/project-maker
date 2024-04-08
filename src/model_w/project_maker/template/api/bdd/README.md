@@ -15,6 +15,16 @@ Here is where all the BDD testing for the entire project exists.
 After installing the project, you will need to install the Playwright browsers
 with: `playwright install` (Remember to have your virtual environment activated)
 
+## How to use in this BDD folder in a pre-existing ModelW project?
+
+-   Copy this entire [bdd/](./) folder into /api of your ModelW project.
+-   Copy the configs in [pyproject.toml](../pyproject.toml) for:
+    -   `tool.poetry.group.test.dependencies`
+    -   `tool.pytest.ini_options`
+-   `poetry lock --no-update` (to sync the new dependencies)
+-   `poetry install` (to install the new dependencies)
+-   `playwright install` (in your Poetry env)
+
 ## Quick start
 
 The recipe for creating BDD tests is:
