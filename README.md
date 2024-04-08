@@ -15,7 +15,7 @@ This will ask you a few questions and create the project's directory for you.
 
 In order to execute the script, you need:
 
--   Python 3.10 (you can use pyenv to load it in your current shell)
+-   Python 3.11 (you can use pyenv to load it in your current shell)
 -   Poetry (follow the instructions on
     [their website](https://python-poetry.org/docs/#installation))
 -   Git (you know where to get it)
