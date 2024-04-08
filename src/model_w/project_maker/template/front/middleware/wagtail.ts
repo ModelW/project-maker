@@ -151,7 +151,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
     async function getServerData() {
         const resp = await fetchDjangoPage();
         const data = decideResponseStrategy(resp);
-        console.log({ data });
         return data;
     }
 
