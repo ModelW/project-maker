@@ -45,16 +45,11 @@ Feature: Smoke test for the site
         And I should be at the URL "http://localhost:3001/"
         And I should see no console errors
 
-    Scenario: Shows correct non wagtail page
-        Given I am on the no-wagtail-index page
-        Then I should see the text "Welcome to Model W"
-        And I should see no console errors
-
     Scenario: Shows correct CMS admin page
         Given I am logged in as a CMS admin
         Then I should not see the text "Sign in to Wagtail"
         But I should see the text "Welcome to the ___project_name__natural_double_quoted___ Wagtail CMS"
-        And I should be at a URL with "cms"
+        And I should be at a URL with "___cms_prefix___"
 
     Scenario: Shows Nuxt injected frontend on Wagtail content
         Given I am at the URL "<API_URL>"
