@@ -13,9 +13,13 @@ Feature: Smoke test for the site
         And I should see the following Django admin models:
             | Group name                       | Model name    |
             | Authentication and Authorization | Groups        |
+            # :: IF api__celery
             | Celery Results                   | Group Results |
             | Celery Results                   | Task Results  |
+            # :: ENDIF
+            # :: IF api__wagtail
             | Taggit                           | Tags          |
+    # :: ENDIF
 
     Scenario Outline: Needs correct log in to access Django admin
         Given I am on the /back/admin page

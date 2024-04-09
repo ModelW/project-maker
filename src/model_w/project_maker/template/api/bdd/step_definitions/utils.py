@@ -6,6 +6,14 @@ import re
 from typing import List
 
 
+def remove_model_w_template_engine_keywords(text: str) -> str:
+    """
+    Used to remove lines beginning with `# ::` as used in ModelW templates
+    Note: The line may have whitespace before the `#` and after the `::`
+    """
+    return re.sub(r"^\s*# ::.*\n", "", text, flags=re.MULTILINE)
+
+
 def split_on_pipes(text: str) -> List[str]:
     """
     Splits a string on pipes and returns a list of the results
@@ -37,7 +45,8 @@ def parse_datatable_string(datatable_string: str, vertical=False):
     without them.
 
     """
-
+    # Remove ModelW template engine keywords
+    datatable_string = remove_model_w_template_engine_keywords(datatable_string)
     # Split the string into lines
     lines = datatable_string.strip().split("\n")
     # Remove leading and trailing whitespace from each line

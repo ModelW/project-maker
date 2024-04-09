@@ -176,6 +176,60 @@ def test_datatable_to_arguments_with_escaped_pipes_vertically():
 ###############################
 
 
+def test_remove_model_w_template_engine_keywords():
+    assert (
+        step_def_utils.remove_model_w_template_engine_keywords(
+            """
+        And I should see the following Django admin models:
+            | Group name                       | Model name    |
+            | Authentication and Authorization | Groups        |
+            # :: IF api__celery
+            | Celery Results                   | Group Results |
+            | Celery Results                   | Task Results  |
+            # :: ENDIF
+            # :: IF api__wagtail
+            | Taggit                           | Tags          |
+    # :: ENDIF
+        """
+        )
+        == """
+        And I should see the following Django admin models:
+            | Group name                       | Model name    |
+            | Authentication and Authorization | Groups        |
+            | Celery Results                   | Group Results |
+            | Celery Results                   | Task Results  |
+            | Taggit                           | Tags          |
+        """
+    )
+
+
+def test_remove_model_w_template_engine_keywords_with_no_keywords():
+    assert (
+        step_def_utils.remove_model_w_template_engine_keywords(
+            """
+        And I should see the following Django admin models:
+            | Group name                       | Model name    |
+            | Authentication and Authorization | Groups        |
+            | Celery Results                   | Group Results |
+            | Celery Results                   | Task Results  |
+            | Taggit                           | Tags          |
+        """
+        )
+        == """
+        And I should see the following Django admin models:
+            | Group name                       | Model name    |
+            | Authentication and Authorization | Groups        |
+            | Celery Results                   | Group Results |
+            | Celery Results                   | Task Results  |
+            | Taggit                           | Tags          |
+        """
+    )
+
+
+def test_remove_model_w_template_engine_keywords_with_no_string():
+    assert step_def_utils.remove_model_w_template_engine_keywords("") == ""
+
+
 def test_should_split_on_pipes():
     assert step_def_utils.split_on_pipes("| id | name |   age |") == [
         "id",
