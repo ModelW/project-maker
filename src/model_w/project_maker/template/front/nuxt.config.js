@@ -1,7 +1,8 @@
 import { envManager, defineModelWConfig } from "@model-w/preset-nuxt3";
+import { defu } from "defu";
 
 export default envManager((env) => {
-    return defineModelWConfig(env, {
+    const modelWConfig = defineModelWConfig(env, {
         siteName: "___project_name__snake___",
         head: {
             meta: [
@@ -15,4 +16,10 @@ export default envManager((env) => {
         },
         cmsAlias: "___cms_prefix___",
     });
+
+    const viteNuxtConfig = defineNuxtConfig({
+        modules: ["@pinia/nuxt"],
+    });
+
+    return defu(modelWConfig, viteNuxtConfig);
 });
