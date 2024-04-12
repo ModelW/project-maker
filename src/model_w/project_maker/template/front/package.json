@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@model-w/axios": "1.x",
-        "@model-w/preset-nuxt3": ">=2024.4.0-beta.2 && <2024.5.0",
+        "@model-w/preset-nuxt3": ">=2024.4.0 && <2024.5.0",
         "@model-w/proxy": "2.x",
         "@model-w/sentry": "1.x",
         "@pinia/nuxt": "^0.5.1",

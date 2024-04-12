@@ -24,7 +24,7 @@ modelw-preset-django = {extras = [
     # :: IF api__wsgi
     "gunicorn",
     # :: ENDIF
-], version = ">=2024.4.0b1,<2024.5.0", allow-prereleases = true}
+], version = ">=2024.4.0,<2024.5.0"}
 drf-spectacular = {extras = ["sidecar"], version = "^0.26.2"}
 
 [tool.poetry.group.dev.dependencies]
