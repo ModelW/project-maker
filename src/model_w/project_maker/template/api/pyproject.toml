@@ -12,6 +12,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "~3.11"
 modelw-preset-django = {extras = [
+    "health",
     # :: IF api__celery
     "celery",
     # :: ENDIF

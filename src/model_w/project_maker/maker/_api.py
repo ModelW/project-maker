@@ -90,6 +90,7 @@ class ApiComponent(BaseComponent):
                 "/api/___project_name__snake___/apps/realtime/",
                 "/api/___project_name__snake___/django/routing.py",
                 "/api/___project_name__snake___/django/asgi.py",
+                "/api/___project_name__snake___/apps/health/tasks.py",
             ],
         )
         self.celery_ignore = pathspec.PathSpec.from_lines(

@@ -1,3 +1,4 @@
+from ___project_name__snake___.apps.people.views import MeViewSet
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
@@ -10,8 +11,6 @@ from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
 # :: ENDIF
-
-from ___project_name__snake___.apps.people.views import MeViewSet
 
 
 admin.site.site_title = _("___project_name__natural_double_quoted___")
