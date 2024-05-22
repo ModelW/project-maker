@@ -1,4 +1,4 @@
-from william.django.celery import app
+from ___project_name__snake___.django.celery import app
 
 from .models import Event
 from .resolver import build_resolver

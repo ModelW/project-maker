@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Optional
 from django.db import models
 from django.db.transaction import atomic
 from django.utils.timezone import now
-from william.health.base import Status
-from william.health.itertools2 import n_uple
+from ___project_name__snake___.health.base import Status
+from ___project_name__snake___.health.itertools2 import n_uple
 
 if TYPE_CHECKING:
-    from william.health.resolver import Cause
+    from ___project_name__snake___.health.resolver import Cause
 
 
 class EventQuerySet(models.QuerySet):
