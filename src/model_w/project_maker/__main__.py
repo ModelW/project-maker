@@ -251,6 +251,7 @@ def main(argv: Optional[Sequence[str]] = None):
             "Are you fancy enough to use WebSockets?"
         )
         context["api"]["wsgi"] = not context["api"]["channels"]
+        context["api"]["redis"] = context["api"]["celery"] or context["api"]["channels"]
 
     if context["api"]["wagtail"]:
         context["cms_prefix"] = Prompt.ask(

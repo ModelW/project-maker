@@ -257,6 +257,8 @@ def build_resolver() -> Resolver:
         )
     )
 
+    # :: IF api__redis
+
     resolver.register(
         Instance(
             code="I002",
@@ -264,6 +266,8 @@ def build_resolver() -> Resolver:
             depends_on=[],
         )
     )
+
+    # :: ENDIF
 
     resolver.register(
         Instance(
@@ -273,6 +277,7 @@ def build_resolver() -> Resolver:
         )
     )
 
+    # :: IF api__celery
     resolver.register(
         Instance(
             code="S002",
@@ -288,6 +293,7 @@ def build_resolver() -> Resolver:
             depends_on=["S002"],
         )
     )
+    # :: ENDIF
 
     resolver.build_graph()
 

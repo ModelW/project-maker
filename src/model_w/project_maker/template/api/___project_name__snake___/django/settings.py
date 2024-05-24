@@ -96,15 +96,15 @@ with EnvManager(ModelWDjango()) as env:
     # ---
     CELERY_BEAT_SCHEDULE = {
         "log-beat": {
-            "task": "___project_name__snake___.health.tasks.log_beat",
+            "task": "___project_name__snake___.apps.health.tasks.log_beat",
             "schedule": timedelta(minutes=1),
         },
         "clean-health-log": {
-            "task": "___project_name__snake___.health.tasks.clear_log",
+            "task": "___project_name__snake___.apps.health.tasks.clear_log",
             "schedule": timedelta(hours=1),
         },
         "check-status": {
-            "task": "___project_name__snake___.health.tasks.check_status",
+            "task": "___project_name__snake___.apps.health.tasks.check_status",
             "schedule": timedelta(minutes=1),
         },
     }

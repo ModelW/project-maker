@@ -1,7 +1,9 @@
 from typing import Mapping, Sequence
 
 from health_check.cache.backends import CacheBackend
+# :: IF api__celery
 from health_check.contrib.celery_ping.backends import CeleryPingHealthCheck
+# :: ENDIF
 from health_check.contrib.psutil.backends import MemoryUsage
 from health_check.db.backends import DatabaseBackend
 
@@ -130,6 +132,7 @@ The memory usage in the container running the application is too high.
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["api"]
 
+# :: IF api__redis
 
 class Cache(DjangoHealthCheckWrapper):
     """
@@ -163,7 +166,9 @@ entry in the cache.
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["redis"]
 
+# :: ENDIF
 
+# :: IF api__celery
 class CeleryPing(DjangoHealthCheckWrapper):
     """
     Validates that Celery is working and replying.
@@ -253,3 +258,5 @@ logged a heartbeat in the last 3 minutes.
 
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["celery_beat"]
+
+# :: ENDIF
