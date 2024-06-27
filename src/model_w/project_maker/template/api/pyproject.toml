@@ -26,7 +26,7 @@ modelw-preset-django = {extras = [
     "gunicorn",
     # :: ENDIF
 ], version = ">=2024.4.0,<2024.5.0"}
-drf-spectacular = {extras = ["sidecar"], version = "^0.26.2"}
+drf-spectacular = {extras = ["sidecar"], version = "^0.27.2"}
 # Health check modules
 markdown = "^3.5.1"
 networkx = "^3.2.1"
