@@ -8,12 +8,13 @@ import httpx
 from django.contrib.auth.models import AbstractBaseUser
 from playwright.sync_api import Page
 from pytest_bdd import given, parsers
+from pytest_django.live_server_helper import LiveServer
 
 from . import utils
 
 
 @given(parsers.cfparse('I am at the URL "{url}"'))
-def at_url(url: str, page: Page, front_server, live_server):
+def at_url(url: str, page: Page, front_server: str, live_server: LiveServer):
     """
     Go to the given URL
 
@@ -25,12 +26,13 @@ def at_url(url: str, page: Page, front_server, live_server):
         Given I am at the URL "https://example.com"
         Given I am at the URL "http://localhost:3000/me"
         Given I am at the URL "http://localhost:3000/me?q=1"
+        Given I am at the URL "<API_URL>"
     """
 
     # Map special URLs as required, else use the supplied URL
     SPECIAL_URLS = {
-        "<API_URL>": str(live_server),
-        "<FRONT_URL>": str(front_server),
+        "<API_URL>": live_server.url,
+        "<FRONT_URL>": front_server,
     }
 
     for key, value in SPECIAL_URLS.items():
@@ -40,7 +42,7 @@ def at_url(url: str, page: Page, front_server, live_server):
 
 
 @given(parsers.cfparse("I am on the {page_name} page"))
-def on_page(page_name: str, page: Page, front_server):
+def on_page(page_name: str, page: Page, front_server: str):
     """
     Go to the given page
 
@@ -67,7 +69,7 @@ def on_page(page_name: str, page: Page, front_server):
 
 
 @given(parsers.cfparse("I am logged in as a CMS admin"))
-def logged_in_as_cms_admin(page: Page, front_server):
+def logged_in_as_cms_admin(page: Page, front_server: str):
     """
     Log in as an admin to the CMS
     """
