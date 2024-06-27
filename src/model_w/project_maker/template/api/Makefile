@@ -1,3 +1,5 @@
+.PHONY: format black isort celery_run 
+
 PYTHON_BIN ?= poetry run python
 
 format: isort black
@@ -7,3 +9,6 @@ black:
 
 isort:
 	$(PYTHON_BIN) -m isort .
+
+celery_run:
+	poetry run celery --app ___project_name__snake___.django.celery:app worker --loglevel=INFO --beat
