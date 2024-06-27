@@ -25,7 +25,7 @@ modelw-preset-django = {extras = [
     "gunicorn",
     # :: ENDIF
 ], version = ">=2024.4.0,<2024.5.0"}
-drf-spectacular = {extras = ["sidecar"], version = "^0.26.2"}
+drf-spectacular = {extras = ["sidecar"], version = "^0.27.2"}
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
@@ -40,6 +40,7 @@ pytest-django = "^4.8.0"
 pytest-html = "^4.1.1"
 pytest-playwright = "^0.4.4"
 node-edge = {version = "^0.1.0b6", allow-prereleases = true}
+pyyaml = "^6.0.1"
 
 [tool.isort]
 profile = "black"

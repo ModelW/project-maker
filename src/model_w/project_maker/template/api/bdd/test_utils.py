@@ -1,4 +1,6 @@
 """
+Test the utility functions that the BDD tester needs.
+
 This file tests the utility functions that the tester may need.
 """
 
@@ -100,7 +102,7 @@ def test_vertical_datatable_to_arguments():
         "rows": [
             {"cells": ["key1", "key2"]},
             {"cells": ["value1", "value2"]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -115,7 +117,7 @@ def test_horizontal_datatable_to_arguments():
             {"cells": ["key1", "key2"]},
             {"cells": ["value1", "value2"]},
             {"cells": ["value3", "value4"]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -130,7 +132,7 @@ def test_datatable_to_arguments_with_empty_values():
             {"cells": ["key1", "key2"]},
             {"cells": ["value1", ""]},
             {"cells": ["", "value2"]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -144,7 +146,7 @@ def test_datatable_to_arguments_with_empty_values_vertically():
         "rows": [
             {"cells": ["key1", "key2"]},
             {"cells": ["value1", ""]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -155,7 +157,7 @@ def test_datatable_to_arguments_with_escaped_pipes():
         "rows": [
             {"cells": ["key | 1"]},
             {"cells": ["value | 1"]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -166,7 +168,7 @@ def test_datatable_to_arguments_with_escaped_pipes_vertically():
         "rows": [
             {"cells": ["key | 1"]},
             {"cells": ["value | 1"]},
-        ]
+        ],
     }
     assert report_utils.datatable_to_arguments(datatable) == expected
 
@@ -183,14 +185,10 @@ def test_remove_model_w_template_engine_keywords():
         And I should see the following Django admin models:
             | Group name                       | Model name    |
             | Authentication and Authorization | Groups        |
-            # :: IF api__celery
             | Celery Results                   | Group Results |
             | Celery Results                   | Task Results  |
-            # :: ENDIF
-            # :: IF api__wagtail
             | Taggit                           | Tags          |
-    # :: ENDIF
-        """
+        """,
         )
         == """
         And I should see the following Django admin models:
@@ -213,7 +211,7 @@ def test_remove_model_w_template_engine_keywords_with_no_keywords():
             | Celery Results                   | Group Results |
             | Celery Results                   | Task Results  |
             | Taggit                           | Tags          |
-        """
+        """,
         )
         == """
         And I should see the following Django admin models:
@@ -267,7 +265,7 @@ def test_should_parse_datatable():
         | id | name |   age |
         | 1  | foo  |  1    |
         | 2  | bar  |  22   |
-        """
+        """,
         )
         == [
             {"id": "1", "name": "foo", "age": "1"},
@@ -289,7 +287,7 @@ def test_should_parse_datatable_with_extra_blank_lines():
 
 
         
-        """
+        """,
         )
         == [
             {"id": "1", "name": "foo", "age": "1"},
@@ -311,7 +309,7 @@ def test_should_parse_datatable_with_extra_blank_white_space():
 
 
         
-        """
+        """,
         )
         == [
             {"id": "1", "name": "foo", "age": "1"},
@@ -361,7 +359,7 @@ def test_should_parse_datatable_with_empty_values():
     | 1  | foo  |     |
     |    | bar  |  22 |
     | 2  |      |  22 |
-    """
+    """,
         )
         == [
             {"id": "1", "name": "foo", "age": ""},
@@ -399,6 +397,80 @@ def test_get_datatable_from_step():
 def test_get_datatable_from_step_without_datatable():
     step_name = "Given I am logged in as a CMS admin"
     assert step_def_utils.get_datatable_from_step_name(step_name) is None
+
+
+def test_should_parse_datatable_with_yaml_string_only():
+    datatable_string = """
+        | key1   | key2   |
+        | Value1 | Value2 |
+    """
+    actual = step_def_utils.parse_datatable_string(datatable_string, is_yaml=True)
+    expected = [{"key1": "Value1", "key2": "Value2"}]
+
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
+
+
+def test_should_parse_datatable_with_yaml_with_numbers():
+    datatable_string = """
+        | key1 | key2 |
+        | 1    | 2    |
+    """
+    actual = step_def_utils.parse_datatable_string(datatable_string, is_yaml=True)
+    expected = [{"key1": 1, "key2": 2}]
+
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
+
+
+def test_should_parse_datatable_with_yaml_with_boolean():
+    datatable_string = """
+        | key1 | key2 |
+        | yes  | no   |
+    """
+    actual = step_def_utils.parse_datatable_string(datatable_string, is_yaml=True)
+    expected = [{"key1": True, "key2": False}]
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
+
+
+def test_should_parse_vertical_datatable_with_yaml_string_only():
+    datatable_string = """
+        | key1   | Value1 |
+        | key2   | Value2 |
+    """
+    actual = step_def_utils.parse_datatable_string(
+        datatable_string,
+        vertical=True,
+        is_yaml=True,
+    )
+    expected = {"key1": "Value1", "key2": "Value2"}
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
+
+
+def test_should_parse_vertical_datatable_with_yaml_with_numbers():
+    datatable_string = """
+        | key1 | 1 |
+        | key2 | 2 |
+    """
+    actual = step_def_utils.parse_datatable_string(
+        datatable_string,
+        vertical=True,
+        is_yaml=True,
+    )
+    expected = {"key1": 1, "key2": 2}
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
+
+
+def test_should_parse_vertical_datatable_with_yaml_with_boolean():
+    datatable_string = """
+        | key1 | yes |
+        | key2 | no  |
+    """
+    actual = step_def_utils.parse_datatable_string(
+        datatable_string,
+        vertical=True,
+        is_yaml=True,
+    )
+    expected = {"key1": True, "key2": False}
+    assert actual == expected, f"Actual: {actual}, Expected: {expected}"
 
 
 def test_cast_to_bool_true():
