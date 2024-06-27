@@ -67,10 +67,13 @@ def network_requests(page: Page) -> List[Request]:
 
 
 @pytest.fixture(scope="session")
-def front_dir() -> Path:
-    """Location of the front-end source code"""
-
-    return settings.BASE_DIR / ".." / "front"
+def front_dir() -> Path | None:
+    """
+    Location of the front-end source code
+    Note: If the environment variable FRONTURL is set, this fixture will return None
+    """
+    if not os.environ.get("FRONTURL"):
+        return settings.BASE_DIR / ".." / "front"
 
 
 @pytest.fixture(scope="session")
@@ -114,71 +117,92 @@ def front_build(front_dir: Path, front_env) -> None:
 def front_server(front_build: None, front_dir: Path, front_env):
     """Starts the front-end until the fixture isn't required any more.
     The returned value is the base URL of that running front-end.
+
+    Note: To test on a URL without starting the server, you can set the
+          environment variable FRONTURL.
     """
-    with subprocess.Popen(
-        ["npm", "run", "preview"],
-        cwd=front_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
-        text=True,
-        env={**os.environ, **front_env},
-    ) as p:
-        for stream in [p.stdout, p.stderr]:
-            fd = stream.fileno()
-            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    if server_address := os.environ.get("FRONTURL"):
+        logger.info(f"Using FRONTURL env var: {server_address} as front server.")
+        yield server_address
 
-        server_address = None
-        total_timeout = 5
-        start_time = time.time()
-        output = {"stdout": "", "stderr": ""}
+    else:
+        with subprocess.Popen(
+            ["npm", "run", "preview"],
+            cwd=front_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            env={**os.environ, **front_env},
+        ) as p:
+            logger.info("Starting the front-end server...")
+            for stream in [p.stdout, p.stderr]:
+                fd = stream.fileno()
+                fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+                fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-        try:
-            while not server_address:
-                remaining_time = total_timeout - (time.time() - start_time)
+            server_address = None
+            total_timeout = 5
+            start_time = time.time()
+            output = {"stdout": "", "stderr": ""}
 
-                if remaining_time <= 0:
-                    raise TimeoutError(
-                        f"Server did not start within the given timeout. "
-                        f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
+            try:
+                while not server_address:
+                    remaining_time = total_timeout - (time.time() - start_time)
+
+                    if remaining_time <= 0:
+                        raise TimeoutError(
+                            f"Server did not start within the given timeout. "
+                            f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
+                        )
+
+                    ready, _, _ = select.select(
+                        [p.stdout, p.stderr], [], [], remaining_time
                     )
 
-                ready, _, _ = select.select(
-                    [p.stdout, p.stderr], [], [], remaining_time
-                )
+                    for stream in ready:
+                        try:
+                            line = stream.readline()
+                            if stream is p.stdout:
+                                output["stdout"] += line
+                            else:
+                                output["stderr"] += line
+                        except IOError:
+                            continue
 
-                for stream in ready:
-                    try:
-                        line = stream.readline()
-                        if stream is p.stdout:
-                            output["stdout"] += line
-                        else:
-                            output["stderr"] += line
-                    except IOError:
-                        continue
-
-                    if stream is p.stdout and line:
-                        if match := utils.get_nuxt_3_server_url(line):
-                            server_address = match
+                        if stream is p.stdout and line:
+                            if match := utils.get_nuxt_3_server_url(line):
+                                server_address = match
+                                break
+                        elif not line:
                             break
-                    elif not line:
-                        break
 
-            server_address = utils.strip_ansi(server_address)
+                server_address = utils.strip_ansi(server_address)
 
-            # We force localhost rather than IP, so the cookies work
-            if "127.0.0.1" in server_address:
-                server_address = server_address.replace("127.0.0.1", "localhost")
+                # We force localhost rather than IP, so the cookies work
+                if "127.0.0.1" in server_address:
+                    server_address = server_address.replace("127.0.0.1", "localhost")
 
-            yield server_address
+                yield server_address
 
-        except Exception as e:
-            raise ChildProcessError(
-                f"Failed to start the server: {str(e)} "
-                f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
-            )
-        finally:
-            utils.kill_child_processes(p.pid)
-            p.terminate()
-            p.wait()
+            except Exception as e:
+                raise ChildProcessError(
+                    f"Failed to start the server: {str(e)} "
+                    f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
+                )
+            finally:
+                # Capture and log any remaining output
+                remaining_output = "".join(p.stdout.readlines())
+                remaining_error = "".join(p.stderr.readlines())
+
+                if remaining_output:
+                    logger.info("Front-end server logs:\n%s", remaining_output.strip())
+                if remaining_error:
+                    logger.error(
+                        "Front-end server error logs:\n%s",
+                        remaining_error.strip(),
+                    )
+
+                utils.kill_child_processes(p.pid)
+                p.terminate()
+                p.wait()

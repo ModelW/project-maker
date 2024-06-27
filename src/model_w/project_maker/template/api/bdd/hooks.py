@@ -6,9 +6,12 @@ extra information to the JSON reporter such as screenshots and logs.
 """
 
 import base64
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pytest
+import pytest_bdd
+import pytest_bdd.exceptions
 from playwright.sync_api import Page
 from pytest_bdd.parser import Feature, Scenario, Step
 from slugify import slugify
@@ -21,7 +24,7 @@ reporter = Reporter()
 
 
 def get_datatable_from_step(step_name: str, step_func_args: Callable[..., Any]):
-    """
+    r"""
     Extracts the datatable from the step function arguments to display
     it in the report nicely.
 
@@ -35,7 +38,6 @@ def get_datatable_from_step(step_name: str, step_func_args: Callable[..., Any]):
     This way, if the naming convention is ignored, we still get OK results,
     just the header styling of table.
     """
-
     datatable_vertical = step_func_args.get("datatable_vertical")
 
     datatable = step_utils.get_datatable_from_step_name(step_name)
@@ -43,18 +45,15 @@ def get_datatable_from_step(step_name: str, step_func_args: Callable[..., Any]):
     if datatable:
         step_name = step_name.split("\n")[0]
         datatable = step_utils.parse_datatable_string(
-            datatable, vertical=bool(datatable_vertical)
+            datatable,
+            vertical=bool(datatable_vertical),
         )
         step_args = report_utils.datatable_to_arguments(datatable)
         reporter.update_existing_step(name=step_name, arguments=step_args)
 
 
 def pytest_sessionstart() -> None:
-    """
-    Called before the test loop is started.
-
-    We use this to initialize the reporter, which is used to store additional data
-    """
+    """Called before the test loop is started."""
 
 
 def pytest_bdd_before_scenario(
@@ -68,7 +67,6 @@ def pytest_bdd_before_scenario(
     executing, so we can add the correct additional data to the correct scenario
     in the report.
     """
-
     reporter.start()
 
     if reporter.feature_uri != feature.rel_filename:
@@ -131,7 +129,6 @@ def pytest_bdd_after_scenario(
     Called after scenario is executed successfully.
     We use this to add a After steps for video and screenshot.
     """
-
     reporter.add_after_step(
         media_directory=slugify(request.node.nodeid),
         keyword="Video",
@@ -159,6 +156,21 @@ def pytest_bdd_step_error(
     screenshot_bytes = page.screenshot(full_page=True)
     png = base64.b64encode(screenshot_bytes).decode()
     reporter.attach(png, "image/png")
+
+
+def pytest_bdd_step_func_lookup_error(
+    request: pytest.FixtureRequest,
+    feature: Feature,
+    scenario: Scenario,
+    step: Step,
+    exception: Exception,
+):
+    """
+    Called when a step lookup fails.
+    We use this to add the correct status to the report at the failing step.
+    """
+    if isinstance(exception, pytest_bdd.exceptions.StepDefinitionNotFoundError):
+        reporter.add_undefined_step(step.keyword, step.name, step.params)
 
 
 @pytest.hookimpl(trylast=True)
