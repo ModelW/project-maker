@@ -19,9 +19,9 @@
         "defu": "^6.1.4",
         "http-proxy-middleware": "^2.0.x",
         "jsdom": "^24.x.x",
-        "nuxt": "3.10.x",
+        "nuxt": "3.12.x",
         "pinia": "^2.1.7",
-        "sass": "1.71.x",
+        "sass": "1.77.x",
         "vite-svg-loader": "5.1.x",
         "vue": "3.4.x"
     },
