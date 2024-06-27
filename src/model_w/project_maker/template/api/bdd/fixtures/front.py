@@ -191,6 +191,18 @@ def front_server(front_build: None, front_dir: Path, front_env):
                     f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
                 )
             finally:
+                # Capture and log any remaining output
+                remaining_output = "".join(p.stdout.readlines())
+                remaining_error = "".join(p.stderr.readlines())
+
+                if remaining_output:
+                    logger.info("Front-end server logs:\n%s", remaining_output.strip())
+                if remaining_error:
+                    logger.error(
+                        "Front-end server error logs:\n%s",
+                        remaining_error.strip(),
+                    )
+
                 utils.kill_child_processes(p.pid)
                 p.terminate()
                 p.wait()
