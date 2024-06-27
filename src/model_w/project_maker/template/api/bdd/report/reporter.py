@@ -103,7 +103,11 @@ class Step:
             "match": {"location": "", "duration": self.duration},
             "result": {"status": self.status},
             "arguments": self.arguments or [],
-            "embeddings": [embedding.to_json() for embedding in self.embeddings] or [],
+            "embeddings": (
+                [embedding.to_json() for embedding in self.embeddings]
+                if self.embeddings
+                else []
+            ),
         }
 
 
@@ -206,6 +210,22 @@ class Reporter(metaclass=utils.SingletonMeta):
             arguments=arguments,
         )
         self.existing_steps.append(step)
+
+    def add_undefined_step(self, keyword: str, name: str, arguments: List[str]) -> None:
+        """
+        Adds an undefined step to the report
+        """
+
+        step = Step(
+            feature_index=self.current_feature_index,
+            scenario_index=self.current_scenario_index,
+            arguments=arguments,
+            name=name,
+            keyword=keyword,
+            status="undefined",
+            hidden=False,
+        )
+        self.additional_steps.append(step)
 
     def add_after_step(
         self,
