@@ -1,4 +1,4 @@
-FROM modelw/base:2024.04
+FROM modelw/base:2024.07
 
 COPY --chown=user pyproject.toml poetry.lock ./
 
