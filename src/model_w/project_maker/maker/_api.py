@@ -96,6 +96,7 @@ class ApiComponent(BaseComponent):
             "gitwildmatch",
             [
                 "/api/___project_name__snake___/django/celery.py",
+                "/api/___project_name__snake___/apps/health/tasks.py",
             ],
         )
 

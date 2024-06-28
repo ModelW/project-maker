@@ -1,22 +1,26 @@
 """
+Utility functions for BDD testing.
+
 This file is for utility functions that step definitions may need.
 """
 
 import re
-from typing import List
+
+from yaml import safe_load
 
 
 def remove_model_w_template_engine_keywords(text: str) -> str:
     """
-    Used to remove lines beginning with `# ::` as used in ModelW templates
+    Used to remove lines beginning with `# ::` as used in ModelW templates.
+
     Note: The line may have whitespace before the `#` and after the `::`
     """
     return re.sub(r"^\s*# ::.*\n", "", text, flags=re.MULTILINE)
 
 
-def split_on_pipes(text: str) -> List[str]:
-    """
-    Splits a string on pipes and returns a list of the results
+def split_on_pipes(text: str) -> list[str]:
+    r"""
+    Splits a string on pipes and returns a list of the results.
 
     Note: Escaped pipes are ignored (ie. `\|` is not treated as a pipe)
           And leading and trailing whitespace is removed from each item
@@ -31,14 +35,18 @@ def split_on_pipes(text: str) -> List[str]:
     Example:
         split_on_pipes("  | a | b | c |  ") -> ["a", "b", "c"]
     """
+    values: list[str] = []
+
     split = [item.strip() for item in re.split(r"(?<!\\)\|", text)]
 
     # Remove splits from before the first pipe and after the last pipe
-    if len(split) >= 2:
-        return split[1:-1]
+    if len(split) >= 2:  # noqa: PLR2004
+        values = split[1:-1]
+
+    return values
 
 
-def parse_datatable_string(datatable_string: str, vertical=False):
+def parse_datatable_string(datatable_string: str, vertical=False, is_yaml=False):  # noqa: ANN001, FBT002
     """
     As pytest-bdd doesn't support data tables, we need to do it manually,
     as data tables are very useful for testing, and we'd be seriously limited
@@ -58,44 +66,42 @@ def parse_datatable_string(datatable_string: str, vertical=False):
         for item in data:
             key = item[0].strip()
             value = item[1].strip() if len(item) > 1 else ""
+            if is_yaml:
+                value = safe_load(value)
             data_dict[key] = value
 
         return data_dict
-    else:
+    else:  # noqa: RET505
         # Extract headers from the first line
         headers = split_on_pipes(lines[0])
 
         # Extract rows from the remaining lines
-        rows: List[dict[str, str]] = []
+        rows: list[dict[str, str]] = []
         for line in lines[1:]:
             values = split_on_pipes(line)
-            if len(values) < len(headers):
-                values.extend(
-                    [""] * (len(headers) - len(values))
-                )  # Extend values to match headers length
-            row = dict(zip(headers, values))
+            if is_yaml:
+                values = [safe_load(value) for value in values]
+            row = dict(zip(headers, values, strict=False))
             rows.append(row)
 
         return rows
 
 
 def get_datatable_from_step_name(step_name: str):
-    """
-    Returns the data table string from the step name
-    """
+    """Returns the data table string from the step name."""
     return step_name.split("\n", 1)[-1] if "\n" in step_name else None
 
 
 def cast_to_bool(text: str) -> bool:
     """
-    Casts a string to a boolean
+    Casts a string to a boolean.
 
     Useful for string values in datatables that need to be treated as boolean
 
     Args:
         text (str): The text to cast
     """
-    TRUE = [
+    truthy = [
         "true",
         "yes",
         "1",
@@ -108,7 +114,7 @@ def cast_to_bool(text: str) -> bool:
         "active",
         "success",
     ]
-    FALSE = [
+    falsy = [
         "false",
         "no",
         "0",
@@ -123,9 +129,10 @@ def cast_to_bool(text: str) -> bool:
         "failure",
     ]
 
-    if text.lower() not in TRUE + FALSE:
+    if text.lower() not in truthy + falsy:
+        msg = f"Cannot cast '{text}' to a boolean.  Please use one of {truthy} or {falsy}, or extend cast_to_bool()"
         raise ValueError(
-            f"Cannot cast '{text}' to a boolean.  Please use one of {TRUE} or {FALSE}, or extend cast_to_bool()"
+            msg,
         )
 
-    return text.lower() in TRUE
+    return text.lower() in truthy

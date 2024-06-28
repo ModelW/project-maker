@@ -1,3 +1,6 @@
+# :: IF api__celery
+from datetime import timedelta
+# :: ENDIF
 from importlib import metadata
 
 from model_w.env_manager import EnvManager
@@ -34,6 +37,7 @@ with EnvManager(ModelWDjango()) as env:
         "___project_name__snake___.apps.cms",
         # :: ENDIF
         "___project_name__snake___.apps.people",
+        "___project_name__snake___.apps.health",
     ]
 
     # ---
@@ -84,4 +88,24 @@ with EnvManager(ModelWDjango()) as env:
     WAGTAIL_SITE_NAME = "___project_name__natural_double_quoted___"
     WAGTAILIMAGES_IMAGE_MODEL = "cms.CustomImage"
     WAGTAILDOCS_DOCUMENT_MODEL = "cms.CustomDocument"
+    # :: ENDIF
+
+    # :: IF api__celery
+    # ---
+    # Celery tasks to control celery and celery beat health
+    # ---
+    CELERY_BEAT_SCHEDULE = {
+        "log-beat": {
+            "task": "___project_name__snake___.apps.health.tasks.log_beat",
+            "schedule": timedelta(minutes=1),
+        },
+        "clean-health-log": {
+            "task": "___project_name__snake___.apps.health.tasks.clear_log",
+            "schedule": timedelta(hours=1),
+        },
+        "check-status": {
+            "task": "___project_name__snake___.apps.health.tasks.check_status",
+            "schedule": timedelta(minutes=1),
+        },
+    }
     # :: ENDIF

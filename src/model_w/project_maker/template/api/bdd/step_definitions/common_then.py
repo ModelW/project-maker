@@ -8,6 +8,7 @@ import re
 
 from playwright.sync_api import ConsoleMessage, Page, expect
 from pytest_bdd import parsers, then
+from pytest_django.live_server_helper import LiveServer
 
 from . import utils
 
@@ -36,18 +37,34 @@ def text_should_be_colour(page: Page, text: str, colour: str):
 
 
 @then(parsers.cfparse('I should be at the URL "{url}"'))
-def at_exact_url(url: str, page: Page):
+def at_exact_url(url: str, page: Page, front_server: str, live_server: LiveServer):
     """
     Checks the current URL for an exact match
+
+    Note: A map is used to introduce special URLs you may need.
+          The idea being to do a string replacement for special URLs
+          eg. the api server's URL (which is random during testing)
 
     Example:
     ```gherkin
         Then I should be at the URL "https://example.com"
         Then I should be at the URL "http://localhost:3000/me"
         Then I should be at the URL "http://localhost:3000/me?q=1"
+        Then I should be at the URL "<API_URL>"
     ```
     """
-    expect(page).to_have_url(url)
+
+    # Map special URLs as required, else use the supplied URL
+    SPECIAL_URLS = {
+        "<API_URL>": live_server.url,
+        "<FRONT_URL>": front_server,
+    }
+
+    for key, value in SPECIAL_URLS.items():
+        url = url.replace(key, value)
+
+    # Check with and without trailing slashes
+    expect(page).to_have_url(re.compile(f"{url}/?$"))
 
 
 @then(parsers.cfparse('I should be at a URL with "{url}"'))

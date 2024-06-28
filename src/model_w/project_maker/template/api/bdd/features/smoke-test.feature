@@ -9,7 +9,7 @@ Feature: Smoke test for the site
         Given I am logged in as a Django admin
         Then I should see the text "welcome"
         And I should not see the text "log in"
-        And I should be at the URL "http://localhost:3001/back/admin/"
+        And I should be at a URL with "back/admin/"
         And I should see the following Django admin models:
             | Group name                       | Model name    |
             | Authentication and Authorization | Groups        |
@@ -46,7 +46,7 @@ Feature: Smoke test for the site
     Scenario: Shows correct wagtail page
         Given I am on the home page
         Then I should see the text "___project_name__natural_double_quoted___"
-        And I should be at the URL "http://localhost:3001/"
+        And I should be at the URL "<FRONT_URL>"
         And I should see no console errors
 
     Scenario: Shows correct CMS admin page
