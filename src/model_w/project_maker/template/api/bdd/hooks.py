@@ -189,3 +189,4 @@ def pytest_sessionfinish(
         reporter.insert_embeddings_into_report()
         reporter.insert_additional_steps_into_report()
         reporter.generate_html_report()
+        reporter.set_results_folder_permissions()
