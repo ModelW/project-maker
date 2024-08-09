@@ -1,0 +1,50 @@
+---
+# Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
+# We run the tests using localhost instead of an isolated network and containerised names.
+# The benefit is that many services like SSO/cookies/tracking etc. are more leniant with localhost.
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - "api/.env.test"
+    network_mode: "host"
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    network_mode: "host"
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: api
+      dockerfile: Dockerfile.test
+    depends_on:
+      - front
+      - postgres
+      - redis
+    environment:
+      - SKIPBUILD=1
+      - FRONTURL=http://localhost:3000 
+      - DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000
+    env_file:
+      - "api/.env.test"
+    volumes:
+      - ./api/bdd/report/:/code/bdd/report/
+    network_mode: "host"
+    ports:
+      - "8000:8000"
+
+  front:
+    build:
+      context: front
+    env_file:
+      - "front/.env.test"
+    ports:
+      - "3000:3000"
+    network_mode: "host"
+    

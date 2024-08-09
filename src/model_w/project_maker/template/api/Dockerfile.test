@@ -1,0 +1,23 @@
+# A Dockerfile for testing a ModelW project.
+
+FROM modelw/base:2024.04
+
+# To avoid complications with permissions to install Playwright's system dependencies
+# we run everything as root.
+USER root
+
+COPY pyproject.toml ./
+
+RUN modelw-docker install
+
+# Install test dependencies
+RUN poetry install --only test
+# Install playwright systme dependencies
+RUN poetry run playwright install --with-deps
+
+# Copy the rest of the api/ files
+COPY . .
+
+RUN modelw-docker build
+
+CMD ["modelw-docker", "run", "pytest"]

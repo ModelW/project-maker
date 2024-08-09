@@ -9,6 +9,7 @@ black:
 
 isort:
 	$(PYTHON_BIN) -m isort .
-
+# :: IF api__celery
 celery_run:
 	poetry run celery --app ___project_name__snake___.django.celery:app worker --loglevel=INFO --beat
+# :: ENDIF

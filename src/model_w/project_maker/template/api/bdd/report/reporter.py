@@ -20,9 +20,9 @@ session, inserting them into the created JSON.
 
 Finally, the JSON is converted to HTML using the `cucumber-html-reporter` npm package.
 """
-
 import base64
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Literal, Optional, Union
@@ -479,6 +479,21 @@ class Reporter(metaclass=utils.SingletonMeta):
                     "failedSummaryReport": True,
                 }
             )
+
+    def set_results_folder_permissions(self) -> None:
+        """
+        As we're sharing the same directory when running in docker and running
+        locally, we update the permissions of the results folder to allow
+        read/write access to everyone recursively.
+        """
+        self.results_dir.chmod(0o777)
+
+        for root, dirs, files in os.walk(self.results_dir):
+            for d in dirs:
+                os.chmod(os.path.join(root, d), 0o777)
+            for f in files:
+                os.chmod(os.path.join(root, f), 0o666)
+
 
     def __str__(self) -> str:
         return (
