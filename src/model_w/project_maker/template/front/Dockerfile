@@ -1,6 +1,6 @@
 FROM modelw/base:2024.07
 
-COPY --chown=user package.json package-lock.json ./
+COPY --chown=user package.json ./
 
 RUN modelw-docker install
 
