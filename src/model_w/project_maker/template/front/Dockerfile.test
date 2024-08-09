@@ -1,0 +1,16 @@
+# A Dockerfile for testing a ModelW project.
+# Almost identical to the main Dockerfile in front/ minus the lock file.
+# As the template doesn't include a lock file, we can't use the main Dockerfile,
+# but for projects, feel free to use it.
+
+FROM modelw/base:2024.07
+
+COPY --chown=user package.json ./
+
+RUN modelw-docker install
+
+COPY --chown=user . .
+
+RUN modelw-docker build
+
+CMD ["modelw-docker", "serve"]

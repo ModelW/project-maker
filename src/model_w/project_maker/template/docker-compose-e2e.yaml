@@ -42,6 +42,7 @@ services:
   front:
     build:
       context: front
+      dockerfile: Dockerfile.test
     env_file:
       - "front/.env.test"
     ports:
