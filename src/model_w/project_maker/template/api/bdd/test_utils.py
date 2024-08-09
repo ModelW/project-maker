@@ -5,6 +5,7 @@ This file tests the utility functions that the tester may need.
 """
 
 import pytest
+from django.utils import timezone
 
 from .fixtures import utils as fixtures_utils
 from .report import utils as report_utils
@@ -259,25 +260,21 @@ def test_should_split_on_pipes_with_escaped_pipes():
 
 
 def test_should_parse_datatable():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
         | id | name |   age |
         | 1  | foo  |  1    |
         | 2  | bar  |  22   |
         """,
-        )
-        == [
-            {"id": "1", "name": "foo", "age": "1"},
-            {"id": "2", "name": "bar", "age": "22"},
-        ]
-    )
+    ) == [
+        {"id": "1", "name": "foo", "age": "1"},
+        {"id": "2", "name": "bar", "age": "22"},
+    ]
 
 
 def test_should_parse_datatable_with_extra_blank_lines():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
 
             
         | id | name |   age |
@@ -288,18 +285,15 @@ def test_should_parse_datatable_with_extra_blank_lines():
 
         
         """,
-        )
-        == [
-            {"id": "1", "name": "foo", "age": "1"},
-            {"id": "2", "name": "bar", "age": "22"},
-        ]
-    )
+    ) == [
+        {"id": "1", "name": "foo", "age": "1"},
+        {"id": "2", "name": "bar", "age": "22"},
+    ]
 
 
 def test_should_parse_datatable_with_extra_blank_white_space():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
 
             
         | id  |    name   |   age | 
@@ -310,25 +304,20 @@ def test_should_parse_datatable_with_extra_blank_white_space():
 
         
         """,
-        )
-        == [
-            {"id": "1", "name": "foo", "age": "1"},
-            {"id": "2", "name": "bar", "age": "22"},
-        ]
-    )
+    ) == [
+        {"id": "1", "name": "foo", "age": "1"},
+        {"id": "2", "name": "bar", "age": "22"},
+    ]
 
 
 def test_should_parse_datatable_vertically():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
     | id   | 1   |
     | name | foo |
     """,
-            vertical=True,
-        )
-        == {"id": "1", "name": "foo"}
-    )
+        vertical=True,
+    ) == {"id": "1", "name": "foo"}
 
 
 def test_should_parse_datatable_horizontally_with_escaped_pipes():
@@ -352,36 +341,30 @@ def test_should_parse_datatable_vertically_with_escaped_pipes():
 
 
 def test_should_parse_datatable_with_empty_values():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
     | id | name | age |
     | 1  | foo  |     |
     |    | bar  |  22 |
     | 2  |      |  22 |
     """,
-        )
-        == [
-            {"id": "1", "name": "foo", "age": ""},
-            {"id": "", "name": "bar", "age": "22"},
-            {"id": "2", "name": "", "age": "22"},
-        ]
-    )
+    ) == [
+        {"id": "1", "name": "foo", "age": ""},
+        {"id": "", "name": "bar", "age": "22"},
+        {"id": "2", "name": "", "age": "22"},
+    ]
 
 
 def test_should_parse_datatable_with_empty_values_vertically():
-    assert (
-        step_def_utils.parse_datatable_string(
-            """
+    assert step_def_utils.parse_datatable_string(
+        """
     | id   | 1      |
     | name | foo    |
     | age  |        |
     | foo  | bar    |
     """,
-            vertical=True,
-        )
-        == {"id": "1", "name": "foo", "age": "", "foo": "bar"}
-    )
+        vertical=True,
+    ) == {"id": "1", "name": "foo", "age": "", "foo": "bar"}
 
 
 def test_get_datatable_from_step():
@@ -492,3 +475,186 @@ def test_cast_to_bool_false():
 
 def test_cast_to_bool_invalid():
     pytest.raises(ValueError, step_def_utils.cast_to_bool, "invalid")
+
+
+def test_key_values_to_table():
+    event = {
+        "category": "a category",
+        "division": "d1",
+    }
+    expected = (
+        "<table border='1' style='border-collapse: collapse; width: 100%;'>"
+        "<thead>"
+        "<tr><th>Key</th><th>Value</th></tr>"
+        "</thead>"
+        "<tbody>"
+        "<tr><td>category</td><td>a category</td></tr>"
+        "<tr><td>division</td><td>d1</td></tr>"
+        "</tbody>"
+        "</table>"
+    )
+    assert step_def_utils.key_values_to_table(event) == expected
+
+
+def test_event_a_subset_of_event_b():
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+        "event": "virtualpageview",
+    }
+    assert step_def_utils.event_a_subset_of_event_b(event_a, event_b) is True
+
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+        "event": "virtualpageview",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+        "event": "uaevent",
+    }
+    assert step_def_utils.event_a_subset_of_event_b(event_a, event_b) is False
+
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+        "event": "virtualpageview",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+    }
+    assert step_def_utils.event_a_subset_of_event_b(event_a, event_b) is False
+
+
+def test_event_a_is_equal_to_event_b_when_identical():
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+    }
+    assert step_def_utils.event_a_subset_of_event_b(event_a, event_b) is True
+
+
+def test_event_a_is_equal_to_event_b_when_different():
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d2",
+    }
+    assert step_def_utils.event_a_subset_of_event_b(event_a, event_b) is False
+
+
+def test_event_a_is_equal_to_event_b_when_ignore_keys():
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+        "event": "virtualpageview",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+        "event": "uaevent",
+    }
+    assert (
+        step_def_utils.event_a_is_equal_to_event_b(
+            event_a,
+            event_b,
+            ignore_keys=["event"],
+        )
+        is True
+    )
+
+
+def test_event_a_is_equal_to_event_b_when_subset_of_event_b():
+    event_a = {
+        "category": "a category",
+        "division": "d1",
+    }
+    event_b = {
+        "category": "a category",
+        "division": "d1",
+        "event": "uaevent",
+    }
+    assert step_def_utils.event_a_is_equal_to_event_b(event_a, event_b) is False
+
+
+def mock_data_layer() -> list[dict[str, any]]:
+    """
+    A function to mock getting the events from the page.
+    The first event yielded will be a load event, simulating first page load.
+    """
+    yield {
+        "event": "gtm.js",
+        "gtm.start": int(timezone.now().timestamp() * 1000),
+        "gtm.uniqueEventId": 1,
+    }
+    yield {
+        "event": "gtm.dom",
+        "gtm.uniqueEventId": 2,
+    }
+    yield {
+        "event": "gtm.load",
+        "gtm.uniqueEventId": 3,
+    }
+    yield {
+        "category": "a category",
+        "division": "d1",
+        "event": "virtualpageview",
+        "gtm.uniqueEventId": 4,
+    }
+    yield {
+        "category": "a category",
+        "division": "d1",
+        "event": "uaevent",
+        "gtm.uniqueEventId": 5,
+    }
+    yield {
+        "category": "a category",
+        "division": "d2",
+        "event": "virtualpageview",
+        "gtm.uniqueEventId": 6,
+    }
+
+
+def test_check_event_in_data_layer():
+    assert (
+        step_def_utils.is_event_in_data_layer(
+            {"category": "a category", "division": "d1", "event": "virtualpageview"},
+            mock_data_layer,
+        )
+        is True
+    )
+
+    assert (
+        step_def_utils.is_event_in_data_layer(
+            {"category": "a category", "division": "d1", "event": "uaevent"},
+            mock_data_layer,
+        )
+        is True
+    )
+    assert (
+        step_def_utils.is_event_in_data_layer(
+            {"category": "a category", "division": "d3", "event": "uaevent"},
+            mock_data_layer,
+        )
+        is False
+    )
+    assert (
+        step_def_utils.is_event_in_data_layer(
+            {"category": "a category", "division": "d3", "event": "virtualpageview"},
+            mock_data_layer,
+        )
+        is False
+    )
