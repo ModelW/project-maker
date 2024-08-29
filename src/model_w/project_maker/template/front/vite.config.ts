@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
                 sourceMapsUploadOptions: {
                     org: env.PUBLIC_SENTRY_ORG,
                     project: env.PUBLIC_SENTRY_PROJECT,
+                    url: env.PUBLIC_SENTRY_URL,
                     authToken: process.env.SENTRY_AUTH_TOKEN,
                     sourcemaps: {
                         assets: ["./build/*/**/*"],
