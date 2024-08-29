@@ -10,42 +10,59 @@ services:
     env_file:
       - "api/.env.test"
     network_mode: "host"
-    ports:
-      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   redis:
     image: redis:7-alpine
     network_mode: "host"
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   api:
     build:
       context: api
       dockerfile: Dockerfile.test
     depends_on:
-      - front
-      - postgres
-      - redis
+      front:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - SKIPBUILD=1
-      - FRONTURL=http://localhost:3000 
+      - FRONTURL=http://localhost:80
       - DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000
     env_file:
       - "api/.env.test"
     volumes:
       - ./api/bdd/report/:/code/bdd/report/
     network_mode: "host"
-    ports:
-      - "8000:8000"
 
   front:
     build:
       context: front
-      dockerfile: Dockerfile.test
     env_file:
       - "front/.env.test"
-    ports:
-      - "3000:3000"
     network_mode: "host"
-    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/non-cms/"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  router:
+    image: nginx:alpine
+    network_mode: "host"
+    volumes:
+      - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf      

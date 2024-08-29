@@ -6,7 +6,7 @@ FROM modelw/base:2024.07
 # we run everything as root.
 USER root
 
-COPY pyproject.toml ./
+COPY pyproject.toml poetry.lock ./
 
 RUN modelw-docker install
 

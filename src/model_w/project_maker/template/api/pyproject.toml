@@ -1,3 +1,6 @@
+[project]
+requires-python = ">=3.11"
+
 [tool.poetry]
 name = "~~~project_name__snake~~~"
 version = "0.1.0"
@@ -31,7 +34,6 @@ drf-spectacular = {extras = ["sidecar"], version = "^0.27.2"}
 markdown = "^3.5.1"
 networkx = "^3.2.1"
 
-
 [tool.poetry.group.dev.dependencies]
 black = "*"
 isort = "*"
@@ -58,6 +60,13 @@ django_debug_mode = "keep"
 log_cli = true
 log_file = "bdd/report/results/test.log"
 addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--video", "on", "--full-page-screenshot", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/bdd/**" = ["ARG001", "S101"]
+"test_*.py" = ["ARG001", "S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

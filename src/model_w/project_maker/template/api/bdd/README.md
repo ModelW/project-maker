@@ -67,8 +67,44 @@ Feature: ...
 Scenario: ...
 ```
 
-To quicken the process while creating tests, you can skip the front's
-`npm run build` stage with `SKIPBUILD=1 pytest`
+### Skip the npm run build stage
+
+To quicken the process while creating tests, when you know the front hasn't
+changed,you can skip the front's `npm run build` stage with `SKIPBUILD=1 pytest`
+
+### Target your front development server
+
+Sometimes, it'e useful to target your front development server, rather than a
+fresh one started by pytest (So you can see in real-time changes to the front /
+front server logs live etc.). To do this, we need to set the live server's port
+to be the same as your front is targeting and tell pytest to target your front's
+dev server. For example, if your front is running on port 3000, and your api
+server is running on port 8000, you can do the following:
+
+-   Stop your dev api server
+-   Run the following command:
+
+```bash
+SKIPBUILD=1 FRONTURL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest
+```
+
+Furthermore, it's likely you have a specific test in mind you want to debug, so
+a more realistic command might be:
+
+```bash
+PWDEBUG=1 SKIPBUILD=1 FRONTURL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest -m current
+```
+
+Where, you're viewing the front in your browser, and just the test marked with
+@current is running. You can then load localhost:3000 in your own browser and
+see what the issue is, by watching your front server logs as normal.
+
+### Run a specific test
+
+If you want to run a specific test, you can use the `-k` flag to target a
+specific test.
+
+pytest
 
 ## Data creation
 

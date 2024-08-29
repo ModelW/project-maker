@@ -47,7 +47,7 @@ Feature: Smoke test for the site
         Given I am on the home page
         Then I should see the text "___project_name__natural_double_quoted___"
         And I should be at the URL "<FRONT_URL>"
-        And I should see no console errors
+        And there should be no console errors
 
     Scenario: Shows correct CMS admin page
         Given I am logged in as a CMS admin
@@ -56,10 +56,15 @@ Feature: Smoke test for the site
         And I should be at a URL with "___cms_prefix___"
 
     Scenario: Shows Nuxt injected frontend on Wagtail content
-        Given I am at the URL "<API_URL>"
-        Then the text "___project_name__natural_double_quoted___" should be the colour "rgb(0, 0, 0)"
         When I go to the URL "<FRONT_URL>"
         Then the text "___project_name__natural_double_quoted___" should be the colour "rgb(255, 0, 0)"
-        And I should see no console errors
-# :: ENDIF
+        And there should be no console errors
+    # :: ENDIF
 
+    # :: IF api__testing
+    Scenario: Shows correct Demo page
+        Given I have created the demo page
+        When I go to the URL "<FRONT_URL>/demo"
+        Then there should be no console errors
+
+# :: ENDIF
