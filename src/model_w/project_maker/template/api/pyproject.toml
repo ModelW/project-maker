@@ -38,6 +38,8 @@ networkx = "^3.2.1"
 black = "*"
 isort = "*"
 ipython = "*"
+django-extensions = "^3.2.3"
+django-debug-toolbar = "^4.4.6"
 
 [tool.poetry.group.test.dependencies]
 psutil = "^5.9.8"
