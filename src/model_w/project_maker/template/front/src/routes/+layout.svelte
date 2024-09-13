@@ -1,6 +1,7 @@
 <slot />
 
 <footer>
+    <hr />
     <a href="/">Home page</a>
     <a href="/demo/">Demo page</a>
     <a href="/non-cms">Non-CMS</a>

@@ -13,7 +13,7 @@ from wagtail import fields as wagtail_fields
 from wagtail.admin import panels
 from wagtail.api import APIField
 
-from . import utils
+from . import blocks, serializers, utils
 
 
 class DemoSubBlock(wagtail_blocks.StructBlock):
@@ -27,12 +27,22 @@ class DemoSubBlock(wagtail_blocks.StructBlock):
         max_length=255,
         help_text=_("This is a required tagline"),
     )
-    description = wagtail_blocks.RichTextBlock(
+    description = blocks.RichTextBlock(
         required=False,
         help_text=_("This is an optional description"),
     )
 
-    blocks = wagtail_blocks.StreamBlock(
+    image = blocks.ImageChooserBlock(
+        required=False,
+        help_text=_("This is an optional image"),
+        filters=[
+            ("fill-768x150-c100", "(max-width: 767px)"),
+            ("fill-512x250-c100", "(max-width: 1023px)"),
+            ("fill-360x350-c100", "(min-width: 1024px)"),
+        ],
+    )
+
+    heading_blocks = wagtail_blocks.StreamBlock(
         [
             (
                 "Heading",
@@ -54,12 +64,12 @@ class DemoBlock(wagtail_blocks.StructBlock):
         max_length=255,
         help_text=_("This is a required tagline"),
     )
-    description = wagtail_blocks.RichTextBlock(
+    description = blocks.RichTextBlock(
         required=False,
         help_text=_("This is an optional description"),
     )
 
-    blocks = wagtail_blocks.StreamBlock(
+    demo_sub_blocks = wagtail_blocks.StreamBlock(
         [
             (
                 "DemoSubBlock",
@@ -67,6 +77,11 @@ class DemoBlock(wagtail_blocks.StructBlock):
             ),
         ],
         required=False,
+    )
+
+    image = blocks.ImageChooserBlock(
+        required=False,
+        help_text=_("This is an optional image"),
     )
 
 
@@ -88,7 +103,7 @@ class DemoPage(utils.ApiPage):
         help_text=_("This is an optional description"),
     )
 
-    blocks = wagtail_fields.StreamField(
+    demo_blocks = wagtail_fields.StreamField(
         [
             (
                 "DemoBlock",
@@ -98,17 +113,40 @@ class DemoPage(utils.ApiPage):
         blank=True,
     )
 
+    image = models.ForeignKey(
+        "cms.CustomImage",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
     api_fields = [
         APIField("tagline"),
-        APIField("description"),
-        APIField("blocks"),
+        APIField("description", serializer=serializers.RichTextSerializer()),
+        APIField("demo_blocks"),
+        APIField(
+            "image",
+            serializer=serializers.ImageSerializer(
+                filters=[
+                    "fill-320x350-c100",
+                    "fill-640x350-c100",
+                    "fill-768x350-c100",
+                    "fill-1024x350-c100",
+                    "fill-1366x350-c100",
+                    "fill-1600x350-c100",
+                    "fill-1920x350-c100",
+                ],
+            ),
+        ),
     ]
 
     content_panels = [
         *utils.ApiPage.content_panels,
         panels.FieldPanel("tagline"),
         panels.FieldPanel("description"),
-        panels.FieldPanel("blocks"),
+        panels.FieldPanel("demo_blocks"),
+        panels.FieldPanel("image"),
     ]
 
     class Meta:
