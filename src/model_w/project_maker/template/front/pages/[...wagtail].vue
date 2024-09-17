@@ -1,4 +1,9 @@
 <template>
+    <Head>
+        <Title>
+            {{ headData.title }}
+        </Title>
+    </Head>
     <ServerTemplatedComponent
         :content="html"
         :components-defs="defs"
