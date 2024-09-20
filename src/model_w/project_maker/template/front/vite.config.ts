@@ -16,7 +16,6 @@ export default defineConfig(({ mode }) => {
                     authToken: process.env.SENTRY_AUTH_TOKEN,
                     sourcemaps: {
                         assets: ["./build/*/**/*"],
-                        ignore: ["**/build/client/**/*"],
                         filesToDeleteAfterUpload: ["./build/**/*.map"],
                     },
                 },
