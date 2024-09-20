@@ -10,8 +10,20 @@ import pytest
 from django.contrib.auth.models import AbstractBaseUser
 from pytest_django.fixtures import SettingsWrapper
 
+# :: IF api__wagtail
+from wagtail.images.tests.utils import Image, get_test_image_file
+
+# :: ENDIF
+
 
 # :: IF api__wagtail
+@pytest.fixture
+def image():
+    """Create an test image."""
+    image_file = get_test_image_file(filename="test.png")
+    return Image.objects.create(title="Test Image", file=image_file)
+
+
 @pytest.fixture(autouse=True)
 def set_wagtail_site(front_server: str, overwrite_settings: SettingsWrapper):
     """

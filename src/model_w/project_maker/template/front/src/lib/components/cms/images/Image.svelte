@@ -11,10 +11,28 @@
      *   "alt": "Image Alt",
      *   "width": 1000,
      *   "height": 600,
-     *   "renditions": [
-     *      { width: 640, url: "https://images.com/photo-2"},
-     *          ...
-     *    ]
+     *   "sources": [
+     *     {
+     *       "image_type": "image/webp",
+     *       "srcset": [
+     *         "https://images.com/photo-1-320w.webp 320w",
+     *         "https://images.com/photo-1-640w.webp 640w",
+     *         "https://images.com/photo-1-1280w.webp 1280w"
+     *       ],
+     *       "media": "(max-width: 768px)",
+     *       "sizes": "100vw"
+     *     },
+     *     {
+     *       "image_type": "image/jpeg",
+     *       "srcset": [
+     *         "https://images.com/photo-1-320w.jpg 320w",
+     *         "https://images.com/photo-1-640w.jpg 640w",
+     *         "https://images.com/photo-1-1280w.jpg 1280w"
+     *       ],
+     *       "media": "(min-width: 769px)",
+     *       "sizes": "50vw"
+     *     }
+     *   ]
      * }
      *
      * @prop {image} image - The image data from the API.
@@ -26,8 +44,13 @@
 </script>
 
 <picture>
-    {#each image.renditions as rendition}
-        <source srcset={rendition.url} media={rendition.media_query} />
+    {#each image.sources as source}
+        <source
+            srcset={source.srcset.join(", ")}
+            type="image/{source.image_type}"
+            media={source.media}
+            sizes={source.sizes}
+        />
     {/each}
     <img src={image.url} alt={image.alt} />
 </picture>

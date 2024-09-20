@@ -62,6 +62,7 @@ Feature: Smoke test for the site
     # :: ENDIF
 
     # :: IF api__testing
+    @demopage
     Scenario: Shows correct Demo page
         Given I have created the demo page
         When I go to the URL "<FRONT_URL>/demo"

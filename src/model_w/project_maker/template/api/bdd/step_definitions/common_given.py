@@ -39,7 +39,7 @@ def at_url(url: str, page: Page, front_server: str, live_server: LiveServer):
     # Map special URLs as required, else use the supplied URL
     SPECIAL_URLS = {
         "<API_URL>": live_server.url,
-        "<FRONT_URL>": front_server,
+        "<FRONT_URL>": front_server.rstrip("/"),
     }
 
     for key, value in SPECIAL_URLS.items():
@@ -127,9 +127,16 @@ def create_demo_page():
     """Create a demo page."""
     root = wagtail_models.Page.get_first_root_node()
     home = root.get_children().first()
+    demo_sub_block = cms_models.DemoSubBlock().to_python(
+        {"tagline": "I'm a...", "description": "I'm a DemoSubBlock"},
+    )
 
     demo_block = cms_models.DemoBlock().to_python(
-        {"tagline": "I'm a...", "description": "I'm a DemoBlock"},
+        {
+            "tagline": "I'm a...",
+            "description": "I'm a DemoBlock",
+            "demo_sub_blocks": [("DemoSubBlock", demo_sub_block)],
+        },
     )
 
     demo_page = cms_models.DemoPage(
@@ -137,7 +144,7 @@ def create_demo_page():
         slug="demo",
         tagline="I'm a demo...",
         description="I'm a DemoPage",
-        blocks=[("DemoBlock", demo_block)],
+        demo_blocks=[("DemoBlock", demo_block)],
     )
     home.add_child(instance=demo_page).save()
     return demo_page

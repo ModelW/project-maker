@@ -61,7 +61,7 @@ python_files = ["test_*.py", "*_test.py"]
 django_debug_mode = "keep"
 log_cli = true
 log_file = "bdd/report/results/test.log"
-addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--video", "on", "--full-page-screenshot", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
+addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--full-page-screenshot", "--video", "on", "--tracing", "retain-on-failure", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/bdd/**" = ["ARG001", "S101"]
