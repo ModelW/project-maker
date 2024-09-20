@@ -13,10 +13,13 @@
     <svelte:component this={$page.data.blockComponents[block.type]} props={block.value} />
     <hr />
 {/each}
-<h4>Default image (without filters specified)</h4>
-<div class="image-container">
-    <Image image={props.image} />
-</div>
+
+{#if props.image}
+    <h4>Default image (without filters specified)</h4>
+    <div class="image-container">
+        <Image image={props.image} />
+    </div>
+{/if}
 
 <style lang="scss">
     .image-container {

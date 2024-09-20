@@ -22,10 +22,13 @@
         <hr />
         <svelte:component this={$page.data.blockComponents[block.type]} props={block.value} />
     {/each}
-    <h2>An image with fill-widthxheight (100% centred focal point)</h2>
-    <div class="image-container">
-        <Image image={props.image} />
-    </div>
+
+    {#if props.image}
+        <h2>An image with fill-widthxheight (100% centred focal point)</h2>
+        <div class="image-container">
+            <Image image={props.image} />
+        </div>
+    {/if}
 </main>
 
 <style lang="scss">
