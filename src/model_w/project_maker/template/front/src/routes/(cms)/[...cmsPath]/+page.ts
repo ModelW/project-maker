@@ -22,7 +22,7 @@ export async function load({ data }: { data: PageServerData }) {
 
     return {
         component: pageComponent,
-        props: data.pageData,
+        props: { ...data.pageData, page: data.page, mockData: data.mockData },
         blockComponents,
     };
 }

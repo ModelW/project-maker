@@ -3,6 +3,7 @@
  */
 
 import type { ComponentType } from "svelte";
+import { fetchWithErrorHandling } from "$lib/utils/fetchUtils";
 
 /**
  * To have a block know how to render itself just from its own type (matching to a Svelte Component in blocks/),
@@ -41,4 +42,35 @@ export async function getBlockComponents() {
     }
 
     return blockComponents;
+}
+
+/**
+ * Constructs the URL for the CMS based on whether the page is in preview mode.
+ * @param {string} cmsPath - The parameter from the URL to define API path.
+ * @param {string | null} previewmodel - If the page is in preview mode, this will be passed.
+ * @returns {URL} - The constructed URL for the CMS API.
+ */
+function constructCmsUrl(cmsPath: string, previewmodel: string | null): URL {
+    const baseUrl = "http://api/back/api/cms/";
+    return new URL(
+        previewmodel
+            ? `${baseUrl}preview/?preview_model=${previewmodel}`
+            : `${baseUrl}pages/find/?html_path=${cmsPath}&fields=*`
+    );
+}
+
+/**
+ * Fetch CMS data for a page based on the constructed URL.
+ * @param {Function} fetch - The fetch function provided by SvelteKit.
+ * @param {string} cmsPath - The CMS HTML path.
+ * @param {string | null} previewPage - Indicates if the page is in preview mode.
+ * @returns {Promise<any>} - The fetched page data.
+ */
+export async function fetchCmsData(
+    fetch: typeof globalThis.fetch,
+    cmsPath: string,
+    previewPage: string | null
+): Promise<any> {
+    const cmsUrl = constructCmsUrl(cmsPath, previewPage);
+    return await fetchWithErrorHandling(fetch(cmsUrl));
 }

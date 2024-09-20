@@ -1,6 +1,6 @@
 <script lang="ts">
     /**
-     * This page is a catch-all for all Wagtail pages.
+     * This page is a catch-all for all CMS pages.
      * It selects the appropriate component to render based on the template field.
      */
     import type { PageData } from "./$types";
