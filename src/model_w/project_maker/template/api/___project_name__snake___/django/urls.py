@@ -1,4 +1,3 @@
-from debug_toolbar.toolbar import debug_toolbar_urls
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
@@ -61,5 +60,5 @@ if settings.DEBUG:
             SpectacularRedocView.as_view(url_name="schema"),
             name="redoc",
         ),
-        *debug_toolbar_urls(),
+        path("back/__debug__/", include("debug_toolbar.urls")),
     ] + urlpatterns
