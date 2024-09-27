@@ -15,30 +15,31 @@ respecting the playwright config that has been set.
 ie. `--video --screenshot` flags in the `pytest` command / pyproject.toml.
 
 The idea is to keep track of the current pytest-bdd feature, scenario, and step index by
-incrementing them in the appropriate pytest-bdd `hooks.py` and then at the end of the 
+incrementing them in the appropriate pytest-bdd `hooks.py` and then at the end of the
 session, inserting them into the created JSON.
 
 Finally, the JSON is converted to HTML using the `cucumber-html-reporter` npm package.
 """
+
 import base64
 import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
 from node_edge import NodeEngine
 from playwright.sync_api import Page
 
-from ..report import utils
+from bdd.report import utils
 
-MimeType = Union[
-    Literal["text/plain"],
-    Literal["text/html"],
-    Literal["application/json"],
-    Literal["image/png"],
-    Literal["image/gif"],
-    Literal["application/octet-stream"],
+MimeType = Literal[
+    "text/plain",
+    "text/html",
+    "application/json",
+    "image/png",
+    "image/gif",
+    "application/octet-stream",
 ]
 
 RESET_INDEX = -1  # Starting index for features, scenarios, and steps
@@ -57,9 +58,9 @@ class StepEmbedding:
 
     mime_type: MimeType
     data: str
-    feature_index: Optional[int] = None
-    scenario_index: Optional[int] = None
-    step_index: Optional[int] = None
+    feature_index: int | None = None
+    scenario_index: int | None = None
+    step_index: int | None = None
 
     def to_json(self) -> dict:
         """
@@ -81,16 +82,16 @@ class Step:
 
     feature_index: int
     scenario_index: int
-    step_index: Optional[int] = None
-    media_directory: Optional[Path] = None
+    step_index: int | None = None
+    media_directory: Path | None = None
 
     hidden: bool = True
     keyword: str = ""
     name: str = ""
     status: str = ""
     duration: int = 0
-    arguments: Optional[List[str]] = None
-    embeddings: Optional[List[StepEmbedding]] = None
+    arguments: list[str] | None = None
+    embeddings: list[StepEmbedding] | None = None
 
     def to_json(self) -> dict:
         """
@@ -146,10 +147,10 @@ class Reporter(metaclass=utils.SingletonMeta):
 
     def __init__(self):
         self.is_running = False
-        self.embeddings: List[StepEmbedding] = []
-        self.additional_steps: List[Step] = []
-        self.existing_steps: List[Step] = []
-        self.existing_scenarios: List[Scenario] = []
+        self.embeddings: list[StepEmbedding] = []
+        self.additional_steps: list[Step] = []
+        self.existing_steps: list[Step] = []
+        self.existing_scenarios: list[Scenario] = []
         self.feature_uri: str = ""
         self.current_feature_index: int = RESET_INDEX
         self.current_scenario_index: int = RESET_INDEX
@@ -181,7 +182,6 @@ class Reporter(metaclass=utils.SingletonMeta):
         Adds an existing scenario to the report with data to be modified at
         the end of the session.  ie. adding the browser/device to the scenario name.
         """
-
         browser_name = page.context.browser.browser_type.name
         viewport = page.viewport_size
 
@@ -193,7 +193,9 @@ class Reporter(metaclass=utils.SingletonMeta):
         self.existing_scenarios.append(scenario)
 
     def update_existing_step(
-        self, name: str, arguments: Optional[List[str]] = None
+        self,
+        name: str,
+        arguments: list[str] | None = None,
     ) -> None:
         """
         Adds an existing step to the report with data to be modified at
@@ -211,11 +213,10 @@ class Reporter(metaclass=utils.SingletonMeta):
         )
         self.existing_steps.append(step)
 
-    def add_undefined_step(self, keyword: str, name: str, arguments: List[str]) -> None:
+    def add_undefined_step(self, keyword: str, name: str, arguments: list[str]) -> None:
         """
         Adds an undefined step to the report
         """
-
         step = Step(
             feature_index=self.current_feature_index,
             scenario_index=self.current_scenario_index,
@@ -291,8 +292,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         """
         Merges the embeddings from the JSON file into the cucumber report
         """
-
-        with open(self.json_report_path, "r") as file:
+        with open(self.json_report_path) as file:
             report = json.load(file)
 
         for embedding in self.embeddings:
@@ -318,26 +318,26 @@ class Reporter(metaclass=utils.SingletonMeta):
         for step in self.additional_steps:
             if step.keyword == "Video":
                 media_tags = self.get_video_tags_of_directory(
-                    self.media_dir / step.media_directory
+                    self.media_dir / step.media_directory,
                 )
                 for tag in media_tags:
                     step.embeddings.append(
                         StepEmbedding(
                             mime_type="text/html",
                             data=tag,
-                        )
+                        ),
                     )
 
             if step.keyword == "Screenshot":
                 media_tags = self.get_img_tags_of_directory(
-                    self.media_dir / step.media_directory
+                    self.media_dir / step.media_directory,
                 )
                 for tag in media_tags:
                     step.embeddings.append(
                         StepEmbedding(
                             mime_type="text/html",
                             data=tag,
-                        )
+                        ),
                     )
 
     def insert_additional_steps_into_report(self) -> None:
@@ -346,13 +346,13 @@ class Reporter(metaclass=utils.SingletonMeta):
         """
         self.insert_media_tags_into_after_steps()
 
-        with open(self.json_report_path, "r") as file:
+        with open(self.json_report_path) as file:
             report = json.load(file)
 
         for step in self.additional_steps:
             feature: dict = report[step.feature_index]
             scenario: dict = feature["elements"][step.scenario_index]
-            steps: List[dict] = scenario["steps"]
+            steps: list[dict] = scenario["steps"]
 
             if step.keyword == "Before":
                 steps.insert(0, step.to_json())
@@ -367,7 +367,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         Merges the data stored in the existing steps to the cucumber report
         For example, prettifying datatables etc.
         """
-        with open(self.json_report_path, "r") as file:
+        with open(self.json_report_path) as file:
             report = json.load(file)
 
         for existing_step in self.existing_steps:
@@ -387,7 +387,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         Merges the data stored in the existing scenarios to the cucumber report
         For example, adding the browser/device to the scenario name.
         """
-        with open(self.json_report_path, "r") as file:
+        with open(self.json_report_path) as file:
             report = json.load(file)
 
         for existing_scenario in self.existing_scenarios:
@@ -406,7 +406,9 @@ class Reporter(metaclass=utils.SingletonMeta):
             json.dump([], file)
 
     def get_current_step_embeddings(
-        self, report: dict, embedding: StepEmbedding
+        self,
+        report: dict,
+        embedding: StepEmbedding,
     ) -> dict:
         """
         Gets the embeddings for the current step
@@ -440,7 +442,7 @@ class Reporter(metaclass=utils.SingletonMeta):
             for file in directory.glob(f"*{extension}")
         ]
 
-    def get_video_tags_of_directory(self, directory: Path) -> List[str]:
+    def get_video_tags_of_directory(self, directory: Path) -> list[str]:
         """
         Gets the videos in a directory
         """
@@ -451,7 +453,7 @@ class Reporter(metaclass=utils.SingletonMeta):
             for path in self.get_filepaths_in_directory(directory, "webm")
         ]
 
-    def get_img_tags_of_directory(self, directory: Path) -> List[str]:
+    def get_img_tags_of_directory(self, directory: Path) -> list[str]:
         """
         Gets the images in a directory
         """
@@ -465,7 +467,7 @@ class Reporter(metaclass=utils.SingletonMeta):
         Converts the JSON report to HTML
         """
         with NodeEngine(
-            {"dependencies": {"cucumber-html-reporter": "^7.1.1"}}
+            {"dependencies": {"cucumber-html-reporter": "^7.1.1"}},
         ) as engine:
             generate = engine.import_from("cucumber-html-reporter", "generate")
             generate(
@@ -477,7 +479,7 @@ class Reporter(metaclass=utils.SingletonMeta):
                     "scenarioTimestamp": True,
                     "launchReport": True,
                     "failedSummaryReport": True,
-                }
+                },
             )
 
     def set_results_folder_permissions(self) -> None:
@@ -493,7 +495,6 @@ class Reporter(metaclass=utils.SingletonMeta):
                 os.chmod(os.path.join(root, d), 0o777)
             for f in files:
                 os.chmod(os.path.join(root, f), 0o666)
-
 
     def __str__(self) -> str:
         return (
