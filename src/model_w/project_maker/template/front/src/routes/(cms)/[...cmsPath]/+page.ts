@@ -8,7 +8,6 @@
 
 import type { ComponentType } from "svelte";
 import type { PageServerData } from "./$types";
-import { getBlockComponents } from "$lib/utils/cms";
 
 export async function load({ data }: { data: PageServerData }) {
     /** Get the app name and model name from the meta.type */
@@ -18,11 +17,8 @@ export async function load({ data }: { data: PageServerData }) {
         await import(`$lib/components/${appName}/pages/${modelName}.svelte`)
     ).default;
 
-    const blockComponents = await getBlockComponents();
-
     return {
         component: pageComponent,
-        props: { ...data.pageData, page: data.page, mockData: data.mockData },
-        blockComponents,
+        props: { ...data.pageData },
     };
 }

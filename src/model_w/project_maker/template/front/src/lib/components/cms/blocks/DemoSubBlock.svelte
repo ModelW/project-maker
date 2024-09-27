@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
-    import Image from "../images/Image.svelte";
+    import Image from "$lib/components/cms/images/Image.svelte";
 
     export let props: any;
 </script>
@@ -10,8 +9,10 @@
 <p>{@html props.description}</p>
 {#each props.heading_blocks as block}
     <hr />
-    <svelte:component this={$page.data.blockComponents[block.type]} props={block.value} />
-    <hr />
+    {#if block.type === "Heading"}
+        <h6>{block.value}</h6>
+        <hr />
+    {/if}
 {/each}
 
 {#if props.image}

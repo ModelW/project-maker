@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import { onMount } from "svelte";
     import Image from "$lib/components/cms/images/Image.svelte";
+    import DemoBlock from "$lib/components/cms/blocks/DemoBlock.svelte";
 
     export let props: any;
 
@@ -20,7 +20,9 @@
     <p>{@html props.description}</p>
     {#each props.demo_blocks as block}
         <hr />
-        <svelte:component this={$page.data.blockComponents[block.type]} props={block.value} />
+        {#if block.type === "DemoBlock"}
+            <svelte:component this={DemoBlock} props={block.value} />
+        {/if}
     {/each}
 
     {#if props.image}
