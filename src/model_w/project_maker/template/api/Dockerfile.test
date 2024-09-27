@@ -6,13 +6,13 @@ FROM modelw/base:2024.07
 # we run everything as root.
 USER root
 
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 RUN modelw-docker install
 
 # Install test dependencies
 RUN poetry install --only test
-# Install playwright systme dependencies
+# Install Playwright system dependencies
 RUN poetry run playwright install --with-deps
 
 # Copy the rest of the api/ files
