@@ -23,17 +23,18 @@ logger = getLogger(__name__)
 @pytest.fixture(autouse=True)
 def overwrite_settings(settings: SettingsWrapper, front_server: str) -> SettingsWrapper:
     """
-    Update the Django settings to use the front-end server URL.
-    Namely the CSRF_TRUSTED_ORIGINS and BASE_URL.
-    Useful for overwriting any settings at runtime just for testing.
+    Overwrite any settings at runtime just for testing.
+
+    ie. dynamic base URL, file storage, etc.
     """
     base_url = front_server.strip("/")
-
     settings.BASE_URL = base_url
-    # Special case for port 80, which will have the port stripped
-    settings.CSRF_TRUSTED_ORIGINS = [
-        base_url if not base_url.endswith(":80") else base_url.split(":80")[0],
-    ]
+
+    # We use InMemoryStorage for local testing, and a Dockerised S3, for CI/CD testing
+    settings.DEFAULT_FILE_STORAGE = os.environ.get(
+        "DEFAULT_FILE_STORAGE",
+        "django.core.files.storage.InMemoryStorage",
+    )
     return settings
 
 
