@@ -9,6 +9,11 @@ const config = {
 
     kit: {
         adapter: adapter(),
+        // Django will check this, so as long as nothing extravagant happens
+        // in the front-end, we don't need Svelte to check it.
+        csrf: {
+            checkOrigin: false,
+        },
     },
 };
 
