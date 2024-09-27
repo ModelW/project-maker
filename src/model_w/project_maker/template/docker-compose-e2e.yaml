@@ -2,8 +2,45 @@
 # Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
 # We run the tests using localhost instead of an isolated network and containerised names.
 # The benefit is that many services like SSO/cookies/tracking etc. are more leniant with localhost.
+# (But no need for the S3 to be on localhost)
 
 services:
+
+  s3:
+    image: minio/minio:latest
+    env_file:
+      - "api/.env.test"    
+    ports:
+      - "9000:9000"
+      - "9099:9099"
+    command: server --address ":9099" --console-address ":9000" /data
+    healthcheck:
+      test: curl -f http://s3:9000 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  createbuckets:
+    image: minio/mc:latest
+    env_file:
+      - "api/.env.test"  
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://s3:9099 $$AWS_ACCESS_KEY_ID $$AWS_SECRET_ACCESS_KEY; 
+      /usr/bin/mc mb myminio/$$AWS_STORAGE_BUCKET_NAME;
+      /usr/bin/mc anonymous set download myminio/$$AWS_STORAGE_BUCKET_NAME;
+      sleep infinity
+      "
+    healthcheck:
+      test: /usr/bin/mc ls myminio/$$AWS_STORAGE_BUCKET_NAME || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
 
   postgres:
     image: postgres:15-alpine
@@ -37,6 +74,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      createbuckets:
         condition: service_healthy
     environment:
       - SKIPBUILD=1

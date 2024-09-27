@@ -30,6 +30,9 @@ def overwrite_settings(settings: SettingsWrapper, front_server: str) -> Settings
     base_url = front_server.strip("/")
     settings.BASE_URL = base_url
 
+    settings.AWS_S3_ENDPOINT_URL = settings.AWS_S3_CUSTOM_DOMAIN
+    settings.AWS_S3_URL_PROTOCOL = settings.AWS_S3_ENDPOINT_URL.split("//", 1)[0]
+
     # We use InMemoryStorage for local testing, and a Dockerised S3, for CI/CD testing
     settings.DEFAULT_FILE_STORAGE = os.environ.get(
         "DEFAULT_FILE_STORAGE",
