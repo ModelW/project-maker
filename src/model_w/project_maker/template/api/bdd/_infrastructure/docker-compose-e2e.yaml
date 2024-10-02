@@ -6,6 +6,7 @@
 
 services:
 
+# :: IF api~~wagtail
   s3:
     image: minio/minio:latest
     env_file:
@@ -41,6 +42,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 1s
+# :: ENDIF
 
   postgres:
     image: postgres:15-alpine
@@ -75,8 +77,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+# :: IF api~~wagtail
       createbuckets:
         condition: service_healthy
+# :: ENDIF        
     environment:
       - SKIPBUILD=1
       - FRONTURL=http://localhost:80
