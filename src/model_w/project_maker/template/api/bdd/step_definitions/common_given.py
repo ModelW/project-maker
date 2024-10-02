@@ -9,14 +9,14 @@ from django.contrib.auth.models import AbstractBaseUser
 from playwright.sync_api import Page
 from pytest_bdd import given, parsers
 from pytest_django.live_server_helper import LiveServer
-from wagtail import models as wagtail_models
 
 # :: IF api__wagtail
+from wagtail import models as wagtail_models
+
 from ___project_name__snake___.apps.cms import models as cms_models
 
-from . import utils
-
 # :: ENDIF
+from . import utils
 
 
 @given(parsers.cfparse('I am at the URL "{url}"'))
