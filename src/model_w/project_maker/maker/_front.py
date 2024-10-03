@@ -24,6 +24,7 @@ def make_path_specs() -> pathspec.PathSpec:
         lines.extend(f)
 
     lines.append("package-lock.json")
+    lines.append("!/front/src/lib/")
 
     return pathspec.PathSpec.from_lines("gitwildmatch", lines)
 
@@ -77,16 +78,21 @@ class FrontComponent(BaseComponent):
         if self.path_specs.match_file(path):
             return False
 
-        if not context["api"]["wagtail"]:
-            if path.name in {
-                "[...wagtail].vue",
-                "server-templated-component.vue",
-                "title-1.vue",
-            }:
-                return False
-        else:
-            if path.name == "no-wagtail-index.vue":
-                return False
+        if not context["api"]["wagtail"] and (
+            path.name
+            in [
+                "cms.ts",
+            ]
+            or path.parent.name
+            in [
+                "[...cmsPath]",
+            ]
+            or path.parent.parent.name
+            in [
+                "cms",
+            ]
+        ):
+            return False
 
         return True
 

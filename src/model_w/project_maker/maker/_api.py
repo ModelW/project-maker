@@ -53,9 +53,8 @@ def clean_pyproject(path: Path) -> None:
 def make_path_specs() -> pathspec.PathSpec:
     """
     Tweaking a bit the project's .gitignore to include only API-related files
-    and exclude the initial "people" migration (we want to keep it locally
-    because we need it for development but at the same time we don't want to
-    impose on the developer a user model out of the box).
+    and exclude some "project maker only" files which we want to keep locally
+    for development but not include in user projects.
     """
 
     lines = [
@@ -67,6 +66,8 @@ def make_path_specs() -> pathspec.PathSpec:
         lines.extend(f)
 
     lines.append("poetry.lock")
+    lines.append("0003_project_maker_only.py")
+    lines.append("demo.py")
 
     return pathspec.PathSpec.from_lines("gitwildmatch", lines)
 
