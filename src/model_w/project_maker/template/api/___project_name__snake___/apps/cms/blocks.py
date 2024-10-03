@@ -25,9 +25,9 @@ class ImageChooserBlock(wagtail_image_blocks.ImageChooserBlock):
         # with custom rendition filters and media queries
         image = blocks.ImageChooserBlock(
             filters=[
-                ("fill-768x150-c100", "(max-width: 767px)"),
-                ("fill-512x250-c100", "(max-width: 1023px)"),
-                ("fill-360x350-c100", "(min-width: 1024px)"),
+                (["fill-768x150-c100", "fill-768x150-c100"], "(max-width: 767px)", "100vw"),
+                (["fill-512x250-c100", "fill-1024x250-c100"], "(max-width: 1023px)", "50vw"),
+                (["fill-360x350-c100", "fill-640x350-c100"], "(min-width: 1024px)", "25vw"),
             ],
         ```
     """
