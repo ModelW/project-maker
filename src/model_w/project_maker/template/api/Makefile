@@ -16,7 +16,7 @@ celery_run:
 
 # :: ENDIF
 dev_stack:
-	docker compose -f ./bdd/_infrastructure/docker-compose-e2e.yaml up postgres redis --abort-on-container-exit --remove-orphans
+	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up postgres redis --force-recreate --abort-on-container-exit --remove-orphans
 
 docker_test:
-	docker compose -f ./bdd/_infrastructure/docker-compose-e2e.yaml up --build --abort-on-container-exit --remove-orphans ; python -m webbrowser -t "./bdd/report/results/report.html"
+	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up --build --force-recreate --abort-on-container-exit --remove-orphans ; python -m webbrowser -t "./bdd/report/results/report.html"

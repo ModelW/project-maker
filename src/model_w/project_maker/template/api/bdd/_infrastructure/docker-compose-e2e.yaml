@@ -2,7 +2,7 @@
 # Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
 # We run the tests using localhost instead of an isolated network and containerised names.
 # The benefit is that many services like SSO/cookies/tracking etc. are more leniant with localhost.
-# (But no need for the S3 to be on localhost)
+# (But no need for the S3 to be on localhost [if used])
 
 services:
 
