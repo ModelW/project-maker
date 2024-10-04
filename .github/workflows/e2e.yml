@@ -11,7 +11,7 @@ jobs:
             - uses: actions/checkout@v4
             - name: Run tests
               run: |
-                  docker compose -f src/model_w/project_maker/template/docker-compose-e2e.yaml up --build --abort-on-container-exit --remove-orphans
+                  docker compose -f src/model_w/project_maker/template/api/bdd/_infrastructure/docker-compose-e2e.yaml up --build --abort-on-container-exit --remove-orphans
 
             - name: Archive test results
               if: success() || failure()
