@@ -33,15 +33,16 @@ def overwrite_settings(settings: SettingsWrapper, front_server: str) -> Settings
     # We use InMemoryStorage for local testing, and a Dockerised S3, for CI/CD testing
     in_memory_file_storage = "django.core.files.storage.InMemoryStorage"
     boto3_file_storage = "storages.backends.s3boto3.S3Boto3Storage"
-
-    settings.DEFAULT_FILE_STORAGE = os.environ.get(
+    default_file_storage = os.environ.get(
         "DEFAULT_FILE_STORAGE",
         in_memory_file_storage,
     )
 
-    if boto3_file_storage == settings.DEFAULT_FILE_STORAGE:
+    if default_file_storage == boto3_file_storage:
         settings.AWS_S3_ENDPOINT_URL = settings.AWS_S3_CUSTOM_DOMAIN
         settings.AWS_S3_URL_PROTOCOL = settings.AWS_S3_ENDPOINT_URL.split("//", 1)[0]
+
+    settings.DEFAULT_FILE_STORAGE = default_file_storage
 
     return settings
 
