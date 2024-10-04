@@ -25,11 +25,11 @@ modelw-preset-django = {extras = [
     # :: IF api__wsgi
     "gunicorn",
     # :: ENDIF
-], version = ">=2024.7.0,<2024.8.0", allow-prereleases = true}
-drf-spectacular = {extras = ["sidecar"], version = "^0.27.2"}
+], version = ">=2024.10.0b1,<2024.11.0", allow-prereleases = true}
+drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
-markdown = "^3.5.1"
-networkx = "^3.2.1"
+markdown = "*"
+networkx = "*"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -38,14 +38,14 @@ isort = "*"
 ipython = "*"
 
 [tool.poetry.group.test.dependencies]
-psutil = "^5.9.8"
-pytest = "^8.1.1"
-pytest-bdd = "^7.0.1"
-pytest-django = "^4.8.0"
-pytest-html = "^4.1.1"
-pytest-playwright = "^0.4.4"
-node-edge = {version = "^0.1.0b6", allow-prereleases = true}
-pyyaml = "^6.0.1"
+psutil = "*"
+pytest = "*"
+pytest-bdd = "*"
+pytest-django = "*"
+pytest-html = "*"
+pytest-playwright = "*"
+node-edge = {version = "*", allow-prereleases = true}
+pyyaml = "*"
 
 [tool.isort]
 profile = "black"
