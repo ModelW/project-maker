@@ -1,0 +1,21 @@
+name: E2E tester
+
+on:
+    workflow_dispatch:
+
+jobs:
+    run-tests:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Run tests
+              run: |
+                  docker compose -f ./api/bdd/_infrastructure/docker-compose-e2e.yaml up --build --abort-on-container-exit --remove-orphans
+
+            - name: Archive test results
+              if: success() || failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-results
+                  path: api/bdd/report/results/

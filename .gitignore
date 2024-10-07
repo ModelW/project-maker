@@ -233,10 +233,3 @@ sw.*
 
 # dotenv environment variables file
 .env
-
-# ---
-# Template lockfiles
-# ---
-
-/src/model_w/project_maker/template/front/package-lock.json
-/src/model_w/project_maker/template/api/poetry.lock

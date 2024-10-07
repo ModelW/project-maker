@@ -9,6 +9,8 @@ from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
+from ___project_name__snake___.apps.cms.api import cms_api_router
+
 # :: ENDIF
 from ___project_name__snake___.apps.people.views import MeViewSet
 
@@ -28,7 +30,8 @@ urlpatterns = [
     path("back/admin/", admin.site.urls),
     path("back/api/", include(router.urls)),
     # :: IF api__wagtail
-    path("___cms_prefix___/", include(wagtailadmin_urls)),
+    path("back/___cms_prefix___/", include(wagtailadmin_urls)),
+    path("back/api/cms/", cms_api_router.urls),
     path("back/documents/", include(wagtaildocs_urls)),
     path("", include(wagtail_urls)),
     # :: ENDIF
@@ -57,4 +60,5 @@ if settings.DEBUG:
             SpectacularRedocView.as_view(url_name="schema"),
             name="redoc",
         ),
+        path("back/__debug__/", include("debug_toolbar.urls")),
     ] + urlpatterns

@@ -1,32 +1,41 @@
 {
     "name": "___project_name__snake___",
+    "version": "0.0.1",
     "private": true,
+    "type": "module",
     "scripts": {
-        "build": "nuxt build",
-        "dev": "nuxt dev",
-        "generate": "nuxt generate",
-        "preview": "nuxt preview",
-        "postinstall": "nuxt prepare"
+        "dev": "vite dev --port 3000",
+        "build": "vite build",
+        "preview": "vite preview --port 3000",
+        "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+        "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+        "test": "vitest",
+        "lint": "prettier --check . && eslint .",
+        "format": "prettier --write ."
     },
     "dependencies": {
-        "@model-w/axios": "1.x",
-        "@model-w/preset-nuxt3": ">=2024.7.0 && <2024.8.0",
-        "@model-w/proxy": "2.x",
-        "@model-w/sentry": "1.x",
-        "@pinia/nuxt": "^0.5.1",
-        "@vuelidate/core": "2.0.x",
-        "@vuelidate/validators": "2.0.x",
-        "defu": "^6.1.4",
-        "http-proxy-middleware": "^2.0.x",
-        "jsdom": "^24.x.x",
-        "nuxt": "3.12.x",
-        "pinia": "^2.1.7",
-        "sass": "1.77.x",
-        "vite-svg-loader": "5.1.x",
-        "vue": "3.4.x"
+        "@model-w/preset-sveltekit": "^2024.10.0",
+        "@sentry/sveltekit": "*"
     },
     "devDependencies": {
-        "consola": "^3.2.x",
-        "prettier": "*"
+        "@sveltejs/adapter-node": "*",
+        "@sveltejs/kit": "*",
+        "@sveltejs/vite-plugin-svelte": "*",
+        "@types/eslint": "*",
+        "@types/node": "*",
+        "@typescript-eslint/eslint-plugin": "*",
+        "@typescript-eslint/parser": "*",
+        "eslint": "*",
+        "eslint-config-prettier": "*",
+        "eslint-plugin-svelte": "*",
+        "prettier": "*",
+        "prettier-plugin-svelte": "*",
+        "sass": "*",
+        "svelte": "*",
+        "svelte-check": "*",
+        "tslib": "*",
+        "typescript": "*",
+        "vite": "*",
+        "vitest": "*"
     }
 }

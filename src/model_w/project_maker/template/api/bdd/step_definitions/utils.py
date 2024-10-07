@@ -4,9 +4,14 @@ Utility functions for BDD testing.
 This file is for utility functions that step definitions may need.
 """
 
+import logging
 import re
+import time
+from collections.abc import Callable
 
 from yaml import safe_load
+
+logger = logging.getLogger(__name__)
 
 
 def remove_model_w_template_engine_keywords(text: str) -> str:
@@ -136,3 +141,125 @@ def cast_to_bool(text: str) -> bool:
         )
 
     return text.lower() in truthy
+
+
+def key_values_to_table(event: dict[str, str]) -> str:
+    """Prettify an object with key values to a nice HTML table."""
+    table_html = "<table border='1' style='border-collapse: collapse; width: 100%;'>"
+    table_html += "<thead><tr><th>Key</th><th>Value</th></tr></thead>"
+    table_html += "<tbody>"
+
+    for key, value in event.items():
+        table_html += f"<tr><td>{key}</td><td>{value}</td></tr>"
+
+    table_html += "</tbody></table>"
+
+    return table_html
+
+
+def event_a_subset_of_event_b(event_a: dict[str, str], event_b: dict[str, str]) -> bool:
+    """
+    Checks if event a is a subset of event b.
+    ie. all of the keys and values in event a are present in event b, but not necessarily vice versa.
+    """
+    return all(event_b.get(key, "") == value for key, value in event_a.items())
+
+
+def event_a_is_equal_to_event_b(
+    event_a: dict[str, str],
+    event_b: dict[str, str],
+    ignore_keys: list[str] = [],
+) -> bool:
+    """
+    Checks if event a is equal to event b.
+    ie. all of the keys and values in event a are present in event b, and vice versa.
+    However, any keys in ignore_keys are ignored.
+    """
+    event_a_minus_ignore_keys = {
+        key: value for key, value in event_a.items() if key not in ignore_keys
+    }
+    event_b_minus_ignore_keys = {
+        key: value for key, value in event_b.items() if key not in ignore_keys
+    }
+
+    # Check no keys are missing
+    missing_keys = set(event_a_minus_ignore_keys.keys()) - set(
+        event_b_minus_ignore_keys.keys(),
+    )
+    if len(missing_keys) > 0:
+        logger.error("Missing keys: %s", missing_keys)
+        return False
+
+    # Check no extra keys are present
+    extra_keys = set(event_b_minus_ignore_keys.keys()) - set(
+        event_a_minus_ignore_keys.keys(),
+    )
+    if len(extra_keys) > 0:
+        logger.error("Extra keys: %s", extra_keys)
+        return False
+
+    # Check no values are different
+    different_keys = [
+        key
+        for key in event_a_minus_ignore_keys
+        if event_a_minus_ignore_keys.get(key) != event_b_minus_ignore_keys.get(key)
+    ]
+
+    if len(different_keys) > 0:
+        logger.error("Different keys: %s", different_keys)
+        for key in different_keys:
+            logger.error(
+                "%s: actual(%s), expected(%s)",
+                key,
+                event_b.get(key),
+                event_a.get(key),
+            )
+        return False
+
+    return True
+
+
+def is_event_in_data_layer(
+    target_event: dict[str, any],
+    get_events: Callable[[], list[dict[str, any]]],
+) -> bool:
+    """
+    Gets events (ie. dataLayer) via the get_events function.
+    Checks that the target_event is one of the events.
+
+    Note: Events could have auto-generated keys, which should be ignored.
+          Therefore, update the ignore_keys list to include any as necessary.
+
+    Args:
+        target_event (dict[str, any]): The event to look for
+        get_events (Callable): A function that gets the events from the page
+
+    Returns:
+        dict[str, str]: The data layer event if found, else None
+    """
+    ignore_keys = ["gtm.uniqueEventId"]
+
+    # Repeat to allow for the dataLayer to be populated
+    i = 0
+    max_tries = 2
+    event_exists = False
+
+    while i < max_tries and not event_exists:
+        events = get_events()
+        logger.debug("all events on attempt %s: %s", i, events)
+
+        event_exists = any(
+            event_a_is_equal_to_event_b(
+                target_event,
+                event,
+                ignore_keys=ignore_keys,
+            )
+            for event in events
+        )
+
+        if not event_exists:
+            logger.debug("event not found on attempt %s", i)
+            i += 1
+            time.sleep(1)
+    return event_exists
+

@@ -3,7 +3,12 @@ from django.utils.translation import gettext_lazy as _
 from wagtail.documents.models import AbstractDocument
 from wagtail.images.models import AbstractImage, AbstractRendition
 from wagtail.images.models import Image as DefaultImage
-from wagtail.models import Page
+
+# :: IF api__testing
+from .demo import *  # noqa: F403
+
+# :: ENDIF
+from .utils import ApiPage
 
 
 class CustomImage(AbstractImage):
@@ -63,7 +68,7 @@ class CustomDocument(AbstractDocument):
         ]
 
 
-class HomePage(Page):
+class HomePage(ApiPage):
     """
     Home page, expected to be the root of the website. There is already a
     migration that will replace Wagtail's default root page by this. All you

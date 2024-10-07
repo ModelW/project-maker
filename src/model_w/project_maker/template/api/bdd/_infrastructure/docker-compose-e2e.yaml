@@ -1,0 +1,111 @@
+---
+# Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
+# We run the tests using localhost instead of an isolated network and containerised names.
+# The benefit is that many services like SSO/cookies/tracking etc. are more leniant with localhost.
+# (But no need for the S3 to be on localhost [if used])
+
+services:
+
+# :: IF api~~wagtail
+  s3:
+    image: minio/minio:latest
+    env_file:
+      - "../../../api/.env.test"    
+    ports:
+      - "9000:9000"
+      - "9099:9099"
+    command: server --address ":9099" --console-address ":9000" /data
+    healthcheck:
+      test: curl -f http://s3:9000 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  createbuckets:
+    image: minio/mc:latest
+    env_file:
+      - "../../../api/.env.test"  
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://s3:9099 $$AWS_ACCESS_KEY_ID $$AWS_SECRET_ACCESS_KEY; 
+      /usr/bin/mc mb myminio/$$AWS_STORAGE_BUCKET_NAME;
+      /usr/bin/mc anonymous set download myminio/$$AWS_STORAGE_BUCKET_NAME;
+      sleep infinity
+      "
+    healthcheck:
+      test: /usr/bin/mc ls myminio/$$AWS_STORAGE_BUCKET_NAME || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+# :: ENDIF
+
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - "../../../api/.env.test"
+    network_mode: "host"
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    network_mode: "host"
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build:
+      context: "../../../api"
+      dockerfile: Dockerfile.test
+    depends_on:
+      front:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+# :: IF api~~wagtail
+      createbuckets:
+        condition: service_healthy
+# :: ENDIF        
+    environment:
+      - SKIPBUILD=1
+      - FRONTURL=http://localhost:80
+      - DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000
+    env_file:
+      - "../../../api/.env.test"
+    volumes:
+      - ../report/:/code/bdd/report/
+    network_mode: "host"
+
+  front:
+    build:
+      context: "../../../front"
+    env_file:
+      - "../../../front/.env.test"
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/non-cms/"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  router:
+    image: nginx:alpine
+    network_mode: "host"
+    volumes:
+      - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf      

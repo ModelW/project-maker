@@ -1,1 +1,15 @@
-.output
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.test
+!.env.example
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# As lib is gitignored in the root gitignore, we'll negate that for front.
+# We could probably remove it from the root one too, but playing it safe.
+!src/lib/

@@ -1,11 +1,15 @@
 # :: IF api__celery
 from datetime import timedelta
+
 # :: ENDIF
 from importlib import metadata
 
 from model_w.env_manager import EnvManager
 from model_w.preset.django import ModelWDjango
 
+# Variables set by the EnvManager but declared here so IDEs don't complain
+DEBUG = False
+MIDDLEWARE = []
 REST_FRAMEWORK = {}
 
 
@@ -15,7 +19,6 @@ def get_package_version() -> str:
     assumes that the version is indeed set in pyproject.toml and that the
     package was cleanly installed.
     """
-
     try:
         return metadata.version("___project_name__snake___")
     except metadata.PackageNotFoundError:
@@ -109,3 +112,17 @@ with EnvManager(ModelWDjango()) as env:
         },
     }
     # :: ENDIF
+
+    if DEBUG:
+        # Django Debug Toolbar
+        INSTALLED_APPS.append("debug_toolbar")
+        MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
+        INTERNAL_IPS = [
+            "127.0.0.1",
+        ]
+        DEBUG_TOOLBAR_CONFIG = {
+            "SHOW_COLLAPSED": True,
+        }
+
+        # Django Extensions
+        INSTALLED_APPS.append("django_extensions")
