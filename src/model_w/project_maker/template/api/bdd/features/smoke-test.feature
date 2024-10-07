@@ -55,7 +55,7 @@ Feature: Smoke test for the site
         But I should see the text "Welcome to the ___project_name__natural_double_quoted___ Wagtail CMS"
         And I should be at a URL with "___cms_prefix___"
 
-    Scenario: Shows Nuxt injected frontend on Wagtail content
+    Scenario: Shows injected frontend on Wagtail content
         When I go to the URL "<FRONT_URL>"
         Then the text "___project_name__natural_double_quoted___" should be the colour "rgb(255, 0, 0)"
         And there should be no console errors
