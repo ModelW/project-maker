@@ -1,6 +1,6 @@
 # A Dockerfile for testing a ModelW project.
 
-FROM modelw/base:2024.07
+FROM modelw/base:2024.10
 
 # To avoid complications with permissions to install Playwright's system dependencies
 # we run everything as root.
