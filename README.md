@@ -102,33 +102,20 @@ api/pmanage migrate
 > the `manage.py` script. It's simply a wrapper to call `manage.py` through the
 > Poetry virtual environment.
 
-### Nuxt/Wagtail integration
+### SvelteKit/Wagtail integration
 
-If you have both a front-end and a back-end, you'll have a Nuxt/Wagtail
-integration automatically enabled.
+If you have chosen a CMS, there will be a SvelteKit/Wagtail integration, using
+Wagtail's v2 API.
 
-All depends on two things:
+A [...cmsPath] directory will be created in the `front` directory, which is a
+catch-all for all the CMS paths.
 
--   The `*.vue` catchall page in Nuxt. It will catch all requests to the
-    front-end and will forward them to Wagtail if they don't match any known
-    route. Then it will download the code of those pages (or forward the
-    errors/redirections) and render it using...
--   The `ServerTemplatedComponent`. See the inline documentation. It will
-    basically allow you to have Vue components getting their template from
-    Django-generated HTML. This allows to easily have Django send generated HTML
-    and to inject some dynamism in required places in each component.
+Inside, `$lib/components/` there is a `cms` directory, which contains the Svelte
+components for the CMS such as blocks and pages.
 
-In case you find the `ServerTemplatedComponent` thing too brittle (it is a bit)
-you can decide to keep the same logic but instead of calling HTML pages you can
-get content from the API. The default is to use this mechanism because it's
-easier to generate from Django, especially if you want to generate image
-thumbnails. But well, it's your project, you can do whatever you want.
-
-The default configuration, which depends a lot on the proxy configuration in
-`nuxt.config.js`, works seamlessly with Wagtail. As long as you access the
-Wagtail URLs through the front-end, the proxy will be invoked when necessary and
-JS code will be run otherwise. The live previews work perfectly well and it's up
-to you to keep it working.
+To make a CMS page work, create a component in the `cms` directory with the same
+name as the Wagtail page type, and it will automatically be imported and
+rendered when landing on a page of that type.
 
 ## Contributing
 
