@@ -25,6 +25,9 @@ def make_path_specs() -> pathspec.PathSpec:
 
     lines.append("package-lock.json")
     lines.append("!/front/src/lib/")
+    lines.append("DemoBlock.svelte")
+    lines.append("DemoSubBlock.svelte")
+    lines.append("DemoPage.svelte")
 
     return pathspec.PathSpec.from_lines("gitwildmatch", lines)
 
@@ -122,11 +125,6 @@ class FrontComponent(BaseComponent):
 
         if not (parser := info.get("inferredParser")):
             return
-
-        if file_path.name == "no-wagtail-index.vue":
-            new_path = file_path.parent / "index.vue"
-            file_path.rename(new_path)
-            file_path = new_path
 
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
