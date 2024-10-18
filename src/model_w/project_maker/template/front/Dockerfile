@@ -6,13 +6,6 @@ RUN modelw-docker install
 
 COPY --chown=user . .
 
-RUN modelw-docker build \
-    && npm prune --omit dev
+RUN modelw-docker build
 
-ARG PORT=3000
-ENV PORT=${PORT:-3000}
-EXPOSE ${PORT}
-
-ENV NODE_ENV=production
-
-CMD [ "node", "./build/index.js" ]
+CMD [ "modelw-docker", "serve" ]
