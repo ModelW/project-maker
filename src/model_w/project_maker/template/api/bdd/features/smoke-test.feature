@@ -59,6 +59,12 @@ Feature: Smoke test for the site
         When I go to the URL "<FRONT_URL>"
         Then the text "___project_name__natural_double_quoted___" should be the colour "rgb(255, 0, 0)"
         And there should be no console errors
+
+    @redirects
+    Scenario: Redirects work correctly
+        Given a permanent redirect exists from /redirect to /home
+        When I visit the /redirect page
+        Then I should be at the URL "<FRONT_URL>/home"
     # :: ENDIF
 
     # :: IF api__testing

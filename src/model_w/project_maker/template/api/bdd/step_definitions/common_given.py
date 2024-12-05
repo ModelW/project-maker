@@ -12,6 +12,7 @@ from pytest_django.live_server_helper import LiveServer
 
 # :: IF api__wagtail
 from wagtail import models as wagtail_models
+from wagtail.contrib.redirects.models import Redirect
 
 from ___project_name__snake___.apps.cms import models as cms_models
 
@@ -77,15 +78,6 @@ def on_page(page_name: str, page: Page, front_server: str):
     page.goto(str(page_url))
 
 
-@given(parsers.cfparse("I am logged in as a CMS admin"))
-def logged_in_as_cms_admin(page: Page, front_server: str):
-    """Log in as an admin to the CMS."""
-    on_page("back/___cms_prefix___", page, front_server)
-    page.locator('input[name="username"]').fill("good@user.com")
-    page.locator('input[name="password"]').fill("correct")
-    page.locator('button[type="submit"]').click()
-
-
 @given(parsers.cfparse("I am logged in as a Django admin"))
 def logged_in_as_django_admin(page: Page, front_server):
     """Log in as an admin to Django."""
@@ -119,6 +111,40 @@ def the_following_user(datatable_vertical: str, django_user_model: AbstractBaseU
         django_user_model.objects.create_superuser(**datatable)
     else:
         django_user_model.objects.create_user(**datatable)
+
+
+# :: IF api__wagtail
+@given(parsers.cfparse("I am logged in as a CMS admin"))
+def logged_in_as_cms_admin(page: Page, front_server: str):
+    """Log in as an admin to the CMS."""
+    on_page("back/___cms_prefix___", page, front_server)
+    page.locator('input[name="username"]').fill("good@user.com")
+    page.locator('input[name="password"]').fill("correct")
+    page.locator('button[type="submit"]').click()
+
+
+@given(
+    parsers.cfparse(
+        "a {permanent_or_temporary} redirect exists from {source_path} to {target_path}",
+    ),
+)
+def create_redirect(permanent_or_temporary: str, source_path: str, target_path: str):
+    """Create a Wagtail redirect from a source path to a target path."""
+    permanent = "permanent"
+    temporary = "temporary"
+    assert permanent_or_temporary in (
+        permanent,
+        temporary,
+    ), f"{permanent_or_temporary} not supported.  Use '{permanent}' or '{temporary}'."
+
+    return Redirect.objects.create(
+        old_path=Redirect.normalise_path(source_path),
+        redirect_link=Redirect.normalise_path(target_path),
+        is_permanent=permanent_or_temporary == permanent,
+    )
+
+
+# :: ENDIF
 
 
 # :: IF api__testing

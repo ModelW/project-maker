@@ -4,8 +4,7 @@ Fixtures related to any global data needed when testing
 For example, users, pages, models, etc.
 """
 
-from urllib.parse import urlparse
-
+import httpx
 import pytest
 from django.contrib.auth.models import AbstractBaseUser
 from pytest_django.fixtures import SettingsWrapper
@@ -33,12 +32,11 @@ def set_wagtail_site(front_server: str, overwrite_settings: SettingsWrapper):
     """
     from wagtail.models import Site
 
-    url = urlparse(front_server)
-
-    site = Site.objects.get(is_default_site=True)
-    site.hostname = url.hostname
-    site.port = url.port
+    site = Site.objects.first()
+    front_url = httpx.URL(front_server)
+    site.port = front_url.port or 80
     site.save()
+    return site
 
 
 # :: ENDIF
@@ -54,7 +52,7 @@ def admin_user(django_user_model: AbstractBaseUser):
       log in to the admin with the credentials defined here.
     """
     email = "good@user.com"
-    password = "correct"
+    password = "correct"  # noqa: S105
 
     try:
         user = django_user_model.objects.get(email=email)
