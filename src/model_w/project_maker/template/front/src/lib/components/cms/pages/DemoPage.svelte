@@ -3,7 +3,7 @@
     import Image from "$lib/components/cms/images/Image.svelte";
     import DemoBlock from "$lib/components/cms/blocks/DemoBlock.svelte";
 
-    export let props: any;
+    export let cmsData: any;
 
     let hasHydrated = false;
 
@@ -16,19 +16,19 @@
 <hr />
 
 <main data-testid="demo page">
-    <h1>{props.title}</h1>
-    <p>{@html props.description}</p>
-    {#each props.demo_blocks as block}
+    <h1>{cmsData.title}</h1>
+    <p>{@html cmsData.description}</p>
+    {#each cmsData.demo_blocks as block}
         <hr />
         {#if block.type === "DemoBlock"}
-            <svelte:component this={DemoBlock} props={block.value} />
+            <svelte:component this={DemoBlock} cmsData={block.value} />
         {/if}
     {/each}
 
-    {#if props.image}
+    {#if cmsData.image}
         <h2>An image with fill-widthxheight (100% centred focal point)</h2>
         <div class="image-container">
-            <Image image={props.image} />
+            <Image image={cmsData.image} />
         </div>
     {/if}
 </main>

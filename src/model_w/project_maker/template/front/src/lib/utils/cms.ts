@@ -10,8 +10,8 @@ import { fetchWithErrorHandling } from "$lib/utils/fetchUtils";
  * and have SSR work, the server imports all block components and makes them available at $page.blockComponents.
  * Then they can be rendered as follows:
  * ```svelte
- *  {#each props.blocks as block}
- *      <svelte:component this={$page.data.blockComponents[block.type]} props={block.value} />
+ *  {#each cmsData.blocks as block}
+ *      <svelte:component this={$page.data.blockComponents[block.type]} cmsData={block.value} />
  *  {/each}
  * ```
  *

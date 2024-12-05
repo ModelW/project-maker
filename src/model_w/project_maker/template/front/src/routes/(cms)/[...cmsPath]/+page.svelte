@@ -8,4 +8,4 @@
     export let data: PageData;
 </script>
 
-<svelte:component this={data.component} props={data.props} />
+<svelte:component this={data.component} cmsData={data.cmsData} />

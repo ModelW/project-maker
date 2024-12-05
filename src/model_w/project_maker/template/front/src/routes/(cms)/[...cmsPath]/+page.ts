@@ -19,6 +19,6 @@ export async function load({ data }: { data: PageServerData }) {
 
     return {
         component: pageComponent,
-        props: { ...data.pageData },
+        cmsData: { ...data.pageData },
     };
 }

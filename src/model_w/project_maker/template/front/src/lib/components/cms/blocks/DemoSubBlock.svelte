@@ -1,13 +1,13 @@
 <script lang="ts">
     import Image from "$lib/components/cms/images/Image.svelte";
 
-    export let props: any;
+    export let cmsData: any;
 </script>
 
 <h5>Demo Sub Block</h5>
-<p>{props.tagline}</p>
-<p>{@html props.description}</p>
-{#each props.heading_blocks as block}
+<p>{cmsData.tagline}</p>
+<p>{@html cmsData.description}</p>
+{#each cmsData.heading_blocks as block}
     <hr />
     {#if block.type === "Heading"}
         <h6>{block.value}</h6>
@@ -15,10 +15,10 @@
     {/if}
 {/each}
 
-{#if props.image}
+{#if cmsData.image}
     <h6>Image with custom filters and media queries</h6>
     <div class="image-container">
-        <Image image={props.image} />
+        <Image image={cmsData.image} />
     </div>
 {/if}
 
