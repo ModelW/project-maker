@@ -101,9 +101,9 @@ class CustomPagesAPIViewSet(PagesAPIViewSet):
     def find_view(self, request: Request):
         """
         When getting pages via the `html_path` query param, if not found, a 404 is returned,
-        without checking if a redirect exists.  Furthermore, it's hard to break out of the WagtailAPIRouter
-        with anything other than 200 or 404 status codes.
-        Therefore, we add redirect headers to the response, and let the client handle it.
+        without checking if a redirect exists.  Furthermore, it's hard to break out of the
+        WagtailAPIRouter with standard redirect & Location header, as it tries to get a template.
+        Therefore, we add a custom redirect header to the response, and let the client handle it.
         """
         try:
             return super().find_view(request)
