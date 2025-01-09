@@ -17,8 +17,7 @@ from rest_framework.response import Response
 from wagtail.api.v2.router import WagtailAPIRouter
 from wagtail.api.v2.views import PagesAPIViewSet
 from wagtail.contrib.redirects.models import Redirect
-from wagtail.documents.api.v2.views import DocumentsAPIViewSet
-from wagtail.images.api.v2.views import BaseAPIViewSet, ImagesAPIViewSet
+from wagtail.images.api.v2.views import BaseAPIViewSet
 
 from . import utils
 
@@ -128,18 +127,8 @@ class CustomPagesAPIViewSet(PagesAPIViewSet):
                 raise Http404 from None
 
 
-class CustomImagesAPIViewSet(ImagesAPIViewSet):
-    permission_classes = [AllowAny]
-
-
-class CustomDocumentsAPIViewSet(DocumentsAPIViewSet):
-    permission_classes = [AllowAny]
-
-
 cms_api_router = WagtailAPIRouter("wagtailapi")
 
 cms_api_router.register_endpoint("pages", CustomPagesAPIViewSet)
-cms_api_router.register_endpoint("images", CustomImagesAPIViewSet)
-cms_api_router.register_endpoint("documents", CustomDocumentsAPIViewSet)
 cms_api_router.register_endpoint("preview", PreviewPagesAPIViewSet)
 cms_api_router.register_endpoint("preview-snippet", PreviewSnippetsViewSet)
