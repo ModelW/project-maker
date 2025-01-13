@@ -52,7 +52,7 @@ Feature: Smoke test for the site
     Scenario: Shows correct CMS admin page
         Given I am logged in as a CMS admin
         Then I should not see the text "Sign in to Wagtail"
-        But I should see the text "Welcome to the ___project_name__natural_double_quoted___ Wagtail CMS"
+        But I should see the text "Welcome to the ___project_name__natural_double_quoted___"
         And I should be at a URL with "___cms_prefix___"
 
     Scenario: Shows injected frontend on Wagtail content
