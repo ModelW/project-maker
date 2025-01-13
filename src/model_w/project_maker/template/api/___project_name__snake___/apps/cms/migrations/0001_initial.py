@@ -77,6 +77,15 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "description",
+                    models.CharField(
+                        blank=True, 
+                        default="", 
+                        max_length=255, 
+                        verbose_name="description",
+                    )
+                ),
+                (
                     "collection",
                     models.ForeignKey(
                         default=wagtail.models.collections.get_root_collection_id,
@@ -138,7 +147,7 @@ class Migration(migrations.Migration):
                     "created_at",
                     models.DateTimeField(auto_now_add=True, verbose_name="created at"),
                 ),
-                ("file_size", models.PositiveIntegerField(editable=False, null=True)),
+                ("file_size", models.PositiveBigIntegerField(editable=False, null=True)),
                 (
                     "file_hash",
                     models.CharField(blank=True, editable=False, max_length=40),
