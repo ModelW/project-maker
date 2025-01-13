@@ -22,9 +22,6 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-    # :: IF api__wsgi
-    "gunicorn",
-    # :: ENDIF
 ], version = ">=2025.1.0,<2025.2.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
