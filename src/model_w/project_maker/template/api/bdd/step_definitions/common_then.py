@@ -64,16 +64,18 @@ def at_exact_url(url: str, page: Page, front_server: str, live_server: LiveServe
     # Map special URLs as required, else use the supplied URL
     SPECIAL_URLS = {
         "<API_URL>": live_server.url,
-        "<FRONT_URL>": front_server.rstrip("/")
-        if not front_server.endswith(":80")
-        else front_server.split(":80")[0],
+        "<FRONT_URL>": (
+            front_server.rstrip("/")
+            if not front_server.endswith(":80")
+            else front_server.split(":80")[0]
+        ),
     }
 
     for key, value in SPECIAL_URLS.items():
         url = url.replace(key, value)
 
     # Check with and without trailing slashes
-    expect(page).to_have_url(re.compile(f"{url}/?$"))
+    expect(page).to_have_url(re.compile(f"{re.escape(url)}/?$"))
 
 
 @then(parsers.cfparse('I should be at a URL with "{url}"'))

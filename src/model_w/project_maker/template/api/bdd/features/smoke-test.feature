@@ -52,13 +52,19 @@ Feature: Smoke test for the site
     Scenario: Shows correct CMS admin page
         Given I am logged in as a CMS admin
         Then I should not see the text "Sign in to Wagtail"
-        But I should see the text "Welcome to the ___project_name__natural_double_quoted___ Wagtail CMS"
+        But I should see the text "Welcome to the ___project_name__natural_double_quoted___"
         And I should be at a URL with "___cms_prefix___"
 
     Scenario: Shows injected frontend on Wagtail content
         When I go to the URL "<FRONT_URL>"
         Then the text "___project_name__natural_double_quoted___" should be the colour "rgb(255, 0, 0)"
         And there should be no console errors
+
+    @redirects
+    Scenario: Redirects work correctly
+        Given a permanent redirect exists from /redirect to /home
+        When I visit the /redirect page
+        Then I should be at the URL "<FRONT_URL>/home"
     # :: ENDIF
 
     # :: IF api__testing

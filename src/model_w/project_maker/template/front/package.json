@@ -14,7 +14,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@model-w/preset-sveltekit": "~2024.10.2",
+        "@model-w/preset-sveltekit": "~2025.1.0",
         "@sentry/sveltekit": "*"
     },
     "devDependencies": {

@@ -2,24 +2,24 @@
     import Image from "$lib/components/cms/images/Image.svelte";
     import DemoSubBlock from "$lib/components/cms/blocks/DemoSubBlock.svelte";
 
-    export let props: any;
+    export let cmsData: any;
 </script>
 
 <h3>Demo block</h3>
-<p>{props.tagline}</p>
-<p>{@html props.description}</p>
-{#each props.demo_sub_blocks as block}
+<p>{cmsData.tagline}</p>
+<p>{@html cmsData.description}</p>
+{#each cmsData.demo_sub_blocks as block}
     <hr />
     {#if block.type === "DemoSubBlock"}
-        <svelte:component this={DemoSubBlock} props={block.value} />
+        <svelte:component this={DemoSubBlock} cmsData={block.value} />
         <hr />
     {/if}
 {/each}
 
-{#if props.image}
+{#if cmsData.image}
     <h4>Default image (without filters specified)</h4>
     <div class="image-container">
-        <Image image={props.image} />
+        <Image image={cmsData.image} />
     </div>
 {/if}
 

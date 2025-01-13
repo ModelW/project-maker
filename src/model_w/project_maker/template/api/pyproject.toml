@@ -1,6 +1,3 @@
-[project]
-requires-python = ">=3.11"
-
 [tool.poetry]
 name = "~~~project_name__snake~~~"
 version = "0.1.0"
@@ -13,8 +10,9 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "~3.11"
+python = "~3.12"
 modelw-preset-django = {extras = [
+    "psycopg",
     "health",
     # :: IF api__celery
     "celery",
@@ -25,10 +23,7 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-    # :: IF api__wsgi
-    "gunicorn",
-    # :: ENDIF
-], version = ">=2024.10.0,<2024.11.0"}
+], version = ">=2025.1.0,<2025.2.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
 markdown = "*"
@@ -45,7 +40,7 @@ django-debug-toolbar = "*"
 node-edge = {version = "^0.1.0b6", allow-prereleases = true}
 psutil = "*"
 pytest = "*"
-pytest-bdd = "*"
+pytest-bdd = "^7.0.0"
 pytest-django = "*"
 pytest-html = "*"
 pytest-playwright = "*"
@@ -62,6 +57,9 @@ django_debug_mode = "keep"
 log_cli = true
 log_file = "bdd/report/results/test.log"
 addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--full-page-screenshot", "--video", "on", "--tracing", "retain-on-failure", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
+
+[tool.ruff]
+target-version = "py312"
 
 [tool.ruff.lint.per-file-ignores]
 "**/bdd/**" = ["ARG001", "S101"]
