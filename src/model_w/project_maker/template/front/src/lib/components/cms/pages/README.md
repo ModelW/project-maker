@@ -1,6 +1,6 @@
-# All blocks for the CMS site
+# All pages for the CMS site
 
-Add all blocks here with the same name (case-sensitve) as Wagtail's block.type. This way, it's easier to track which front component belongs to which back model. Furthermore, it makes it easier to do automatic import of blocks, should you wish to do so.
+Add all pages here with the same name (case-sensitve) as Wagtail's page.type. This way, it's easier to track which front component belongs to which back model.
 
 ## Example
 

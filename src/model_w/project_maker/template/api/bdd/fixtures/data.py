@@ -24,7 +24,7 @@ def image():
 
 
 @pytest.fixture(autouse=True)
-def set_wagtail_site(front_server: str, overwrite_settings: SettingsWrapper):
+def site(front_server: str, overwrite_settings: SettingsWrapper):
     """
     Set the wagtail site as needed.
 
@@ -32,10 +32,21 @@ def set_wagtail_site(front_server: str, overwrite_settings: SettingsWrapper):
     """
     from wagtail.models import Site
 
-    site = Site.objects.first()
     front_url = httpx.URL(front_server)
-    site.port = front_url.port or 80
-    site.save()
+
+    site, created = Site.objects.get_or_create(
+        hostname=front_url.host,
+        defaults={
+            "port": front_url.port or 80,
+            "is_default_site": True,
+        },
+    )
+
+    # Update the port if it already existed
+    if not created:
+        site.port = front_url.port or 80
+        site.save()
+
     return site
 
 

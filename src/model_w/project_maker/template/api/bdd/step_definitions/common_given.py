@@ -115,7 +115,7 @@ def the_following_user(datatable_vertical: str, django_user_model: AbstractBaseU
 
 # :: IF api__wagtail
 @given(parsers.cfparse("I am logged in as a CMS admin"))
-def logged_in_as_cms_admin(page: Page, front_server: str):
+def logged_in_as_cms_admin(site: wagtail_models.Site, page: Page, front_server: str):
     """Log in as an admin to the CMS."""
     on_page("back/___cms_prefix___", page, front_server)
     page.locator('input[name="username"]').fill("good@user.com")
@@ -149,7 +149,7 @@ def create_redirect(permanent_or_temporary: str, source_path: str, target_path: 
 
 # :: IF api__testing
 @given(parsers.cfparse("I have created the demo page"), target_fixture="demo_page")
-def create_demo_page():
+def create_demo_page(site: wagtail_models.Site) -> cms_models.DemoPage:
     """Create a demo page."""
     root = wagtail_models.Page.get_first_root_node()
     home = root.get_children().first()

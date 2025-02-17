@@ -5,18 +5,20 @@
  */
 
 import type { PageServerLoad } from "./$types";
-import { fetchCmsData } from "$lib/utils/cms";
+import type { PageType } from "$lib/components/cms/pages/types";
+import { fetchCmsData, fetchUserbar } from "$lib/utils/cms";
 
 /** Server side load function for the dynamic page route. */
 export const load: PageServerLoad = async ({ fetch, params, url }) => {
+    const inPreviewPanel = url.searchParams.get("in_preview_panel");
+
     /** The CMS page data (or preview data if `in_preview_panel` query param). */
-    const pageData = await fetchCmsData(
-        fetch,
-        params.cmsPath,
-        url.searchParams.get("in_preview_panel")
-    );
+    const pageData: PageType = await fetchCmsData(fetch, params.cmsPath, inPreviewPanel);
+
+    const userbar = await fetchUserbar(fetch, pageData.id, inPreviewPanel);
 
     return {
         pageData,
+        userbar,
     };
 };

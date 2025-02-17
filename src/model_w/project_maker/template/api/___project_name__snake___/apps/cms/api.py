@@ -20,6 +20,7 @@ from wagtail.contrib.redirects.models import Redirect
 from wagtail.images.api.v2.views import BaseAPIViewSet
 
 from . import utils
+from .wagtail_userbar.views import WagtailUserbarAPIView
 
 logger = logging.getLogger(__name__)
 
@@ -132,3 +133,4 @@ cms_api_router = WagtailAPIRouter("wagtailapi")
 cms_api_router.register_endpoint("pages", CustomPagesAPIViewSet)
 cms_api_router.register_endpoint("preview", PreviewPagesAPIViewSet)
 cms_api_router.register_endpoint("preview-snippet", PreviewSnippetsViewSet)
+cms_api_router.register_endpoint("wagtail-userbar", WagtailUserbarAPIView)
