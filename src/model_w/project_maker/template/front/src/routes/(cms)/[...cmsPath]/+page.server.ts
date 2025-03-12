@@ -8,6 +8,9 @@ import type { PageServerLoad } from "./$types";
 import type { PageType } from "$lib/components/cms/pages/types";
 import { fetchCmsData, fetchUserbar } from "$lib/utils/cms";
 
+/** Keep trailing slash consistent with Wagtail/Django URLs. */
+export const trailingSlash = "always";
+
 /** Server side load function for the dynamic page route. */
 export const load: PageServerLoad = async ({ fetch, params, url }) => {
     const inPreviewPanel = url.searchParams.get("in_preview_panel");
