@@ -149,31 +149,11 @@ def create_redirect(permanent_or_temporary: str, source_path: str, target_path: 
 
 # :: IF api__testing
 @given(parsers.cfparse("I have created the demo page"), target_fixture="demo_page")
-def create_demo_page(site: wagtail_models.Site) -> cms_models.DemoPage:
+def create_demo_page(
+    site: wagtail_models.Site,
+    demo_page: cms_models.DemoPage,
+) -> cms_models.DemoPage:
     """Create a demo page."""
-    root = wagtail_models.Page.get_first_root_node()
-    home = root.get_children().first()
-    demo_sub_block = cms_models.DemoSubBlock().to_python(
-        {"tagline": "I'm a...", "description": "I'm a DemoSubBlock"},
-    )
-
-    demo_block = cms_models.DemoBlock().to_python(
-        {
-            "tagline": "I'm a...",
-            "description": "I'm a DemoBlock",
-            "demo_sub_blocks": [("DemoSubBlock", demo_sub_block)],
-        },
-    )
-
-    demo_page = cms_models.DemoPage(
-        title="Demo Page",
-        slug="demo",
-        tagline="I'm a demo...",
-        description="I'm a DemoPage",
-        demo_blocks=[("DemoBlock", demo_block)],
-    )
-    home.add_child(instance=demo_page).save()
-    return demo_page
 
 
 # :: ENDIF
