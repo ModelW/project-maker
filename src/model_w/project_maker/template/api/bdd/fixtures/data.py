@@ -4,14 +4,20 @@ Fixtures related to any global data needed when testing
 For example, users, pages, models, etc.
 """
 
-import httpx
 import pytest
-from django.contrib.auth.models import AbstractBaseUser
 from pytest_django.fixtures import SettingsWrapper
+
+from bdd.utils import data_utils
+
 
 # :: IF api__wagtail
 from wagtail.images.tests.utils import Image, get_test_image_file
 
+# :: ENDIF
+
+# :: IF api__testing
+from ___project_name__snake___.apps.cms import models as cms_models
+from wagtail import models as wagtail_models
 # :: ENDIF
 
 
@@ -25,52 +31,24 @@ def image():
 
 @pytest.fixture(autouse=True)
 def site(front_server: str, overwrite_settings: SettingsWrapper):
-    """
-    Set the wagtail site as needed.
-
-    Port should be the same as the front server.
-    """
-    from wagtail.models import Site
-
-    front_url = httpx.URL(front_server)
-
-    site, created = Site.objects.get_or_create(
-        hostname=front_url.host,
-        defaults={
-            "port": front_url.port or 80,
-            "is_default_site": True,
-        },
-    )
-
-    # Update the port if it already existed
-    if not created:
-        site.port = front_url.port or 80
-        site.save()
-
-    return site
+    """Fixture to make sure the site is set up."""
+    return data_utils.get_and_set_up_site(front_server)
 
 
 # :: ENDIF
 
 
 @pytest.fixture(autouse=True)
-def admin_user(django_user_model: AbstractBaseUser):
-    """
-    Create a superuser for ease of debugging.
+def admin_user():
+    """Fixture to make sure the admin user is set up."""
+    return data_utils.get_or_create_admin_user()
 
-    Useful to see django / wagtail admin when debugging
-    - Will be available in all tests implicitly, so you can
-      log in to the admin with the credentials defined here.
-    """
-    email = "good@user.com"
-    password = "correct"  # noqa: S105
 
-    try:
-        user = django_user_model.objects.get(email=email)
-    except django_user_model.DoesNotExist:
-        user = django_user_model.objects.create_superuser(
-            email=email,
-            password=password,
-        )
+# :: IF api__testing
+@pytest.fixture
+def demo_page(site: wagtail_models.Site) -> cms_models.DemoPage:
+    """Fixture to create a demo page."""
+    return data_utils.get_or_create_demo_page(site)
 
-    return user
+
+# :: ENDIF

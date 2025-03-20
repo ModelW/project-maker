@@ -6,12 +6,14 @@ For example, users, pages, models, etc.
 
 import httpx
 from django.contrib.auth import get_user_model
-
+import logging
 
 # :: IF api__testing
 from ___project_name__snake___.apps.cms import models as cms_models
 from wagtail import models as wagtail_models
 # :: ENDIF
+
+logger = logging.getLogger(__name__)
 
 
 # :: IF api__wagtail
@@ -22,6 +24,28 @@ def get_and_set_up_site(front_server: str) -> wagtail_models.Site:
     site.port = front_url.port or 80
     site.save()
     return site
+
+
+def small_image() -> cms_models.CustomImage:
+    """Create or get a test image."""
+    from wagtail.images.tests.utils import get_image_model, get_test_image_file
+
+    file_name = "___test_image___.png"
+
+    file = get_test_image_file(
+        filename=file_name,
+        colour="#ffffba",
+    )
+
+    image, created = get_image_model().objects.get_or_create(
+        title=file_name,
+        defaults={"file": file},
+    )
+
+    if created:
+        logger.debug("Created a new test image model: %s", image)
+
+    return image
 
 
 # :: ENDIF
@@ -66,6 +90,7 @@ def get_or_create_demo_page(site: wagtail_models.Site) -> cms_models.DemoPage:
             {
                 "tagline": "I'm a...",
                 "description": "I'm a DemoBlock",
+                "image": small_image().pk,
                 "demo_sub_blocks": [("DemoSubBlock", demo_sub_block)],
             },
         )
