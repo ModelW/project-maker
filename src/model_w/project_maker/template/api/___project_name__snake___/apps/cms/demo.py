@@ -12,8 +12,12 @@ from wagtail import blocks as wagtail_blocks
 from wagtail import fields as wagtail_fields
 from wagtail.admin import panels
 from wagtail.api import APIField
+from wagtail.blocks import StreamValue
+from wagtail.images import get_image_model
+from wagtail.rich_text import RichText
 
 from . import blocks, serializers, utils
+from .images import serializers as image_serializers
 
 
 class DemoSubBlock(wagtail_blocks.StructBlock):
@@ -96,6 +100,33 @@ class DemoBlock(wagtail_blocks.StructBlock):
         help_text=_("This is an optional image"),
     )
 
+    class Meta:
+        preview_template = True
+        description = "A demo block containing a rich text field, a demo sub block, and a demo image."
+
+    def get_preview_value(self):
+        """Show a preview value for the block in the CMS admin, with access to the DB."""
+        return {
+            "tagline": "I'm the demo block preview value tagline.",
+            "description": RichText(
+                "<h3>I'm a preview value description.</h3><ol><li>I'm a preview value list item.</li></ol>",
+            ),
+            "image": get_image_model().objects.first(),
+            "demo_sub_blocks": StreamValue(
+                self.child_blocks["demo_sub_blocks"],
+                [
+                    (
+                        "DemoSubBlock",
+                        DemoSubBlock().to_python(
+                            {
+                                "tagline": "I'm a preview value demo sub block tagline.",
+                            },
+                        ),
+                    ),
+                ],
+            ),
+        }
+
 
 class DemoPage(utils.ApiPage):
     """
@@ -117,10 +148,8 @@ class DemoPage(utils.ApiPage):
 
     demo_blocks = wagtail_fields.StreamField(
         [
-            (
-                "DemoBlock",
-                DemoBlock(),
-            ),
+            ("DemoBlock", DemoBlock()),
+            ("DemoSubBlock", DemoSubBlock()),
         ],
         blank=True,
     )
@@ -139,7 +168,7 @@ class DemoPage(utils.ApiPage):
         APIField("demo_blocks"),
         APIField(
             "image",
-            serializer=serializers.ImageSerializer(
+            serializer=image_serializers.ImageSerializer(
                 filters=[
                     "fill-320x350-c100",
                     "fill-640x350-c100",

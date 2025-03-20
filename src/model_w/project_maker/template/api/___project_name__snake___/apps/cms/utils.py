@@ -3,11 +3,13 @@
 from logging import getLogger
 
 import httpx
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect
 from modelcluster.models import ClusterableModel
 from rest_framework.request import Request
+from wagtail.admin.views.generic.preview import StreamFieldBlockPreview
 from wagtail.models import Page
 
 logger = getLogger(__name__)
@@ -171,3 +173,40 @@ class ApiSnippet(ClusterableModel):
     def retrieve_preview_data(cls, data: dict) -> "ApiSnippet":
         """Return the snippet from the JSON representation."""
         return cls.from_json(data)
+
+
+class ApiStreamFieldBlockPreview(StreamFieldBlockPreview):
+    """
+    Make the block preview data available to the front-end.
+    We do this using the same mechanism as the page and snippet previews.
+    Namely, we redirect to the front's ___block_preview___ route with a query param
+    of the block's "app.model" name.  The front-end then queries the backend for the
+    block's preview value and renders it.
+    """
+
+    front_path = "/___block_preview___"
+
+    def get_app_dot_model(self, context: dict) -> str:
+        """Get the app and model of the preview data."""
+        block_app = apps.get_containing_app_config(context["block_class"].__module__)
+        block_name = context["block_class"].__name__
+        return f"{block_app.label}.{block_name}"
+
+    def get(self, request: Request, *args, **kwargs):
+        """
+        Get the preview data for the block.
+
+        As the block preview value is hardcoded, we don't need to store it in the session.
+        Instead, we just need to tell the front-end what block to query for.
+        """
+        context = self.get_context_data(**kwargs)
+
+        base_url = httpx.URL(settings.BASE_URL)
+        redirect_url = base_url.copy_with(
+            path=self.front_path,
+            params={
+                "id": self.block_id,
+                "in_preview_panel": self.get_app_dot_model(context=context),
+            },
+        )
+        return redirect(str(redirect_url))

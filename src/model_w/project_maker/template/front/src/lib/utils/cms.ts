@@ -79,6 +79,22 @@ export async function fetchCmsData(
 }
 
 /**
+ * Fetch block data for a block preview.
+ * @param {Function} fetch - The fetch function provided by SvelteKit.
+ * @param {string} blockId - The block ID of the block as given by PreviewBlocksViewSet.
+ * @param {string} previewModal - The app dot model (eg. cms.DemoBlock)
+ * @returns {Promise<any>} - The fetched preview data.
+ */
+export async function fetchBlockData(
+    fetch: typeof globalThis.fetch,
+    blockId: string,
+    previewModal: string
+): Promise<any> {
+    const cmsUrl = `${API_CMS_BASE_URL}preview-block/?id=${blockId}&in_preview_panel=${previewModal}`;
+    return await fetchWithErrorHandling(fetch(cmsUrl));
+}
+
+/**
  * Constructs the URL for the Wagtail userbar based on whether the page is in preview mode.
  * @param {number} pageId - The ID of the page the userbar is used on
  * @param {string | null} previewModel - If the page is in preview mode, this will be passed.
