@@ -2,7 +2,6 @@ from uuid import uuid4
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
-from django.contrib.postgres.fields import CIEmailField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from psqlextra.models import PostgresModel
@@ -66,10 +65,7 @@ class User(UuidPkModel, AbstractBaseUser, PermissionsMixin):
         _("last name"),
         max_length=150,
     )
-    email = CIEmailField(
-        _("email address"),
-        unique=True,
-    )
+    email = models.EmailField(_("email address"), unique=True, db_collation="und-x-icu")
     is_staff = models.BooleanField(
         _("staff status"),
         default=False,
@@ -80,7 +76,7 @@ class User(UuidPkModel, AbstractBaseUser, PermissionsMixin):
         default=True,
         help_text=_(
             "Designates whether this user should be treated as active. "
-            "Unselect this instead of deleting accounts."
+            "Unselect this instead of deleting accounts.",
         ),
     )
     date_joined = models.DateTimeField(
@@ -105,7 +101,6 @@ class User(UuidPkModel, AbstractBaseUser, PermissionsMixin):
         """
         The user's full name, if available
         """
-
         parts = [
             x
             for x in [
