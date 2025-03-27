@@ -11,6 +11,7 @@ import logging
 # :: IF api__testing
 from ___project_name__snake___.apps.cms import models as cms_models
 from wagtail import models as wagtail_models
+
 # :: ENDIF
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def get_and_set_up_site(front_server: str) -> wagtail_models.Site:
     """Set up the site."""
     site = wagtail_models.Site.objects.first()
     front_url = httpx.URL(front_server)
+    site.hostname = front_url.host
     site.port = front_url.port or 80
     site.save()
     return site
