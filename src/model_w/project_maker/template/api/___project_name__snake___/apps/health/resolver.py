@@ -1,6 +1,6 @@
 import traceback
 from dataclasses import dataclass, field
-from typing import Mapping, MutableMapping, Optional, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 
 import networkx as nx
 from sentry_sdk import capture_exception
@@ -29,7 +29,7 @@ class Cause:
     """
 
     instance: Instance
-    outcome: Optional[Outcome]
+    outcome: Outcome | None
 
     @property
     def code(self):
@@ -144,7 +144,7 @@ class Resolver:
 
         self.outcomes = outcomes
 
-    def get_root_cause(self) -> Optional[Cause]:
+    def get_root_cause(self) -> Cause | None:
         """
         Once the tests are made (don't forget to run_tests()), determines the
         first failing test in topological order, which should be the root cause
@@ -158,7 +158,7 @@ class Resolver:
             if outcome.status == Status.ERROR:
                 return Cause(instance, outcome)
 
-    def check(self, stop_on_error=True) -> Optional[Cause]:
+    def check(self, stop_on_error=True) -> Cause | None:
         """
         Shortcut to run tests and get the root cause.
 
@@ -277,23 +277,15 @@ def build_resolver() -> Resolver:
         )
     )
 
-    # :: IF api__celery
+    # :: IF api__procrastinate
     resolver.register(
         Instance(
-            code="S002",
-            check=CeleryPing(),
-            depends_on=["I001", "I002", "S001"],
+            code="S004",
+            check=ProcrastinateHealthCheck(),
+            depends_on=["I001"],
         )
     )
-
-    resolver.register(
-        Instance(
-            code="S003",
-            check=LogBeat(),
-            depends_on=["S002"],
-        )
-    )
-    # :: ENDIF
+    #:: ENDIF
 
     resolver.build_graph()
 
