@@ -68,6 +68,13 @@ with EnvManager(ModelWDjango()) as env:
     ]
 
     # ---
+    # Logging
+    # ---
+    MIDDLEWARE.append(
+        "___project_name__snake___.django.middleware.RequestLogMiddleware"
+    )
+
+    # ---
     # OpenAPI Schema
     # ---
 
