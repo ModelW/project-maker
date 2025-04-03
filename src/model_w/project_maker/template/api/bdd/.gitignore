@@ -1,4 +1,6 @@
 # BDD test specific files / folders to ignore
 
-# Ignore the report folder
+# Ignore the BDD results folder
 report/results/
+# Ignore performance results
+performance/results/

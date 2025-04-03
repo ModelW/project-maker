@@ -1,0 +1,146 @@
+---
+# Run the performance tests in Docker in a way closely resembling the production environment.
+
+services:
+
+# :: IF api~~wagtail
+  s3:
+    image: minio/minio:latest
+    env_file:
+      - "../../../api/.env.test"    
+    ports:
+      - "9000:9000"
+      - "9099:9099"
+    command: server --address ":9099" --console-address ":9000" /data
+    healthcheck:
+      test: curl -f http://s3:9000 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  createbuckets:
+    image: minio/mc:latest
+    env_file:
+      - "../../../api/.env.test"  
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://s3:9099 $$AWS_ACCESS_KEY_ID $$AWS_SECRET_ACCESS_KEY; 
+      /usr/bin/mc mb myminio/$$AWS_STORAGE_BUCKET_NAME;
+      /usr/bin/mc anonymous set download myminio/$$AWS_STORAGE_BUCKET_NAME;
+      sleep infinity
+      "
+    healthcheck:
+      test: /usr/bin/mc ls myminio/$$AWS_STORAGE_BUCKET_NAME || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+# :: ENDIF
+
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - "../../../api/.env.test"
+    command: -c 'max_connections=1000'
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build:
+      context: "../../../api"
+    # mem_limit: "1000mb"  
+    depends_on:
+      front:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+# :: IF api~~wagtail
+      createbuckets:
+        condition: service_healthy
+# :: ENDIF        
+    env_file:
+      - "../../../api/.env.test"
+    volumes:
+      - ../report/:/code/bdd/report/
+    expose:
+      - "8000"      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://api:8000/back/admin/login/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s    
+    command: >
+      sh -c "
+      modelw-docker run python manage.py start_dev --noinput &&
+      modelw-docker run python -m granian --host 0.0.0.0 --port 8000 --workers 1 --threads 2 --interface asgi ___project_name__snake___.django.asgi:application
+      "
+
+  front:
+    build:
+      context: "../../../front"
+    env_file:
+      - "../../../front/.env.test"
+    expose:
+      - "3000"
+    # mem_limit: "1000mb"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://front:3000/favicon.png"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  router:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443" 
+    depends_on:
+      front:
+        condition: service_healthy
+      api:   
+        condition: service_healthy
+    volumes:
+      - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf      
+
+  locust:
+    image: locustio/locust:latest
+    depends_on:
+      front:
+        condition: service_healthy
+      api:
+        condition: service_healthy  
+    volumes:
+      - ../performance/locustfile.py:/locustfile.py
+      - ../performance/results/:/results/
+    network_mode: "host"
+    command: >
+      -f /locustfile.py
+      --host http://localhost
+      --headless
+      --users 500
+      --spawn-rate 20
+      --run-time 10s
+      --html /results/locust_report.html
+      --csv /results/
+    user: "${UID}:${GID}"  
