@@ -1,8 +1,10 @@
 ---
 # Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
-# We run the tests using localhost instead of an isolated network and containerised names.
-# The benefit is that many services like SSO/cookies/tracking etc. are more leniant with localhost.
-# (But no need for the S3 to be on localhost [if used])
+# We run the tests using a router on localhost instead of an isolated network and containerised names.
+# The benefit is that many services like SSO/cookies/tracking etc. are more lenient with localhost.
+# It also makes local development easier, when using DB/redis, as no need to mess with adding hosts 
+# to /etc/hosts.
+# (Some containers we don't keep on localhost so we want to scale then in performance testing.)
 
 services:
 
@@ -89,16 +91,24 @@ services:
       - "../../../api/.env.test"
     volumes:
       - ../report/:/code/bdd/report/
-    network_mode: "host"
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://api:8000/back/admin/login/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s   
 
   front:
     build:
       context: "../../../front"
     env_file:
       - "../../../front/.env.test"
-    network_mode: "host"
+    expose:
+      - "3000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/non-cms/"]
+      test: ["CMD", "curl", "-f", "http://front:3000/favicon.png"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -106,6 +116,11 @@ services:
 
   router:
     image: nginx:alpine
+    depends_on:
+      front:
+        condition: service_healthy
+      api:   
+        condition: service_healthy      
     network_mode: "host"
     volumes:
-      - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf      
+      - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf
