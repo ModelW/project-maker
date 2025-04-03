@@ -9,6 +9,7 @@ from collections.abc import Generator
 from logging import getLogger
 from pathlib import Path
 
+import httpx
 import pytest
 from django.conf import settings
 from playwright.sync_api import ConsoleMessage, Page, Request
@@ -21,7 +22,58 @@ logger = getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
-def overwrite_settings(settings: SettingsWrapper, front_server: str) -> SettingsWrapper:
+def overwrite_storage_settings(
+    settings: SettingsWrapper, live_server: LiveServer, tmp_path: Path
+):
+    """
+    Overwrite any storage settings at runtime just for testing.
+    We use the local file system for local testing, and a dockerised minio S3 for
+    CI/CD testing.
+    """
+
+    # We use FileSystemStorage (temp directory) for local testing, and a Dockerised S3, for CI/CD testing
+    local_file_storage = "django.core.files.storage.FileSystemStorage"
+    boto3_file_storage = "storages.backends.s3boto3.S3Boto3Storage"
+    default_file_storage = os.environ.get(
+        "DEFAULT_FILE_STORAGE",
+        local_file_storage,
+    )
+
+    if default_file_storage == boto3_file_storage:
+        settings.AWS_S3_URL_PROTOCOL = "http:"
+        settings.AWS_S3_ENDPOINT_URL = str(
+            httpx.URL(
+                f"{settings.AWS_S3_URL_PROTOCOL}//{settings.AWS_S3_CUSTOM_DOMAIN}",
+            ).copy_with(path=""),
+        )
+
+    else:
+        media_directory = tmp_path / "test_media"
+        settings.MEDIA_ROOT = str(media_directory)
+        settings.MEDIA_URL = live_server.url
+
+    settings.STORAGES = {
+        "default": {
+            "BACKEND": default_file_storage,
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        },
+    }
+
+    # Don't use the cache for tests
+    settings.CACHES["default"][
+        "BACKEND"
+    ] = "django.core.cache.backends.dummy.DummyCache"
+
+    return settings
+
+
+@pytest.fixture(autouse=True)
+def overwrite_settings(
+    overwrite_storage_settings: SettingsWrapper,
+    front_server: str,
+) -> SettingsWrapper:
     """
     Overwrite any settings at runtime just for testing.
 
@@ -29,21 +81,9 @@ def overwrite_settings(settings: SettingsWrapper, front_server: str) -> Settings
     """
     base_url = front_server.strip("/")
     settings.BASE_URL = base_url
-
-    # We use InMemoryStorage for local testing, and a Dockerised S3, for CI/CD testing
-    in_memory_file_storage = "django.core.files.storage.InMemoryStorage"
-    boto3_file_storage = "storages.backends.s3boto3.S3Boto3Storage"
-    default_file_storage = os.environ.get(
-        "DEFAULT_FILE_STORAGE",
-        in_memory_file_storage,
-    )
-
-    if default_file_storage == boto3_file_storage:
-        settings.AWS_S3_ENDPOINT_URL = settings.AWS_S3_CUSTOM_DOMAIN
-        settings.AWS_S3_URL_PROTOCOL = settings.AWS_S3_ENDPOINT_URL.split("//", 1)[0]
-
-    settings.DEFAULT_FILE_STORAGE = default_file_storage
-
+    # :: IF api__wagtail
+    settings.WAGTAILADMIN_BASE_URL = settings.WAILER_BASE_URL = base_url
+    # :: ENDIF
     return settings
 
 
