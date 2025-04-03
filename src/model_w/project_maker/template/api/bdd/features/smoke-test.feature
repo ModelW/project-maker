@@ -11,14 +11,13 @@ Feature: Smoke test for the site
         And I should not see the text "log in"
         And I should be at a URL with "back/admin/"
         And I should see the following Django admin models:
-            | Group name                       | Model name    |
-            | Authentication and Authorization | Groups        |
-            # :: IF api__celery
-            | Celery Results                   | Group Results |
-            | Celery Results                   | Task Results  |
+            | Group name                       | Model name         |
+            | Authentication and Authorization | Groups             |
+            # :: IF api__procrastinate
+            | Procrastinate                    | Procrastinate jobs |
             # :: ENDIF
             # :: IF api__wagtail
-            | Taggit                           | Tags          |
+            | Taggit                           | Tags               |
     # :: ENDIF
 
     Scenario Outline: Needs correct log in to access Django admin
