@@ -1,8 +1,9 @@
 import { sequence } from "@sveltejs/kit/hooks";
+import type { HandleFetch, HandleServerError } from "@sveltejs/kit";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
-import type { HandleFetch } from "@sveltejs/kit";
+import { accessLog } from "$lib/utils/access_log";
 
 Sentry.init({
     dsn: publicEnv.PUBLIC_SENTRY_DSN,
@@ -104,6 +105,11 @@ export const handleFetch: HandleFetch = async function handleFetch({ event, requ
     return fetch(request);
 };
 
-export const handleError = Sentry.handleErrorWithSentry();
+/** Log error in server console as well as sending to Sentry. */
+const errorHandler: HandleServerError = async ({ error, event }) => {
+    console.error("Server side error:", error, event);
+};
 
-export const handle = sequence(Sentry.sentryHandle());
+export const handleError = Sentry.handleErrorWithSentry(errorHandler);
+
+export const handle = sequence(Sentry.sentryHandle(), accessLog);
