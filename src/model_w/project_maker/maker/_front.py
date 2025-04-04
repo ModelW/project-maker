@@ -94,6 +94,10 @@ class FrontComponent(BaseComponent):
             in [
                 "cms",
             ]
+            or path.parent.parent.name
+            in [
+                "(cms)",
+            ]
         ):
             return False
 
