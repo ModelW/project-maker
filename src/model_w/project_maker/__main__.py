@@ -277,7 +277,6 @@ def main(argv: Optional[Sequence[str]] = None):
         labels=dict(
             wagtail="Wagtail",
             channels="Channels",
-            procrastinate="Procrastinate",
         ),
     )
 
