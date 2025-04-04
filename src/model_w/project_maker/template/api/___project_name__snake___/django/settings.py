@@ -32,9 +32,7 @@ with EnvManager(ModelWDjango()) as env:
         # :: IF api__channels
         "___project_name__snake___.apps.realtime",
         # :: ENDIF
-        # :: IF api__procrastinate
         "procrastinate.contrib.django",
-        # :: ENDIF
         # :: IF api__wagtail
         "___project_name__snake___.apps.cms",
         # :: ENDIF

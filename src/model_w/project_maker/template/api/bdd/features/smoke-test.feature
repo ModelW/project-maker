@@ -13,9 +13,7 @@ Feature: Smoke test for the site
         And I should see the following Django admin models:
             | Group name                       | Model name         |
             | Authentication and Authorization | Groups             |
-            # :: IF api__procrastinate
             | Procrastinate                    | Procrastinate jobs |
-            # :: ENDIF
             # :: IF api__wagtail
             | Taggit                           | Tags               |
     # :: ENDIF

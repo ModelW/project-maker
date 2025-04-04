@@ -93,13 +93,6 @@ class ApiComponent(BaseComponent):
                 "/api/___project_name__snake___/django/asgi.py",
             ],
         )
-        self.celery_ignore = pathspec.PathSpec.from_lines(
-            "gitwildmatch",
-            [
-                "/api/___project_name__snake___/django/celery.py",
-                "/api/___project_name__snake___/apps/health/tasks.py",
-            ],
-        )
 
     def accept(self, path: Path, context: Mapping):
         if not context["api"]["enable"]:
@@ -110,10 +103,6 @@ class ApiComponent(BaseComponent):
 
         if not context["api"]["channels"]:
             if self.channels_ignore.match_file(path):
-                return False
-
-        if not context["api"]["celery"]:
-            if self.celery_ignore.match_file(path):
                 return False
 
         if not context["api"]["wagtail"]:

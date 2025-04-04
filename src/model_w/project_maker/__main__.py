@@ -246,12 +246,17 @@ def main(argv: Optional[Sequence[str]] = None):
 
     if context["api"]["enable"]:
         context["api"]["wagtail"] = Confirm.ask("Would you like a Wagtail CMS?")
-        context["api"]["celery"] = Confirm.ask("Do you expect using Celery queue?")
         context["api"]["channels"] = Confirm.ask(
             "Are you fancy enough to use WebSockets?"
         )
         context["api"]["wsgi"] = not context["api"]["channels"]
-        context["api"]["redis"] = context["api"]["celery"] or context["api"]["channels"]
+        context["api"]["redis"] = (
+            context["api"]["wagtail"] or context["api"]["channels"]
+        )
+        # Make procrastinate mandatory, as health check will need it.
+        # When health check is it's own library, this can be removed, and we can bring
+        # it in with the health check app.
+        context["api"]["procrastinate"] = True
 
     if context["api"]["wagtail"]:
         context["cms_prefix"] = Prompt.ask(
@@ -269,7 +274,11 @@ def main(argv: Optional[Sequence[str]] = None):
 
     extras = keys_text(
         context["api"],
-        labels=dict(wagtail="Wagtail", celery="Celery", channels="Channels"),
+        labels=dict(
+            wagtail="Wagtail",
+            channels="Channels",
+            procrastinate="Procrastinate",
+        ),
     )
 
     if extras:

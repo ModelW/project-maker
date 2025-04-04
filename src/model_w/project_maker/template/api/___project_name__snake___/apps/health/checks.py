@@ -1,13 +1,8 @@
 from collections.abc import Mapping, Sequence
 
-from health_check.cache.backends import CacheBackend
-
-# :: IF api__procrastinate
 from asgiref.sync import async_to_sync
 from django.conf import settings
-
-# :: ENDIF
-
+from health_check.cache.backends import CacheBackend
 from health_check.contrib.psutil.backends import MemoryUsage
 from health_check.db.backends import (
     DatabaseBackend,
@@ -180,9 +175,6 @@ entry in the cache.
 # :: ENDIF
 
 
-# :: IF api__procrastinate
-
-
 class ProcrastinateBuiltInHealthCheck(BaseHealthCheckBackend):
     """
     Health check for Procrastinate task processor.
@@ -260,6 +252,3 @@ This test verifies several components of the Procrastinate system:
 
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["procrastinate_worker"]
-
-
-# :: ENDIF

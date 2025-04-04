@@ -14,9 +14,7 @@ python = "~3.12"
 modelw-preset-django = {extras = [
     "psycopg",
     "health",
-    # :: IF api__procrastinate
     "procrastinate",
-    # :: ENDIF
     # :: IF api__channels
     "channels",
     # :: ENDIF

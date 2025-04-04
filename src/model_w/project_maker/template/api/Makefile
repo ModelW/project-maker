@@ -10,10 +10,9 @@ black:
 isort:
 	$(PYTHON_BIN) -m isort .
 
-# :: IF api__procrastinate
 procrastinate_run:
 	$(PYTHON_BIN) ./manage.py procrastinate worker
-# :: ENDIF
+
 dev_stack:
 	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up postgres redis --force-recreate --abort-on-container-exit --remove-orphans
 

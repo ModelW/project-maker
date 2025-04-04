@@ -277,7 +277,6 @@ def build_resolver() -> Resolver:
         )
     )
 
-    # :: IF api__procrastinate
     resolver.register(
         Instance(
             code="S004",
@@ -285,7 +284,6 @@ def build_resolver() -> Resolver:
             depends_on=["I001"],
         )
     )
-    #:: ENDIF
 
     resolver.build_graph()
 
