@@ -2,8 +2,12 @@
  * Utility functions for working with the CMS.
  */
 
-import type { ComponentType } from "svelte";
+import type { Component } from "svelte";
+import type { WagtailUserbarType } from "$lib/components/cms/pages/types";
 import { fetchWithErrorHandling } from "$lib/utils/fetchUtils";
+import { captureException, captureMessage } from "@sentry/sveltekit";
+
+const API_CMS_BASE_URL = "http://api/back/api/cms/";
 
 /**
  * To have a block know how to render itself just from its own type (matching to a Svelte Component in blocks/),
@@ -22,7 +26,7 @@ import { fetchWithErrorHandling } from "$lib/utils/fetchUtils";
  * { 'DemoBlock': <DemoBlock /> }
  */
 export async function getBlockComponents() {
-    const blockComponents: Record<string, ComponentType> = {};
+    const blockComponents: Record<string, Component> = {};
 
     /**
      * Import all svelte components in the blocks folder with import.meta.glob wildcard.
@@ -32,7 +36,7 @@ export async function getBlockComponents() {
      */
     const blockImports = import.meta.glob("$lib/components/cms/blocks/*.svelte", {
         import: "default",
-    }) as Record<string, () => Promise<ComponentType>>;
+    }) as Record<string, () => Promise<Component>>;
 
     // Import the block components and store in blockComponents object
     for (const blockImport in blockImports) {
@@ -51,11 +55,10 @@ export async function getBlockComponents() {
  * @returns {URL} - The constructed URL for the CMS API.
  */
 function constructCmsUrl(cmsPath: string, previewmodel: string | null): URL {
-    const baseUrl = "http://api/back/api/cms/";
     return new URL(
         previewmodel
-            ? `${baseUrl}preview/?preview_model=${previewmodel}`
-            : `${baseUrl}pages/find/?html_path=${cmsPath}&fields=*`
+            ? `${API_CMS_BASE_URL}preview/?preview_model=${previewmodel}`
+            : `${API_CMS_BASE_URL}pages/find/?html_path=${cmsPath}&fields=*`
     );
 }
 
@@ -73,4 +76,59 @@ export async function fetchCmsData(
 ): Promise<any> {
     const cmsUrl = constructCmsUrl(cmsPath, previewPage);
     return await fetchWithErrorHandling(fetch(cmsUrl));
+}
+
+/**
+ * Fetch block data for a block preview.
+ * @param {Function} fetch - The fetch function provided by SvelteKit.
+ * @param {string} blockId - The block ID of the block as given by PreviewBlocksViewSet.
+ * @param {string} previewModal - The app dot model (eg. cms.DemoBlock)
+ * @returns {Promise<any>} - The fetched preview data.
+ */
+export async function fetchBlockData(
+    fetch: typeof globalThis.fetch,
+    blockId: string,
+    previewModal: string
+): Promise<any> {
+    const cmsUrl = `${API_CMS_BASE_URL}preview-block/?id=${blockId}&in_preview_panel=${previewModal}`;
+    return await fetchWithErrorHandling(fetch(cmsUrl));
+}
+
+/**
+ * Constructs the URL for the Wagtail userbar based on whether the page is in preview mode.
+ * @param {number} pageId - The ID of the page the userbar is used on
+ * @param {string | null} previewModel - If the page is in preview mode, this will be passed.
+ * @returns {URL} - The constructed URL for the CMS API.
+ */
+function constructUserbarUrl(pageId: number, previewModel: string | null): URL {
+    const url = new URL(`${API_CMS_BASE_URL}wagtail-userbar/${pageId}/`);
+    if (previewModel) {
+        url.searchParams.append("in_preview_panel", previewModel);
+    }
+    return url;
+}
+
+export async function fetchUserbar(
+    fetch: typeof globalThis.fetch,
+    pageId: number,
+    previewModel: string | null
+): Promise<WagtailUserbarType> {
+    const userbarUrl = constructUserbarUrl(pageId, previewModel);
+    let userbar: WagtailUserbarType = { html: "" };
+
+    try {
+        const response = await fetch(userbarUrl);
+
+        if (response.ok) {
+            userbar = await response.json();
+        }
+
+        if (response.status !== 403) {
+            captureMessage(`${response.status} from the userbar`);
+        }
+    } catch (e) {
+        console.error(e);
+        captureException(e);
+    }
+    return userbar;
 }

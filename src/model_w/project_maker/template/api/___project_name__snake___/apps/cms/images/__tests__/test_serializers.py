@@ -1,17 +1,17 @@
-"""Test the serializers for the CMS app."""
+"""Test the serializers for the CMS app image handler."""
 
 import pytest
 from wagtail.images.models import AbstractImage
 from wagtail.images.tests.utils import Image, get_test_image_file
 
-from ___project_name__snake___.apps.cms import serializers
+from ___project_name__snake___.apps.cms.images import serializers
 from bdd.fixtures.front import *  # noqa: F403
 
-# Uses the global pytestmark variable to add the cms_serializers marker to all tests in this file.
-# This means these tests can be specifically targetted with `pytest -m cms_serializers`.
+# Uses the global pytestmark variable to add the image_serializers marker to all tests in this file.
+# This means these tests can be specifically targetted with `pytest -m image_serializers`.
 pytestmark = [
     pytest.mark.django_db(transaction=True, serialized_rollback=True),
-    pytest.mark.cms_serializers,
+    pytest.mark.image_serializers,
 ]
 
 

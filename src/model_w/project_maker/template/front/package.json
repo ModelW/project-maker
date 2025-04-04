@@ -4,9 +4,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite dev --port 3000",
+        "dev": "vite dev --port 3000 --host",
         "build": "vite build",
-        "preview": "vite preview --port 3000",
+        "preview": "vite preview --port 3000  --host",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "vitest",
@@ -14,7 +14,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@model-w/preset-sveltekit": "~2025.1.0",
+        "@fullerstack/nax-ipware": "^0.10.0",
+        "@model-w/preset-sveltekit": "~2025.4.0",
         "@sentry/sveltekit": "*"
     },
     "devDependencies": {

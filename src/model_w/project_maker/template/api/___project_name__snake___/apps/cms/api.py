@@ -14,14 +14,20 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from wagtail.admin.views.generic.preview import Block
 from wagtail.api.v2.router import WagtailAPIRouter
 from wagtail.api.v2.views import PagesAPIViewSet
 from wagtail.contrib.redirects.models import Redirect
 from wagtail.images.api.v2.views import BaseAPIViewSet
 
 from . import utils
+from .wagtail_userbar.views import WagtailUserbarAPIView
 
 logger = logging.getLogger(__name__)
+
+
+class ApiStreamFieldBlockPreview(utils.ApiStreamFieldBlockPreview):
+    """The block preview for the API."""
 
 
 class PreviewPagesAPIViewSet(PagesAPIViewSet):
@@ -94,6 +100,59 @@ class PreviewSnippetsViewSet(BaseAPIViewSet):
         return self.detail_view(request, pk=0)
 
 
+class PreviewBlocksViewSet(BaseAPIViewSet):
+    """
+    ViewSet for previewing blocks.
+    Similar to the PreviewPagesAPIViewSet, but as blocks are not DB models themselves,
+    we treat them slightly differently.  Also, as the preview value is hard-coded, we
+    need not use the session for storage/retrieval.
+    """
+
+    permission_classes = [IsAuthenticated]
+    model = Block
+
+    def listing_view(self, request: Request) -> Response:
+        """
+        To keep the logic consistent with the page & snippet preview, we receive the app
+        dot model and block ID as query params, and passed to the detail view to retrieve
+        the block preview data.
+        """
+        pk = self.request.query_params.get("id")
+        app_dot_model = self.request.query_params.get("in_preview_panel")
+        logger.debug(
+            "Getting detail view for block with PK %s in %s",
+            pk,
+            app_dot_model,
+        )
+        return self.detail_view(request, pk=pk, app_dot_model=app_dot_model)
+
+    def detail_view(self, request: Request, pk: str, app_dot_model: str):
+        """Get the block preview data from the block ID."""
+        logger.debug("Getting object for block %s", pk)
+        block = self.get_object(pk)
+        block["meta"] = {
+            "type": app_dot_model,
+        }
+        logger.debug("Returning block %s", block)
+        return Response(block)
+
+    def get_object(self, block_id: str) -> dict:
+        """Get the preview data for the block."""
+        return self.block_def(block_id).get_api_representation(
+            value=self.block_def(block_id).get_preview_value(),
+            context={"request": self.request},
+        )
+
+    def block_def(self, block_id: str) -> Block:
+        """
+        Retrieve the block definition for the preview.
+        Mimic what happens in block_def in StreamFieldBlockPreview.
+        """
+        if not (block := Block.definition_registry.get(block_id)):
+            raise Http404
+        return block
+
+
 class CustomPagesAPIViewSet(PagesAPIViewSet):
     permission_classes = [AllowAny]
 
@@ -117,9 +176,11 @@ class CustomPagesAPIViewSet(PagesAPIViewSet):
                     "X-Redirect-To": redirect.link,
                 }
                 return Response(
-                    status=status.HTTP_301_MOVED_PERMANENTLY
-                    if redirect.is_permanent
-                    else status.HTTP_302_FOUND,
+                    status=(
+                        status.HTTP_301_MOVED_PERMANENTLY
+                        if redirect.is_permanent
+                        else status.HTTP_302_FOUND
+                    ),
                     headers=headers,
                 )
             except Redirect.DoesNotExist:
@@ -132,3 +193,5 @@ cms_api_router = WagtailAPIRouter("wagtailapi")
 cms_api_router.register_endpoint("pages", CustomPagesAPIViewSet)
 cms_api_router.register_endpoint("preview", PreviewPagesAPIViewSet)
 cms_api_router.register_endpoint("preview-snippet", PreviewSnippetsViewSet)
+cms_api_router.register_endpoint("preview-block", PreviewBlocksViewSet)
+cms_api_router.register_endpoint("wagtail-userbar", WagtailUserbarAPIView)

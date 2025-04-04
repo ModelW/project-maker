@@ -37,9 +37,9 @@ def text_should_be_colour(page: Page, text: str, colour: str):
         }""",
     )
 
-    assert (
-        actual_colour == colour
-    ), f"Actual colour: {actual_colour}, Expected colour: {colour}"
+    assert actual_colour == colour, (
+        f"Actual colour: {actual_colour}, Expected colour: {colour}"
+    )
 
 
 @then(parsers.cfparse('I should be at the URL "{url}"'))
@@ -144,6 +144,13 @@ def element_should_contain_text(data_testid: str, text: str, page: Page):
     expect(page.get_by_test_id(data_testid)).to_have_text(text)
 
 
+@then(parsers.cfparse('the page title should be "{text}"'))
+@then(parsers.cfparse('I should see the page title as "{text}"'))
+def should_see_page_title(page: Page, text: str):
+    """Check the page title."""
+    expect(page).to_have_title(text)
+
+
 @then("there should be no console errors")
 def should_be_no_console_errors(page: Page, console: ConsoleMessage):
     """Check the console for any errors."""
@@ -181,3 +188,21 @@ def should_see_admin_models(page: Page, datatable):
         # Find the model element within the table
         model_element = model_table.locator("a").get_by_text(model_name)
         expect(model_element).to_be_visible()
+
+
+# :: IF api__wagtail
+@then("the userbar should be shown")
+def userbar_should_be_shown(page: Page):
+    """Check the page for the expected userbar."""
+    wagtail_userbar = page.get_by_role("button", name="View Wagtail quick actions")
+    expect(wagtail_userbar).to_be_visible()
+
+
+@then("the userbar should not be shown")
+def userbar_should_not_be_shown(page: Page):
+    """Check the page to make sure the expected userbar is not visible."""
+    wagtail_userbar = page.get_by_role("button", name="View Wagtail quick actions")
+    expect(wagtail_userbar).not_to_be_visible()
+
+
+# :: ENDIF

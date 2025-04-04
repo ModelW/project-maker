@@ -1,12 +1,13 @@
 """A collection of custom blocks for the CMS app."""
 
 from wagtail import blocks as wagtail_blocks
-from wagtail.images import blocks as wagtail_image_blocks
 
 from . import serializers
+from .images import blocks as image_blocks
+from .images import serializers as image_serializers
 
 
-class ImageChooserBlock(wagtail_image_blocks.ImageChooserBlock):
+class ImageChooserBlock(image_blocks.ImageChooserBlock):
     """
     Custom Image chooser block.
     This allows us to use our custom ImageSerializer.
@@ -39,9 +40,9 @@ class ImageChooserBlock(wagtail_image_blocks.ImageChooserBlock):
 
     def get_api_representation(self, value, context=None):
         """Return the API representation of the image chooser block."""
-        return serializers.ImageSerializer(filters=self.filters).to_representation(
-            value,
-        )
+        return image_serializers.ImageSerializer(
+            filters=self.filters
+        ).to_representation(value)
 
 
 class RichTextBlock(wagtail_blocks.RichTextBlock):

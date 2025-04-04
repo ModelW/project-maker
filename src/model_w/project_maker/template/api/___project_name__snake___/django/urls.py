@@ -8,8 +8,10 @@ from rest_framework.routers import DefaultRouter, SimpleRouter
 from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
-
-from ___project_name__snake___.apps.cms.api import cms_api_router
+from ___project_name__snake___.apps.cms.api import (
+    cms_api_router,
+    ApiStreamFieldBlockPreview,
+)
 
 # :: ENDIF
 from ___project_name__snake___.apps.people.views import MeViewSet
@@ -30,6 +32,11 @@ urlpatterns = [
     path("back/admin/", admin.site.urls),
     path("back/api/", include(router.urls)),
     # :: IF api__wagtail
+    path(
+        "back/___cms_prefix___/block-preview/",
+        ApiStreamFieldBlockPreview.as_view(),
+        name="wagtailadmin_block_preview",
+    ),
     path("back/___cms_prefix___/", include(wagtailadmin_urls)),
     path("back/api/cms/", cms_api_router.urls),
     path("back/documents/", include(wagtaildocs_urls)),

@@ -14,16 +14,14 @@ python = "~3.12"
 modelw-preset-django = {extras = [
     "psycopg",
     "health",
-    # :: IF api__celery
-    "celery",
-    # :: ENDIF
+    "procrastinate",
     # :: IF api__channels
     "channels",
     # :: ENDIF
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-], version = ">=2025.1.0,<2025.2.0"}
+], version = ">=2025.4.0,<2025.5.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
 markdown = "*"

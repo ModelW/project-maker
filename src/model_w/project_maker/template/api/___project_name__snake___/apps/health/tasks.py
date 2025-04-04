@@ -1,11 +1,11 @@
-from ___project_name__snake___.django.celery import app
-
+from procrastinate.contrib.django import app
 from .models import Event
 from .resolver import build_resolver
 
 
+@app.periodic(cron="* * * * *")  # https://crontab.guru/#*_*_*_*_*
 @app.task
-def log_beat():
+def log_beat(timestamp: int):
     """
     Log that the beat is running.
     """
@@ -17,8 +17,9 @@ def log_beat():
     )
 
 
+@app.periodic(cron="0 * * * *")  # https://crontab.guru/#0_*_*_*_*
 @app.task
-def clear_log():
+def clear_log(timestamp: int):
     """
     Delete old items from the events log
     """
@@ -45,8 +46,9 @@ def log_entry(**kwargs):
     Event.objects.create(**kwargs)
 
 
+@app.periodic(cron="* * * * *")  # https://crontab.guru/#0_*_*_*_*
 @app.task
-def check_status():
+def check_status(timestamp: int):
     """
     Periodic check of status to keep track of status history
     """

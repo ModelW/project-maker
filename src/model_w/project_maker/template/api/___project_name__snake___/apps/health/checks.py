@@ -1,11 +1,14 @@
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
+from asgiref.sync import async_to_sync
+from django.conf import settings
 from health_check.cache.backends import CacheBackend
-# :: IF api__celery
-from health_check.contrib.celery_ping.backends import CeleryPingHealthCheck
-# :: ENDIF
 from health_check.contrib.psutil.backends import MemoryUsage
-from health_check.db.backends import DatabaseBackend
+from health_check.db.backends import (
+    DatabaseBackend,
+    ServiceUnavailable,
+    BaseHealthCheckBackend,
+)
 
 from .base import DjangoHealthCheckWrapper, HealthCheck, Outcome, Status
 from .models import Event
@@ -132,7 +135,9 @@ The memory usage in the container running the application is too high.
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["api"]
 
+
 # :: IF api__redis
+
 
 class Cache(DjangoHealthCheckWrapper):
     """
@@ -166,97 +171,84 @@ entry in the cache.
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["redis"]
 
+
 # :: ENDIF
 
-# :: IF api__celery
-class CeleryPing(DjangoHealthCheckWrapper):
+
+class ProcrastinateBuiltInHealthCheck(BaseHealthCheckBackend):
     """
-    Validates that Celery is working and replying.
+    Health check for Procrastinate task processor.
+
+    Uses the built-in healthchecks to check if the Procrastinate app is
+    working.
     """
 
-    base_class = CeleryPingHealthCheck
+    def __init__(self):
+        """
+        Get the Procrastinate app from the settings.
+        If not set, it will be set to the default app.
+        """
+        super().__init__()
+        self.app = getattr(settings, "PROCRASTINATE_APP", None)
+
+        if self.app is None:
+            from procrastinate.contrib.django import app
+
+            self.app = app
+
+    def check_status(self):
+        """
+        Use the built-in healthchecks to check if the Procrastinate app is
+        working.
+        """
+        from procrastinate.contrib.django.healthchecks import healthchecks
+        from procrastinate import exceptions
+
+        try:
+            async_to_sync(healthchecks)(app=self.app)
+        except exceptions.ConnectorException:
+            self.add_error(
+                ServiceUnavailable("Error connecting to Procrastinate database")
+            )
+        except Exception as exc:
+            self.add_error(ServiceUnavailable("Error checking Procrastinate"), exc)
+
+
+class ProcrastinateHealthCheck(DjangoHealthCheckWrapper):
+    """
+    Validates that Procrastinate is working and replying.
+    """
+
+    base_class = ProcrastinateBuiltInHealthCheck
 
     def get_name(self) -> str:
-        return "Celery Ping"
+        return "Procrastinate Built-In Health Check"
 
     def get_resolving_actions(self, outcome: Outcome) -> str:
-        return """# __CODE__ &mdash; Celery cannot be reached
+        return """# __CODE__ &mdash; Procrastinate cannot be reached
 
-This test works by sending a ping to the Celery worker and waiting for an
-answer. If the answer is not received, it means that the worker is not
-reachable.
+This test verifies several components of the Procrastinate system:
+
+    1. Database connection - Ensures the system can connect to the database
+    2. Migration status - Checks that all required migrations for the procrastinate app have been applied
+    3. Default Django Procrastinate App - Verifies the default app can connect properly
+    4. Worker App - Confirms the worker app can establish a connection
 
 ## Possible causes
 
-- There could be a network issue that prevents reaching out the queue, but
-  if the Redis is responding (see the Cache check), it is unlikely that this
-  would be an issue
-- The Celery worker could be overloaded or all its workers could be busy. This
-  is the most likely.
-- The worker could be down
+    - Database connectivity issues (network problems, credentials, database server down)
+    - Missing migrations for the procrastinate application
+    - Configuration issues with either the default Django Procrastinate App or the Worker App
 
 ## Possible solutions
 
-- Check that the worker is running.
-- Check if the process is active. If CPU use is low, it probably means that
-  the worker is caught up in some deadlock or network timeout. Simplest
-  solution is to restart it.
-- If it is _too_ active (100% CPU, 100% RAM), it means that the worker is
-  overloaded. In this case, you should increase the number of workers or the
-  resources available to the container.
+    - Check database server status and network connectivity
+    - Run python manage.py migrate procrastinate to apply any missing migrations
+    - Verify database credentials and connection settings
+    - Check database permissions for the application user
+    - Review logs for specific error messages that might indicate configuration problems
+    - Ensure the database has enough resources (connections, memory, etc.) to handle requests
 """
 
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
-        return ["celery_worker"]
-
-
-class LogBeat(HealthCheck):
-    """
-    Every minute the beat will trigger a task to write a log. We make sure here
-    that these logs are being written.
-    """
-
-    WINDOW = dict(minutes=2)
-
-    def get_name(self) -> str:
-        return "Celery Beat"
-
-    def get_status(self) -> Outcome:
-        stats = Event.objects.type("beat").within(**self.WINDOW).stats()
-        stats_str = disp_stats(stats)
-
-        if stats["success"]:
-            outcome = dict(
-                status=Status.OK,
-                message=f"{stats_str} in the last {disp_window(self.WINDOW)}",
-            )
-        else:
-            outcome = dict(
-                status=Status.ERROR,
-                message=f"{stats_str} in the last {disp_window(self.WINDOW)}",
-            )
-
-        return Outcome(
-            instance=self,
-            **outcome,
-        )
-
-    def get_resolving_actions(self, outcome: Outcome) -> str:
-        return """# __CODE__ &mdash; Celery beat is not running
-
-This checks verifies if the Celery beat is running by checking if it has
-logged a heartbeat in the last 3 minutes.
-
-## Possible causes
-
-- The beat could be down
-
-## Possible solutions
-
-- Check that the beat is running.
-"""
-
-    def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
-        return ["celery_beat"]
-
-# :: ENDIF
+        return ["procrastinate_worker"]

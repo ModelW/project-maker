@@ -23,7 +23,7 @@ export async function fetchWithErrorHandling(fetchPromise: Promise<Response>): P
         if (300 <= response.status && response.status <= 308) {
             const location = redirectUrl || response.headers.get("location");
             if (location) {
-                return redirect(response.status, location);
+                redirect(response.status, location);
             } else {
                 throw Error(`No location found for redirect ${response.status}.`);
             }
@@ -31,15 +31,19 @@ export async function fetchWithErrorHandling(fetchPromise: Promise<Response>): P
 
         error(response.status);
     } catch (e) {
-        captureException(e);
-
         if (isHttpError(e)) {
+            if (e.status !== 404) {
+                console.error(e);
+                captureException(e);
+            }
             error(e.status, e.body);
         }
         if (isRedirect(e)) {
             redirect(e.status, e.location);
         }
 
+        console.error(e);
+        captureException(e);
         error(500, "Internal server error");
     }
 }
