@@ -1781,13 +1781,13 @@ PyYAML = ">=6.0"
 
 [[package]]
 name = "modelw-preset-django"
-version = "2025.4.0b5"
+version = "2025.4.0"
 description = "Model W preset for Django"
 optional = false
 python-versions = "<3.13,>=3.12"
 files = [
-    {file = "modelw_preset_django-2025.4.0b5-py3-none-any.whl", hash = "sha256:f481ed4ac2216cf255f86c2df597080a1bfa7c21b08d63ca1b46c8f38abf53ff"},
-    {file = "modelw_preset_django-2025.4.0b5.tar.gz", hash = "sha256:135efa9cf95b1fd4852eca9a3931fe447aef34728d91186e935e81ee6e1e61fa"},
+    {file = "modelw_preset_django-2025.4.0-py3-none-any.whl", hash = "sha256:0c86a5b8578ea4da084413df0472bf9d68914ad3030e5be0000577550fbb4082"},
+    {file = "modelw_preset_django-2025.4.0.tar.gz", hash = "sha256:29a4fa9935f655b0128cfbc6d1867ed2cb2e0119c8611bc6ee69823505650fa1"},
 ]
 
 [package.dependencies]
@@ -2533,13 +2533,13 @@ typing-extensions = "*"
 
 [[package]]
 name = "pytest-django"
-version = "4.11.0"
+version = "4.11.1"
 description = "A Django plugin for pytest."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest_django-4.11.0-py3-none-any.whl", hash = "sha256:ab969cc86585a1763fd4a2fa1bc0f3015abbbcb823667af48320f1a1d2053291"},
-    {file = "pytest_django-4.11.0.tar.gz", hash = "sha256:35b339b9a231a99de226789c3e45d4d19d6c09ca9f3c236b3b5024afbf1f68b5"},
+    {file = "pytest_django-4.11.1-py3-none-any.whl", hash = "sha256:1b63773f648aa3d8541000c26929c1ea63934be1cfa674c76436966d73fe6a10"},
+    {file = "pytest_django-4.11.1.tar.gz", hash = "sha256:a949141a1ee103cb0e7a20f1451d355f83f5e4a5d07bdd4dcfdd1fd0ff227991"},
 ]
 
 [package.dependencies]
@@ -3130,13 +3130,13 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "typing-extensions"
-version = "4.13.0"
+version = "4.13.1"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typing_extensions-4.13.0-py3-none-any.whl", hash = "sha256:c8dd92cc0d6425a97c18fbb9d1954e5ff92c1ca881a309c45f06ebc0b79058e5"},
-    {file = "typing_extensions-4.13.0.tar.gz", hash = "sha256:0a4ac55a5820789d87e297727d229866c9650f6521b64206413c4fbada24d95b"},
+    {file = "typing_extensions-4.13.1-py3-none-any.whl", hash = "sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69"},
+    {file = "typing_extensions-4.13.1.tar.gz", hash = "sha256:98795af00fb9640edec5b8e31fc647597b4691f099ad75f469a2616be1a76dff"},
 ]
 
 [[package]]
@@ -3329,4 +3329,4 @@ wand = ["Wand (>=0.6,<1.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.12"
-content-hash = "ca8f84560daa103281696abcb6b5818a7b9e64ec43dc8ef13e968e6b8f2e170f"
+content-hash = "dd560d1c1ccd2219442218cc9c828533a38e1ae0eb5fd6282384b02f9f40513a"
