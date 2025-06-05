@@ -28,4 +28,4 @@ export type PageType<T = Record<string, unknown>> = {
     title: string;
 } & T;
 
-export type WagtailUserbarType = Record<"html", str>;
+export type WagtailUserbarType = Record<"html", string>;
