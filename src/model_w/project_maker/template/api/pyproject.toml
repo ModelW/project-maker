@@ -33,6 +33,7 @@ isort = "*"
 ipython = "*"
 django-extensions = "*"
 django-debug-toolbar = "*"
+ruff = "*"
 
 [tool.poetry.group.test.dependencies]
 node-edge = {version = "^0.1.0b6", allow-prereleases = true}
