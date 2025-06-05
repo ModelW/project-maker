@@ -34,9 +34,11 @@
 </main>
 
 <style lang="scss">
+    @use "$lib/styles/abstracts/mixins" as mixins;
+
+    // Global styles for demo purposes only to as this file isn't part of the project
     :global(main) {
-        max-width: 1440px;
-        margin: 0 auto;
+        @include mixins.max-width;
         padding: 50px;
     }
 
@@ -46,6 +48,12 @@
         margin: 0;
         width: 100%;
         min-height: 100%;
+    }
+
+    h1 {
+        @include mixins.breakpoints-down(md) {
+            color: lime;
+        }
     }
 
     .image-container {

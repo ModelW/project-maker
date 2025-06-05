@@ -1,0 +1,63 @@
+@use "sass:map";
+@use "variables";
+
+/// Used to make converting px to vw easier
+/// Usage: padding: vw(100px)
+/// Use case: to make padding responsive but still keep to figma design
+/// Only-less will never return more than supplied $px-vw value
+/// @param {Number} $px-vw - The pixel value to convert to vw.
+/// @param {Number} $base-vw - The base vw value to use for the conversion.
+/// @param {Boolean} $only-less - If true, the function will return the minimum value between the calculated vw value and the supplied $px-vw value.
+@function vw($px-vw, $base-vw: 1280px, $only-less: false) {
+    @if $only-less {
+        @return min(calc(($px-vw * 100vw) / $base-vw), $px-vw);
+    } @else {
+        @return calc(($px-vw * 100vw) / $base-vw);
+    }
+}
+
+/// Used to make converting px to vh easier
+/// Usage: padding: vh(100px)
+/// Use case: to make images responsive but still keep to figma design
+/// Only-less will never return more than supplied $px-vh value
+/// @param {Number} $px-vh - The pixel value to convert to vh.
+/// @param {Number} $base-vh - The base vh value to use for the conversion.
+/// @param {Boolean} $only-less - If true, the function will return the minimum value between the calculated vh value and the supplied $px-vh value.
+@function vh($px-vh, $base-vh: 1280px, $only-less: false) {
+    @if $only-less {
+        @return min(calc(($px-vh * 100vh) / $base-vh), $px-vh);
+    } @else {
+        @return calc(($px-vh * 100vh) / $base-vh);
+    }
+}
+
+/// Returns the value of the next key in a map.
+///
+/// @param {Map} $map - The map containing the keys and values.
+/// @param {any} $key - The key whose next value is needed.
+/// @returns {any} The value corresponding to the next key in the map, or null if the provided key is the last key.
+@function next-value($map, $key) {
+    $keys: map-keys($map);
+    $index: index($keys, $key);
+
+    @if $index == length($keys) {
+        @return null;
+    } @else {
+        $next-key: nth($keys, $index + 1);
+        @return map.get($map, $next-key);
+    }
+}
+
+/// Validates and retrieves the value of a breakpoint key.
+///
+/// @param {string} $breakpoint - The breakpoint key to validate.
+/// @returns {string} The value corresponding to the validated breakpoint key.
+@function validate-breakpoint($breakpoint) {
+    $breakpoint-value: map.get(variables.$breakpoints, $breakpoint);
+
+    @if not $breakpoint-value {
+        @error "Invalid breakpoint key '#{$breakpoint}'. Please use one of: #{map-keys(variables.$breakpoints)}.";
+    }
+
+    @return $breakpoint-value;
+}
