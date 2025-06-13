@@ -7,7 +7,6 @@ export default defineConfig(({ mode }) => {
 
     return {
         plugins: [
-            sveltekit(),
             sentrySvelteKit({
                 sourceMapsUploadOptions: {
                     org: env.PUBLIC_SENTRY_ORG,
@@ -20,6 +19,7 @@ export default defineConfig(({ mode }) => {
                     },
                 },
             }),
+            sveltekit(),
         ],
         test: {
             include: ["src/**/*.{test,spec}.{js,ts}"],
