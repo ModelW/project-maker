@@ -8,7 +8,7 @@ import httpx
 from django.contrib.auth import get_user_model
 import logging
 
-# :: IF api__testing
+# :: IF api__wagtail
 from ___project_name__snake___.apps.cms import models as cms_models
 from wagtail import models as wagtail_models
 
