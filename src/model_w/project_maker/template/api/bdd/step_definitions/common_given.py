@@ -6,7 +6,7 @@ These are the common given steps that can be used in scenarios.
 
 import httpx
 from django.contrib.auth.models import AbstractBaseUser
-from playwright.sync_api import Page
+from playwright.sync_api import Page, Playwright
 from pytest_bdd import given, parsers
 from pytest_django.live_server_helper import LiveServer
 
@@ -76,6 +76,31 @@ def on_page(page_name: str, page: Page, front_server: str):
 
     page_url = httpx.URL(front_server).join(f"/{page_name}")
     page.goto(str(page_url))
+
+
+@given(parsers.cfparse("I change screen size to that of a {device}"))
+@given(parsers.cfparse("I change screen size to that of an {device}"))
+def on_device(device: str, page: Page, playwright: Playwright):
+    """
+    Set the device type for the browser.
+
+    Example:
+    ```gherkin
+        Given I change screen size to that of a Desktop Safari
+        Given I change screen size to that of an iPhone 8
+        Given I change screen size to that of an iPhone 8 landscape
+        Given I change screen size to that of an iPad (gen 7)
+    ```
+    """
+    devices = playwright.devices
+
+    assert (
+        device in devices
+    ), f"Device '{device}' not found in playwright devices.  Please use one of: {devices.keys()}"
+
+    page.set_viewport_size(devices[device]["viewport"])
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_timeout(1000)  # Take a beat after changing the viewport
 
 
 @given(parsers.cfparse("I am logged in as a Django admin"))
