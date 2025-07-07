@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "modelw-project-maker"
-version = "2025.4.0"
+version = "2025.7.0"
 packages = [
     {  include = "model_w/project_maker", from = "src" }
 ]
@@ -18,7 +18,7 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Code Generators",
     "Topic :: Utilities",
 ]
@@ -27,7 +27,7 @@ classifiers = [
 project_maker = "model_w.project_maker.__main__:__main__"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 setuptools = "*"
 rich = "^13.4.2"
 Unidecode = "^1.3.4"

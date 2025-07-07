@@ -6,6 +6,7 @@ extra information to the JSON reporter such as screenshots and logs.
 """
 
 import base64
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -19,6 +20,8 @@ from slugify import slugify
 from .report import utils as report_utils
 from .report.reporter import Reporter
 from .step_definitions import utils as step_utils
+
+logger = logging.getLogger(__name__)
 
 reporter = Reporter()
 
@@ -169,8 +172,11 @@ def pytest_bdd_step_func_lookup_error(
     Called when a step lookup fails.
     We use this to add the correct status to the report at the failing step.
     """
+    logger.exception(exception)
     if isinstance(exception, pytest_bdd.exceptions.StepDefinitionNotFoundError):
-        reporter.add_undefined_step(step.keyword, step.name, step.params)
+        reporter.add_undefined_step(
+            step.keyword, step.name, step.params if hasattr(step, "params") else None
+        )
 
 
 @pytest.hookimpl(trylast=True)

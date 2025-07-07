@@ -122,14 +122,18 @@ services:
         condition: service_healthy
     volumes:
       - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://router:80/favicon.png"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s   
 
   locust:
     image: locustio/locust:latest
     depends_on:
-      front:
+      router:
         condition: service_healthy
-      api:
-        condition: service_healthy  
     volumes:
       - ../performance/locustfile.py:/locustfile.py
       - ../performance/results/:/results/

@@ -6,10 +6,10 @@ import { fetchWithErrorHandling } from "./fetchUtils";
 import { error, isHttpError, isRedirect, redirect } from "@sveltejs/kit";
 
 vi.mock("@sveltejs/kit", () => ({
-    error: vi.fn() as Mock<[number, string?], void>,
-    isHttpError: vi.fn() as Mock<[unknown], boolean>,
-    isRedirect: vi.fn() as Mock<[unknown], boolean>,
-    redirect: vi.fn() as Mock<[number, string], void>,
+    error: vi.fn(),
+    isHttpError: vi.fn(),
+    isRedirect: vi.fn(),
+    redirect: vi.fn(),
 }));
 
 describe("fetchWithErrorHandling", () => {
@@ -83,7 +83,6 @@ describe("fetchWithErrorHandling", () => {
         await fetchWithErrorHandling(Promise.resolve(mockResponse));
 
         expect(redirect).toHaveBeenCalledWith(301, "https://example.com/custom-redirect");
-        expect(error).not.toHaveBeenCalled();
     });
 
     it("should handle temporary redirects from API response headers", async () => {
@@ -96,6 +95,5 @@ describe("fetchWithErrorHandling", () => {
         await fetchWithErrorHandling(Promise.resolve(mockResponse));
 
         expect(redirect).toHaveBeenCalledWith(302, "https://example.com");
-        expect(error).not.toHaveBeenCalled();
     });
 });

@@ -14,11 +14,14 @@ Note: Different matchers can be used for the same step, to allow for more
 import re
 
 from django.utils import timezone
-from playwright.sync_api import ConsoleMessage, Page, expect
+from playwright.sync_api import ConsoleMessage, Page, Playwright, expect
 from pytest_bdd import parsers, then
 from pytest_django.live_server_helper import LiveServer
 
-from . import utils
+from bdd.fixtures import Reporter
+from bdd.report import utils as report_utils
+
+from . import common_given, utils
 
 
 @then(parsers.cfparse('the text "{text}" should be the colour "{colour}"'))
@@ -37,9 +40,9 @@ def text_should_be_colour(page: Page, text: str, colour: str):
         }""",
     )
 
-    assert actual_colour == colour, (
-        f"Actual colour: {actual_colour}, Expected colour: {colour}"
-    )
+    assert (
+        actual_colour == colour
+    ), f"Actual colour: {actual_colour}, Expected colour: {colour}"
 
 
 @then(parsers.cfparse('I should be at the URL "{url}"'))
@@ -206,3 +209,61 @@ def userbar_should_not_be_shown(page: Page):
 
 
 # :: ENDIF
+
+
+@then(
+    parsers.cfparse(
+        "the following devices should not have any a11y violations:\n{datatable}",
+    ),
+)
+def should_not_have_any_a11y_violations(
+    datatable: str,
+    page: Page,
+    report: Reporter,
+    playwright: Playwright,
+):
+    """
+    Change the viewport size to the specified device, and check the page has no a11y violations.
+
+    Example:
+    ```gherkin
+        Then the following devices should not have any a11y violations:
+            | device         |
+            | Desktop Chrome |
+            | iPad (gen 7)   |
+            | iPhone X       |
+    ```
+    """
+    page.add_script_tag(url="https://unpkg.com/axe-core@4.8.3/axe.min.js")
+
+    datatable = utils.parse_datatable_string(datatable)
+
+    info = []
+    violations = set()
+
+    for row in datatable:
+        info.append(f"<strong>{row['device']}</strong>")
+
+        common_given.on_device(row["device"], page, playwright)
+
+        results = page.evaluate(
+            """
+            axe.run({
+                runOnly: {
+                    type: 'tag',
+                    values: ['wcag2a', 'wcag2aa']
+                },
+                absolutePaths: true
+            })
+            """,
+        )
+
+        if results["violations"]:
+            [violations.add(violation["id"]) for violation in results["violations"]]
+            info.append(report_utils.generate_a11y_report(results))
+            info.append("<hr>")
+
+    if violations:
+        report.attach("<hr>".join(info), mime_type="text/html")
+
+    assert not violations, f"Accessibility violations found: {violations}"

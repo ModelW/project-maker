@@ -1,0 +1,129 @@
+@use "sass:map";
+@use "variables";
+@use "functions";
+
+/// Mixin to media query all screens above and **including** given breakpoint.
+/// @param {string} $breakpoint A breakpoint key inside $breakpoints map
+/// @content
+/// @example scss - Make font-size 14px on medium screens and larger
+///     @include breakpoints-up(md) {
+///         font-size: 14px;
+///     }
+@mixin breakpoints-up($breakpoint) {
+    $breakpoint-value: functions.validate-breakpoint($breakpoint);
+
+    @media (min-width: $breakpoint-value) {
+        @content;
+    }
+}
+
+/// Mixin to media query all screens up to but **excluding** the passed breakpoint
+/// @param {string} $breakpoint A breakpoint key inside $breakpoints map
+/// @example scss - Make font-size 14px on screens less than medium
+///     @include breakpoints-down(md) {
+///         font-size: 14px;
+///     }
+@mixin breakpoints-down($breakpoint) {
+    $breakpoint-value: functions.validate-breakpoint($breakpoint);
+
+    @media (max-width: ($breakpoint-value - 1)) {
+        @content;
+    }
+}
+
+/// Mixin to media query only the passed breakpoint up to and excluding the next one.
+/// @param {string} $breakpoint A breakpoint key inside $breakpoints map
+/// @example scss - Make font-size 14px on medium screens
+///     @include breakpoints-only(md) {
+///         font-size: 14px;
+///     }
+@mixin breakpoints-only($breakpoint) {
+    $breakpoint-value: functions.validate-breakpoint($breakpoint);
+    $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
+
+    @if not $next-breakpoint {
+        @media (min-width: $breakpoint-value) {
+            @content;
+        }
+    } @else {
+        @media (min-width: $breakpoint-value) and (max-width: ($next-breakpoint - 1)) {
+            @content;
+        }
+    }
+}
+
+/// Mixin to media query only the passed $breakpoint1 up to and excluding the passed $breakpoint2.
+/// @param {string} $breakpoint1 A breakpoint key inside $breakpoints map
+/// @param {string} $breakpoint2 A breakpoint key inside $breakpoints map
+/// @example scss - Make font-size 14px from small screens to less than large
+///     @include breakpoints-between(sm, lg) {
+///         font-size: 14px;
+///     }
+@mixin breakpoints-between($breakpoint1, $breakpoint2) {
+    $breakpoint1-value: functions.validate-breakpoint($breakpoint1);
+    $breakpoint2-value: functions.validate-breakpoint($breakpoint2);
+
+    @if not($breakpoint1-value < $breakpoint2-value) {
+        @error "Invalid breakpoint range: '#{$breakpoint1}' must be smaller than '#{$breakpoint2}'.";
+    }
+
+    @media (min-width: $breakpoint1-value) and (max-width: ($breakpoint2-value - 1)) {
+        @content;
+    }
+}
+
+/// Mixin to media query all apart from the passed breakpoint up to and excluding the next one.
+/// @param {string} $breakpoint A breakpoint key inside $breakpoints map
+/// @example scss - Make font-size 14px on screens apart from medium
+///     @include breakpoints-not(md) {
+///         font-size: 14px;
+///     }
+@mixin breakpoints-not($breakpoint) {
+    $breakpoint-value: functions.validate-breakpoint($breakpoint);
+    $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
+
+    @if not $next-breakpoint {
+        @media (max-width: ($breakpoint-value - 1)) {
+            @content;
+        }
+    } @else {
+        @media (max-width: ($breakpoint-value - 1)) or (min-width: $next-breakpoint) {
+            @content;
+        }
+    }
+}
+
+/// Mixin to limit width of an element to a maximum width.
+/// @param {string} $max-width The maximum width of the element
+@mixin max-width($max-width: map.get(variables.$breakpoints, "xl")) {
+    max-width: $max-width;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/// Mixin to truncate text and add ellipsis
+/// @param {Number} $lines - Number of lines to display before truncating
+/// @param {Boolean} $break-word - Determines if words should break mid-word when truncating
+@mixin truncate-text($lines: 1, $break-word: true) {
+    overflow-y: auto;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $lines;
+
+    @if $break-word {
+        word-break: break-all;
+    } @else {
+        word-break: normal;
+    }
+
+    text-overflow: ellipsis;
+}
+
+/// Mixin to reset styling of ul/li tags. (ie. bullet point and left padding.
+/// @example scss - Reset the styling in a ul tag
+///     @include reset-list;
+@mixin reset-list() {
+    // Styling
+    list-style-type: none;
+    padding-left: 0;
+}

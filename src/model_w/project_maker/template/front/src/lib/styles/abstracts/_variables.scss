@@ -1,0 +1,31 @@
+/// Breakpoints for the site (ordered smallest to largest).
+///
+/// The xs and xl are the extremes the site supports.
+/// In general usage, you should only need to use the md, to know if
+/// desktop, or mobile, but if a specific use case comes up, there are sm and lg available.
+/// (eg. in the carousel component, we need for breakpoints to adapt the number of slides
+/// shown, else they're too stretched or too small.
+///
+/// These are referenced in the media query mixins
+/// @example scss - Media query using 'sm'
+///     @include breakpoints-up(sm) {
+///         font-size: 12px;
+///     }
+$breakpoints: (
+    "xs": 375px,
+    "sm": 480px,
+    "md": 768px,
+    "lg": 1024px,
+    "xl": 1280px,
+);
+
+/// Set the breakpoints as CSS variables at the root level
+/// This is useful to get the breakpoints in JS as we can
+/// query CSS variables, as opposed to just the SCSS variable.
+/// @example js - Get the breakpoints
+///     const breakpoints = getComputedStyle(document.documentElement).getPropertyValue('--breakpoints').split(', ');
+:root {
+    @each $key, $value in $breakpoints {
+        --#{$key}-breakpoint: #{$value};
+    }
+}
