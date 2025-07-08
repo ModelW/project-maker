@@ -179,12 +179,12 @@ class ApiStreamFieldBlockPreview(StreamFieldBlockPreview):
     """
     Make the block preview data available to the front-end.
     We do this using the same mechanism as the page and snippet previews.
-    Namely, we redirect to the front's ___block_preview___ route with a query param
+    Namely, we redirect to the front's __block_preview__ route with a query param
     of the block's "app.model" name.  The front-end then queries the backend for the
     block's preview value and renders it.
     """
 
-    front_path = "/___block_preview___"
+    front_path = "/__block_preview__"
 
     def get_app_dot_model(self, context: dict) -> str:
         """Get the app and model of the preview data."""
