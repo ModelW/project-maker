@@ -44,6 +44,7 @@ pytest-django = "*"
 pytest-html = "*"
 pytest-playwright = "*"
 pyyaml = "*"
+pixelmatch = "*"
 
 [tool.isort]
 profile = "black"

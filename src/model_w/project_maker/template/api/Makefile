@@ -1,4 +1,4 @@
-.PHONY: format black isort procrastinate_run dev_stack docker_test
+.PHONY: format black isort procrastinate_run dev_stack destroy_stack performance_test docker_test update-snapshots
 
 PYTHON_BIN ?= poetry run python
 
@@ -24,3 +24,5 @@ performance_test:
 
 docker_test:
 	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up --build --force-recreate --abort-on-container-exit --remove-orphans ; python -m webbrowser -t "./bdd/report/results/report.html"
+update-snapshots:
+	poetry run pytest -m vr --update-snapshots

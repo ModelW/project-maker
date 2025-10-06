@@ -2392,6 +2392,18 @@ tests = ["defusedxml", "numpy", "packaging", "pympler", "pytest"]
 tests-min = ["defusedxml", "packaging", "pytest"]
 
 [[package]]
+name = "pixelmatch"
+version = "0.3.0"
+description = "A pixel-level image comparison library."
+optional = false
+python-versions = ">=3.7,<4.0"
+groups = ["test"]
+files = [
+    {file = "pixelmatch-0.3.0-py3-none-any.whl", hash = "sha256:1fe86c50e7d00eb4b4de7b991f8b7ebc12da841ce1e9f7304480ab0f58a2bd81"},
+    {file = "pixelmatch-0.3.0.tar.gz", hash = "sha256:d0fa36a593cfcfa2d4b225da9d72c5b5218aef8b0594bc1a91953533c2676099"},
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.4.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
@@ -3634,4 +3646,4 @@ wand = ["Wand (>=0.6,<1.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.13"
-content-hash = "43286a0f7f59297bb3c7dd294267bc1b4754c7cd14b2918e6907c8b370815619"
+content-hash = "326a046256aa22f32d214b35e10bf579d4ecd5091c00af72cb6e547e617a3fbb"

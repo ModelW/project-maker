@@ -12,8 +12,12 @@ Note: Different matchers can be used for the same step, to allow for more
 """
 
 import re
+from collections.abc import Callable
+from io import BytesIO
 
 from django.utils import timezone
+from django.utils.text import slugify
+from PIL import Image
 from playwright.sync_api import ConsoleMessage, Page, Playwright, expect
 from pytest_bdd import parsers, then
 from pytest_django.live_server_helper import LiveServer
@@ -267,3 +271,58 @@ def should_not_have_any_a11y_violations(
         report.attach("<hr>".join(info), mime_type="text/html")
 
     assert not violations, f"Accessibility violations found: {violations}"
+
+
+
+@then(
+    parsers.cfparse(
+        "the current page ({snapshot_name}) should not have any visual regressions",
+    ),
+)
+def should_not_have_any_visual_regressions(
+    snapshot_name: str,
+    page: Page,
+    front_server: str,
+    assert_snapshot: Callable[[bytes, str, float], Image.Image | None],
+    report: Reporter,
+):
+    """
+    Verify that the visual snapshot of the current page remains unchanged.
+
+    Snapshots are stored in the `snapshots` folder and named in the format:
+    `<snapshot_name>.png`.
+
+    Example:
+    ```gherkin
+        Then the current page (home) should not have any visual regressions
+    ```
+    """
+    screenshot_name = f"{slugify(snapshot_name)}-{page.viewport_size['width']}x{page.viewport_size['height']}.png"
+
+    # Disable transitions globally
+    page.add_style_tag(
+        content="* { transition: none !important; animation: none !important; }",
+    )
+
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_timeout(3000)  # Brief pause to reduce flakiness in screenshots
+
+    # Scroll down to trigger any scroll-triggered animations
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(1000)  # Wait for the animations to trigger
+
+    # Scroll back up
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(1000)  # Wait for the animations to complete
+
+    difference: Image.Image | None = assert_snapshot(
+        image_data=page.screenshot(full_page=True, type="png"),
+        name=screenshot_name,
+    )
+
+    if difference:
+        buffer = BytesIO()
+        difference.save(buffer, format="PNG")
+        report.attach_image(buffer.getvalue())
+
+    assert difference is None, f"Screenshots are different: {screenshot_name}"
