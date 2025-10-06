@@ -45,6 +45,7 @@ pytest-html = "*"
 pytest-playwright = "*"
 pyyaml = "*"
 pixelmatch = "*"
+pillow = "*"
 
 [tool.isort]
 profile = "black"
