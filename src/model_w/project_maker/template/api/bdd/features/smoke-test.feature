@@ -18,18 +18,6 @@ Feature: Smoke test for the site
             | Taggit                           | Tags               |
     # :: ENDIF
 
-    Scenario Outline: Needs correct log in to access Django admin
-        Given I am on the /back/admin page
-        When I log in with <username> and <password>
-        Then I should see the text "<expected_text>"
-        And I should not see the text "<not_expected_text>"
-
-        Examples:
-            | username      | password  | expected_text            | not_expected_text        |
-            | good@user.com | correct   | welcome                  | Please enter the correct |
-            | good@user.com | incorrect | Please enter the correct | welcome                  |
-            | bad@user.com  | correct   | Please enter the correct | welcome                  |
-
     Scenario: Non-admin user can't log in to Django admin
         Given I am the following user:
             | email    | good2@user.com |

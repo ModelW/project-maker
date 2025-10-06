@@ -1,4 +1,4 @@
-FROM modelw/base:2025.07
+FROM modelw/base:2025.10
 
 COPY --chown=user .npmrc package.json package-lock.json ./
 
