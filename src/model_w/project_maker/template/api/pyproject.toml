@@ -21,7 +21,7 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-], version = ">=2025.7.0,<2025.8.0"}
+], version = ">=2025.10.0,<2025.11.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
 markdown = "*"
