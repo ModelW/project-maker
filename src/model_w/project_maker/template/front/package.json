@@ -15,7 +15,7 @@
     },
     "dependencies": {
         "@fullerstack/nax-ipware": "^0.10.0",
-        "@model-w/preset-sveltekit": "~2025.7.0",
+        "@model-w/preset-sveltekit": "~2025.10.0",
         "@sentry/sveltekit": "*"
     },
     "devDependencies": {
@@ -38,5 +38,6 @@
         "typescript": "*",
         "vite": "*",
         "vitest": "*"
-    }
+    },
+    "overrides": { "cookie": "^0.7.0" }
 }
