@@ -84,6 +84,10 @@ def overwrite_settings(
     # :: IF api__wagtail
     settings.WAGTAILADMIN_BASE_URL = settings.WAILER_BASE_URL = base_url
     # :: ENDIF
+    base_origin = base_url.replace(":80", "").split("://", 1)[-1]
+    settings.CSRF_TRUSTED_ORIGINS = [
+        f"{scheme}://{base_origin}" for scheme in ["http", "https"]
+    ]
     return settings
 
 
