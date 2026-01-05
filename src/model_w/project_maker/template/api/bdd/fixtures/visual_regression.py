@@ -50,7 +50,7 @@ def assert_snapshot(
         image_data: bytes,
         name: str,
         *,
-        threshold: float = 1,
+        threshold: float = 0.5,
     ) -> Image.Image | None:
         """
         Compare two snapshot images and assert they are the same.

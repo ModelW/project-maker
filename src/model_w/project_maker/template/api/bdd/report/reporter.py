@@ -293,6 +293,16 @@ class Reporter(metaclass=utils.SingletonMeta):
         logger.debug("Removing previous HTML report")
         self.html_report_path.unlink(missing_ok=True)
 
+    def current_step_has_image(self) -> bool:
+        """Check if the current step has an image embedding."""
+        return any(
+            e.feature_index == self.current_feature_index
+            and e.scenario_index == self.current_scenario_index
+            and e.step_index == self.current_step_index
+            and e.mime_type.startswith("image/")
+            for e in self.embeddings
+        )
+
     def insert_embeddings_into_report(self) -> None:
         """Merge the embeddings from the JSON file into the cucumber report."""
         with self.json_report_path.open() as file:
