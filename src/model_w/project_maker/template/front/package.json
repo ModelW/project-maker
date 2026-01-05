@@ -15,7 +15,7 @@
     },
     "dependencies": {
         "@fullerstack/nax-ipware": "^0.10.0",
-        "@model-w/preset-sveltekit": "~2025.10.0",
+        "@model-w/preset-sveltekit": "~2026.1.0",
         "@sentry/sveltekit": "*"
     },
     "devDependencies": {
