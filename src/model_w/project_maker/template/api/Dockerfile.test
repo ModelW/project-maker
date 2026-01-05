@@ -1,6 +1,6 @@
 # A Dockerfile for testing a ModelW project.
 
-FROM modelw/base:2025.10
+FROM modelw/base:2026.01
 
 # To avoid complications with permissions to install Playwright's system dependencies
 # we run everything as root.
@@ -20,4 +20,4 @@ COPY . .
 
 RUN modelw-docker build
 
-CMD ["modelw-docker", "run", "pytest"]
+CMD ["modelw-docker", "run", "pytest", "-m", "not skipCI"]
