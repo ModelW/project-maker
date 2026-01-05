@@ -154,7 +154,16 @@ def pytest_bdd_step_error(
     """
     Called when a step fails.
     We use this to add a screenshot to the report at the failing step.
+    Note: As only 1 screenshot per step is supported, we skip this
+    if a screenshot is already attached to the step (for example a VR difference).
     """
+    if reporter.current_step_has_image():
+        logger.debug(
+            "Skipping failure screenshot — image already attached to step %s",
+            step,
+        )
+        return
+
     page = request.getfixturevalue("page")
     screenshot_bytes = page.screenshot(full_page=True)
     png = base64.b64encode(screenshot_bytes).decode()
