@@ -258,9 +258,9 @@ def main(argv: Optional[Sequence[str]] = None):
         # it in with the health check app.
         context["api"]["procrastinate"] = True
 
-    if context["api"]["wagtail"]:
-        context["cms_prefix"] = Prompt.ask(
-            "What is the URL prefix for the CMS admin?", default="wubba-lubba-dub-dub"
+        if context["api"]["wagtail"]:
+            context["cms_prefix"] = Prompt.ask(
+                "What is the URL prefix for the CMS admin?", default="wubba-lubba-dub-dub"
         )
 
     components = keys_text(
