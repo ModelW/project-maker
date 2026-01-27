@@ -80,8 +80,10 @@ class FrontComponent(BaseComponent):
 
         if self.path_specs.match_file(path):
             return False
+        
+        wagtail_enabled = context["api"]["enable"] and context["api"]["wagtail"]
 
-        if not context["api"]["wagtail"] and (
+        if not wagtail_enabled and (
             path.name
             in [
                 "cms.ts",
