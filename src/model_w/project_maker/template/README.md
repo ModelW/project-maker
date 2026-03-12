@@ -24,12 +24,15 @@ from WITH.
 ### Components
 
 This project is composed of the following components:
-
+# :: IF api__enable
 -   [API](./api) &mdash; The back-end of the project, mostly serving as API and
     back-office admin. Most of the time, URLs targeting the API are prefixed by
     `/back`.
+# :: ENDIF
+# :: IF front__enable
 -   [Front](./front) &mdash; The front-end, which renders all the
     customer-facing pages. It covers the rest of URLs.
+# :: ENDIF
 
 ### Writing more of it
 
