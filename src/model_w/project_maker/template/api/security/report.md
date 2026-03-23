@@ -1,0 +1,4679 @@
+## System Description
+&nbsp;
+
+
+Threat model for Model W projects.
+
+Architecture:
+
+Browser -> SvelteKit -> Django API/Wagtail
+Workers -> background jobs
+PostgreSQL + Redis
+DigitalOcean Spaces storage
+Sentry observability
+Kerfu Foo deployment system
+GitHub source control
+
+
+&nbsp;
+
+
+
+|Assumptions|
+|-----------|
+|Session authentication implemented using Django session cookies| 
+|Public object storage used only for non-sensitive media assets| 
+|Redis and PostgreSQL accessible only within private network| 
+|All external communication uses HTTPS| 
+|DigitalOcean App Platform provides network isolation| 
+|Kerfu Foo manages deployment and secrets| 
+|CSRF protection enabled via Django middleware| 
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+
+
+
+## Dataflow Diagram - Level 0 DFD
+
+![](cawl-dfd.png)
+
+&nbsp;
+
+## Dataflows
+&nbsp;
+
+Name|From|To |Data|Protocol|Port
+|:----:|:----:|:---:|:----:|:--------:|:----:|
+|Dataflow(User interaction)|Actor(Public User)|Process(User Browser)|[]||-1|
+|Dataflow(HTTPS request for web pages)|Process(User Browser)|Process(SvelteKit Frontend)|[]|HTTPS|443|
+|Dataflow(API request with session cookie)|Process(User Browser)|Process(Django API)|[]|HTTPS|443|
+|Dataflow(CMS login and content editing)|Actor(CMS Editor)|Process(Wagtail Admin)|[]|HTTPS|443|
+|Dataflow(CMS content read/write)|Process(Wagtail Admin)|Datastore(PostgreSQL Database)|[]|PostgreSQL|5432|
+|Dataflow(Internal API request via platform network)|Process(SvelteKit Frontend)|Process(Django API)|[]|HTTP|8000|
+|Dataflow(Application data queries)|Process(Django API)|Datastore(PostgreSQL Database)|[]|PostgreSQL|5432|
+|Dataflow(Caching / channels / session storage)|Process(Django API)|Datastore(Redis Cache / Channels)|[]|Redis|6379|
+|Dataflow(Media uploads and asset storage)|Process(Django API)|Datastore(DigitalOcean Spaces Object Storage)|[]|HTTPS|443|
+|Dataflow(Background job dispatch)|Process(Django API)|Process(Background Worker (Procrastinate))|[]|Procrastinate|8000|
+|Dataflow(Background job queries)|Process(Background Worker (Procrastinate))|Datastore(PostgreSQL Database)|[]|PostgreSQL|5432|
+|Dataflow(File processing or asset generation)|Process(Background Worker (Procrastinate))|Datastore(DigitalOcean Spaces Object Storage)|[]|HTTPS|443|
+|Dataflow(Application errors and traces)|Process(Django API)|ExternalEntity(Sentry Monitoring)|[]|HTTPS|443|
+|Dataflow(Frontend error reporting)|Process(SvelteKit Frontend)|ExternalEntity(Sentry Monitoring)|[]|HTTPS|443|
+|Dataflow(Public health endpoint)|Process(User Browser)|Process(Django API)|[]|HTTPS|443|
+|Dataflow(Administrative access)|Actor(Platform Administrator)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
+|Dataflow(Deployments and environment configuration)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Django API)|[]|SSH|22|
+|Dataflow(Worker deployment control)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Background Worker (Procrastinate))|[]|SSH|22|
+|Dataflow(Source code push)|Actor(Developer)|ExternalEntity(GitHub Source Control)|[]|Git/HTTPS|443|
+|Dataflow(Build trigger)|ExternalEntity(GitHub Source Control)|ExternalEntity(CI/CD Pipeline)|[]|Webhook/HTTPS|443|
+|Dataflow(Deployment artifacts)|ExternalEntity(CI/CD Pipeline)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
+
+
+## Data Dictionary
+&nbsp;
+
+Name|Description|Classification
+|:----:|:--------:|:----:|
+
+
+&nbsp;
+
+## Potential Threats
+
+&nbsp;
+&nbsp;
+
+
+<details>
+  <summary>
+    INP02 — Overflow Buffers
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA01 — Authentication Abuse/ByPass
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE02 — Double Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP07 — Buffer Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO01 — Flooding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP08 — Format String Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP12 — Client-side Injection-induced Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP13 — Command Delimiters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP14 — Input Data Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR03 — Dictionary-based Password Attack
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA02 — Principal Spoof
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Employ robust authentication processes (e.g., multi-factor authentication).</p>
+
+</details>
+
+<details>
+  <summary>
+    INP20 — iFrame Overlay
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP23 — File Content Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC12 — Privilege Escalation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC13 — Hijacking a privileged process
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC14 — Catching exception throw/signal from privileged block
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP24 — Filter Failure through Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP25 — Resource Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP26 — Code Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP27 — XSS Targeting HTML Attributes
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP28 — XSS Targeting URI Placeholders
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP29 — XSS Using Doubled Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP30 — XSS Using Invalid Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP31 — Command Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP32 — XML Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP33 — Remote Code Inclusion
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP35 — Leverage Alternate Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC15 — Schema Poisoning
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC18 — Session Hijacking - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP41 — Argument Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC20 — Reusing Session IDs (aka Session Replay) - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC21 — Cross Site Request Forgery
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP02 — Overflow Buffers
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA01 — Authentication Abuse/ByPass
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE02 — Double Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP07 — Buffer Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO01 — Flooding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP08 — Format String Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP12 — Client-side Injection-induced Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP13 — Command Delimiters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP14 — Input Data Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR03 — Dictionary-based Password Attack
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA02 — Principal Spoof
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Employ robust authentication processes (e.g., multi-factor authentication).</p>
+
+</details>
+
+<details>
+  <summary>
+    INP20 — iFrame Overlay
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP23 — File Content Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC12 — Privilege Escalation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC13 — Hijacking a privileged process
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC14 — Catching exception throw/signal from privileged block
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP24 — Filter Failure through Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP25 — Resource Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP26 — Code Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP27 — XSS Targeting HTML Attributes
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP28 — XSS Targeting URI Placeholders
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP29 — XSS Using Doubled Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP30 — XSS Using Invalid Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP31 — Command Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP32 — XML Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP33 — Remote Code Inclusion
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP35 — Leverage Alternate Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC15 — Schema Poisoning
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC18 — Session Hijacking - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP41 — Argument Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC20 — Reusing Session IDs (aka Session Replay) - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC21 — Cross Site Request Forgery
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP02 — Overflow Buffers
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA01 — Authentication Abuse/ByPass
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE02 — Double Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP07 — Buffer Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO01 — Flooding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP08 — Format String Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP12 — Client-side Injection-induced Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP13 — Command Delimiters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP14 — Input Data Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR03 — Dictionary-based Password Attack
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA02 — Principal Spoof
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Employ robust authentication processes (e.g., multi-factor authentication).</p>
+
+</details>
+
+<details>
+  <summary>
+    INP20 — iFrame Overlay
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP23 — File Content Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC12 — Privilege Escalation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC13 — Hijacking a privileged process
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC14 — Catching exception throw/signal from privileged block
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP24 — Filter Failure through Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP25 — Resource Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP26 — Code Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP27 — XSS Targeting HTML Attributes
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP28 — XSS Targeting URI Placeholders
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP29 — XSS Using Doubled Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP30 — XSS Using Invalid Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP31 — Command Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP32 — XML Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP33 — Remote Code Inclusion
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP35 — Leverage Alternate Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC15 — Schema Poisoning
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC18 — Session Hijacking - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP41 — Argument Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC20 — Reusing Session IDs (aka Session Replay) - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC21 — Cross Site Request Forgery
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP02 — Overflow Buffers
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA01 — Authentication Abuse/ByPass
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE02 — Double Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP07 — Buffer Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO01 — Flooding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP08 — Format String Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP12 — Client-side Injection-induced Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP13 — Command Delimiters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP14 — Input Data Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR03 — Dictionary-based Password Attack
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA02 — Principal Spoof
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Employ robust authentication processes (e.g., multi-factor authentication).</p>
+
+</details>
+
+<details>
+  <summary>
+    INP20 — iFrame Overlay
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP23 — File Content Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC12 — Privilege Escalation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC13 — Hijacking a privileged process
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC14 — Catching exception throw/signal from privileged block
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP24 — Filter Failure through Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP25 — Resource Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP26 — Code Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP27 — XSS Targeting HTML Attributes
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP28 — XSS Targeting URI Placeholders
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP29 — XSS Using Doubled Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP30 — XSS Using Invalid Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP31 — Command Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP32 — XML Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP33 — Remote Code Inclusion
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP35 — Leverage Alternate Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC15 — Schema Poisoning
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC18 — Session Hijacking - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP41 — Argument Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC20 — Reusing Session IDs (aka Session Replay) - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC21 — Cross Site Request Forgery
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP02 — Overflow Buffers
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA01 — Authentication Abuse/ByPass
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE02 — Double Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP07 — Buffer Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO01 — Flooding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP08 — Format String Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP12 — Client-side Injection-induced Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP13 — Command Delimiters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP14 — Input Data Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR03 — Dictionary-based Password Attack
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    AA02 — Principal Spoof
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Employ robust authentication processes (e.g., multi-factor authentication).</p>
+
+</details>
+
+<details>
+  <summary>
+    INP20 — iFrame Overlay
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP23 — File Content Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC12 — Privilege Escalation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC13 — Hijacking a privileged process
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC14 — Catching exception throw/signal from privileged block
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP24 — Filter Failure through Buffer Overflow
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP25 — Resource Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP26 — Code Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP27 — XSS Targeting HTML Attributes
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP28 — XSS Targeting URI Placeholders
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP29 — XSS Using Doubled Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP30 — XSS Using Invalid Characters
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP31 — Command Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP32 — XML Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP33 — Remote Code Inclusion
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP35 — Leverage Alternate Encoding
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC15 — Schema Poisoning
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC18 — Session Hijacking - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP41 — Argument Injection
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC20 — Reusing Session IDs (aka Session Replay) - ClientSide
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC21 — Cross Site Request Forgery
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>PostgreSQL Database</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>PostgreSQL Database</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR05 — Encryption Brute Forcing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>PostgreSQL Database</p>
+
+  <h6>Severity</h6>
+  <p>Low</p>
+
+  <h6>Mitigation</h6>
+  <p>Use commonly accepted algorithms and recommended key sizes. The key size used will depend on how important it is to keep the data confidential and for how long.In theory a brute force attack performing an exhaustive key space search will always succeed, so the goal is to have computational security. Moore&#x27;s law needs to be taken into account that suggests that computing resources double every eighteen months.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE04 — Audit Log Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>PostgreSQL Database</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use Principle of Least Privilege to avoid unauthorized access to log files leading to manipulation/injection on those files. Do not allow tainted data to be written in the log file without prior input validation. Whitelisting may be used to properly validate the data. Use synchronization to control the flow of execution. Use static analysis tool to identify log forging vulnerabilities. Avoid viewing logs with tools that may interpret control characters in the file, such as command-line shells.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Redis Cache / Channels</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Redis Cache / Channels</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR05 — Encryption Brute Forcing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Redis Cache / Channels</p>
+
+  <h6>Severity</h6>
+  <p>Low</p>
+
+  <h6>Mitigation</h6>
+  <p>Use commonly accepted algorithms and recommended key sizes. The key size used will depend on how important it is to keep the data confidential and for how long.In theory a brute force attack performing an exhaustive key space search will always succeed, so the goal is to have computational security. Moore&#x27;s law needs to be taken into account that suggests that computing resources double every eighteen months.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE04 — Audit Log Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Redis Cache / Channels</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use Principle of Least Privilege to avoid unauthorized access to log files leading to manipulation/injection on those files. Do not allow tainted data to be written in the log file without prior input validation. Whitelisting may be used to properly validate the data. Use synchronization to control the flow of execution. Use static analysis tool to identify log forging vulnerabilities. Avoid viewing logs with tools that may interpret control characters in the file, such as command-line shells.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC01 — Privilege Abuse
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>DigitalOcean Spaces Object Storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.</p>
+
+</details>
+
+<details>
+  <summary>
+    DO02 — Excessive Allocation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>DigitalOcean Spaces Object Storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR05 — Encryption Brute Forcing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>DigitalOcean Spaces Object Storage</p>
+
+  <h6>Severity</h6>
+  <p>Low</p>
+
+  <h6>Mitigation</h6>
+  <p>Use commonly accepted algorithms and recommended key sizes. The key size used will depend on how important it is to keep the data confidential and for how long.In theory a brute force attack performing an exhaustive key space search will always succeed, so the goal is to have computational security. Moore&#x27;s law needs to be taken into account that suggests that computing resources double every eighteen months.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE04 — Audit Log Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>DigitalOcean Spaces Object Storage</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use Principle of Least Privilege to avoid unauthorized access to log files leading to manipulation/injection on those files. Do not allow tainted data to be written in the log file without prior input validation. Whitelisting may be used to properly validate the data. Use synchronization to control the flow of execution. Use static analysis tool to identify log forging vulnerabilities. Avoid viewing logs with tools that may interpret control characters in the file, such as command-line shells.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User interaction</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User interaction</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User interaction</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User interaction</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User interaction</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>HTTPS request for web pages</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>HTTPS request for web pages</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>HTTPS request for web pages</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>HTTPS request for web pages</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>HTTPS request for web pages</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>API request with session cookie</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>API request with session cookie</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>API request with session cookie</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>API request with session cookie</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>API request with session cookie</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS login and content editing</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS login and content editing</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS login and content editing</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS login and content editing</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS login and content editing</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS content read/write</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS content read/write</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS content read/write</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS content read/write</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>CMS content read/write</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Internal API request via platform network</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Internal API request via platform network</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Internal API request via platform network</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Internal API request via platform network</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Internal API request via platform network</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application data queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application data queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application data queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application data queries</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application data queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Caching / channels / session storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Caching / channels / session storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Caching / channels / session storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Caching / channels / session storage</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Caching / channels / session storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Media uploads and asset storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Media uploads and asset storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Media uploads and asset storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Media uploads and asset storage</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Media uploads and asset storage</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job dispatch</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job dispatch</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job dispatch</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job dispatch</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job dispatch</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job queries</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background job queries</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>File processing or asset generation</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>File processing or asset generation</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>File processing or asset generation</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>File processing or asset generation</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>File processing or asset generation</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application errors and traces</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application errors and traces</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application errors and traces</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application errors and traces</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Application errors and traces</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Frontend error reporting</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Frontend error reporting</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Frontend error reporting</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Frontend error reporting</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Frontend error reporting</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Public health endpoint</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Public health endpoint</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Public health endpoint</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Public health endpoint</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Public health endpoint</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Administrative access</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Administrative access</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Administrative access</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Administrative access</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Administrative access</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployments and environment configuration</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployments and environment configuration</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployments and environment configuration</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployments and environment configuration</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployments and environment configuration</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Worker deployment control</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Worker deployment control</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Worker deployment control</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Worker deployment control</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Worker deployment control</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Source code push</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Source code push</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Source code push</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Source code push</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Source code push</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Build trigger</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Build trigger</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Build trigger</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Build trigger</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Build trigger</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE01 — Interception
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployment artifacts</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC05 — Content Spoofing
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployment artifacts</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
+
+</details>
+
+<details>
+  <summary>
+    DE03 — Sniffing Attacks
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployment artifacts</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR06 — Communication Channel Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployment artifacts</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
+
+</details>
+
+<details>
+  <summary>
+    CR08 — Client-Server Protocol Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Deployment artifacts</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Use strong authentication protocols.</p>
+
+</details>
+||
