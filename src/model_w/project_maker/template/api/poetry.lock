@@ -2676,6 +2676,22 @@ files = [
 ]
 
 [[package]]
+name = "pydal"
+version = "20260216.1"
+description = "pyDAL is a Database Abstraction Layer. It generates queries for SQlite, PotsgreSQL, MySQL, and other backends. It was originally part of the web2py frameworks but it is now an independent project. Example: db.define_table(\"thing\",Field(\"name\")) and db.thing.insert(name=\"Pizza\")"
+optional = false
+python-versions = ">=3.7"
+groups = ["dev"]
+files = [
+    {file = "pydal-20260216.1-py2.py3-none-any.whl", hash = "sha256:78e9f886821a3114beb9188d6dd5c145b942a44711b197d47fe7ffa1996725a6"},
+    {file = "pydal-20260216.1.tar.gz", hash = "sha256:3788599332164e753cf37e9911cb39fd159d766ac2a868f17a3abc21523663ce"},
+]
+
+[package.extras]
+manage = ["twine"]
+test = ["legacy-cgi ; python_version >= \"3.13\""]
+
+[[package]]
 name = "pyee"
 version = "13.0.0"
 description = "A rough port of Node.js's EventEmitter to Python with a few tricks of its own"
@@ -2923,6 +2939,21 @@ text-unidecode = ">=1.3"
 
 [package.extras]
 unidecode = ["Unidecode (>=1.1.1)"]
+
+[[package]]
+name = "pytm"
+version = "1.3.1"
+description = "A Python-based framework for threat modeling."
+optional = false
+python-versions = ">=3"
+groups = ["dev"]
+files = [
+    {file = "pytm-1.3.1-py3-none-any.whl", hash = "sha256:dea906d772d4d151b7211d22255d82a723127283a93fe7fb6b86a790aae2c777"},
+    {file = "pytm-1.3.1.tar.gz", hash = "sha256:f547a05146810eefe856e8c3c0a4c584d435d8681ba9c9d1b105d64be81069a6"},
+]
+
+[package.dependencies]
+pydal = ">=20200714.1"
 
 [[package]]
 name = "pytokens"
@@ -3628,4 +3659,4 @@ wand = ["Wand (>=0.6,<1.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.14"
-content-hash = "ed4c215ad95d682fb6d546ecb7afcf6c719a5008daa479fb67ba24f7f412cd78"
+content-hash = "fcefa38281eba7d257e5ebdf7eec73c68e3f21f269ba3f8f73fb0dbc68f72b0e"
