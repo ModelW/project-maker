@@ -27,20 +27,20 @@ Architecture:
 
 |Assumptions|
 |-----------|
-|Kerfu Foo manages deployment and secrets with secure access controls| 
 |DigitalOcean App Platform provides network isolation and security groups| 
-|All dependencies are regularly updated and monitored for vulnerabilities| 
-|SvelteKit implements proper client-side security controls| 
-|Django settings use appropriate security configurations (DEBUG=False in production)| 
-|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
 |Redis and PostgreSQL accessible only within private network/VPC| 
-|All external communication uses HTTPS with TLS 1.2+| 
-|Database backups are encrypted and stored securely| 
-|Access logs are collected and monitored for suspicious activity| 
-|Session authentication implemented using Django session cookies with secure flags| 
 |GitHub repository uses branch protection and requires code review| 
-|CSRF protection enabled via Django middleware with proper token validation| 
+|Session authentication implemented using Django session cookies with secure flags| 
+|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
+|All dependencies are regularly updated and monitored for vulnerabilities| 
 |Multi-factor authentication enabled for administrative access| 
+|Database backups are encrypted and stored securely| 
+|All external communication uses HTTPS with TLS 1.2+| 
+|CSRF protection enabled via Django middleware with proper token validation| 
+|Django settings use appropriate security configurations (DEBUG=False in production)| 
+|Access logs are collected and monitored for suspicious activity| 
+|Kerfu Foo manages deployment and secrets with secure access controls| 
+|SvelteKit implements proper client-side security controls| 
 
 
 &nbsp;
@@ -64,22 +64,17 @@ Name|From|To |Data|Protocol|Port
 |Dataflow(HTTPS request for web pages)|Process(User Browser)|Process(SvelteKit Frontend)|[]|HTTPS|443|
 |Dataflow(API request with session cookie)|Process(User Browser)|Process(Django API)|User Credentials, User Session Cookie|HTTPS|443|
 |Dataflow(CMS login and content editing)|Actor(CMS Editor)|Process(Wagtail Admin)|User Credentials|HTTPS|443|
-|Dataflow(CMS content read/write)|Process(Wagtail Admin)|Datastore(PostgreSQL Database)|Application Content|PostgreSQL|5432|
-|Dataflow(Internal API request via platform network)|Process(SvelteKit Frontend)|Process(Django API)|[]|HTTP|8000|
-|Dataflow(Application data queries)|Process(Django API)|Datastore(PostgreSQL Database)|Application Content, User Profile Data|PostgreSQL|5432|
-|Dataflow(Caching / channels / session storage)|Process(Django API)|Datastore(Redis Cache / Channels)|User Session Cookie|Redis|6379|
+|Dataflow(CMS content read/write)|Process(Wagtail Admin)|Datastore(PostgreSQL Database)|Application Content|PostgreSQL|25061|
+|Dataflow(Application data queries)|Process(Django API)|Datastore(PostgreSQL Database)|Application Content, User Profile Data|PostgreSQL|25061|
+|Dataflow(Caching / channels / session storage)|Process(Django API)|Datastore(Redis Cache / Channels)|User Session Cookie|Redis|25061|
+|Dataflow(Internal API request)|Process(SvelteKit Frontend)|Process(Django API)|[]|HTTP|8000|
+|Dataflow(Background job dispatch (Procrastinate))|Process(Django API)|Datastore(PostgreSQL Database)|[]|PostgreSQL|25061|
+|Dataflow(Background job queries)|Process(Background Worker (Procrastinate))|Datastore(PostgreSQL Database)|[]|PostgreSQL|25061|
 |Dataflow(Media uploads and asset storage)|Process(Django API)|Datastore(DigitalOcean Spaces Object Storage)|[]|HTTPS|443|
-|Dataflow(Background job dispatch)|Process(Django API)|Process(Background Worker (Procrastinate))|[]|Procrastinate|8000|
-|Dataflow(Background job queries)|Process(Background Worker (Procrastinate))|Datastore(PostgreSQL Database)|[]|PostgreSQL|5432|
-|Dataflow(File processing or asset generation)|Process(Background Worker (Procrastinate))|Datastore(DigitalOcean Spaces Object Storage)|[]|HTTPS|443|
 |Dataflow(Application errors and traces)|Process(Django API)|ExternalEntity(Sentry Monitoring)|Error Traces|HTTPS|443|
-|Dataflow(Frontend error reporting)|Process(SvelteKit Frontend)|ExternalEntity(Sentry Monitoring)|[]|HTTPS|443|
-|Dataflow(Public health endpoint)|Process(User Browser)|Process(Django API)|[]|HTTPS|443|
 |Dataflow(Administrative access)|Actor(Platform Administrator)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
 |Dataflow(Deployments and environment configuration)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Django API)|Database Secrets|SSH|22|
-|Dataflow(Worker deployment control)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Background Worker (Procrastinate))|[]|SSH|22|
 |Dataflow(Source code push)|Actor(Developer)|ExternalEntity(GitHub Source Control)|[]|Git/HTTPS|443|
-|Dataflow(Build trigger)|ExternalEntity(GitHub Source Control)|ExternalEntity(CI/CD Pipeline)|[]|Webhook/HTTPS|443|
 |Dataflow(Deployment artifacts)|ExternalEntity(CI/CD Pipeline)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
 
 
@@ -103,7 +98,7 @@ Name|Description|Classification
 &nbsp;
 &nbsp;
 
-**Total Threats Identified:** 325
+**Total Threats Identified:** 300
 
 &nbsp;
 &nbsp;
@@ -3891,86 +3886,6 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Internal API request via platform network</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
-
-</details>
-
-<details>
-  <summary>
-    AC05 — Content Spoofing
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Internal API request via platform network</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE03 — Sniffing Attacks
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Internal API request via platform network</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR06 — Communication Channel Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Internal API request via platform network</p>
-
-  <h6>Severity</h6>
-  <p>High</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR08 — Client-Server Protocol Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Internal API request via platform network</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Use strong authentication protocols.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE01 — Interception
-  </summary>
-
-  <h6>Targeted Element</h6>
   <p>Application data queries</p>
 
   <h6>Severity</h6>
@@ -4195,7 +4110,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Media uploads and asset storage</p>
+  <p>Internal API request</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4211,7 +4126,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Media uploads and asset storage</p>
+  <p>Internal API request</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4227,7 +4142,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Media uploads and asset storage</p>
+  <p>Internal API request</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4243,7 +4158,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Media uploads and asset storage</p>
+  <p>Internal API request</p>
 
   <h6>Severity</h6>
   <p>High</p>
@@ -4259,7 +4174,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Media uploads and asset storage</p>
+  <p>Internal API request</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4275,7 +4190,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Background job dispatch</p>
+  <p>Background job dispatch (Procrastinate)</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4291,7 +4206,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Background job dispatch</p>
+  <p>Background job dispatch (Procrastinate)</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4307,7 +4222,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Background job dispatch</p>
+  <p>Background job dispatch (Procrastinate)</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4323,7 +4238,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Background job dispatch</p>
+  <p>Background job dispatch (Procrastinate)</p>
 
   <h6>Severity</h6>
   <p>High</p>
@@ -4339,7 +4254,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Background job dispatch</p>
+  <p>Background job dispatch (Procrastinate)</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4435,7 +4350,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>File processing or asset generation</p>
+  <p>Media uploads and asset storage</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4451,7 +4366,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>File processing or asset generation</p>
+  <p>Media uploads and asset storage</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4467,7 +4382,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>File processing or asset generation</p>
+  <p>Media uploads and asset storage</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4483,7 +4398,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>File processing or asset generation</p>
+  <p>Media uploads and asset storage</p>
 
   <h6>Severity</h6>
   <p>High</p>
@@ -4499,7 +4414,7 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>File processing or asset generation</p>
+  <p>Media uploads and asset storage</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
@@ -4618,166 +4533,6 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE01 — Interception
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Frontend error reporting</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
-
-</details>
-
-<details>
-  <summary>
-    AC05 — Content Spoofing
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Frontend error reporting</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE03 — Sniffing Attacks
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Frontend error reporting</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR06 — Communication Channel Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Frontend error reporting</p>
-
-  <h6>Severity</h6>
-  <p>High</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR08 — Client-Server Protocol Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Frontend error reporting</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Use strong authentication protocols.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE01 — Interception
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Public health endpoint</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
-
-</details>
-
-<details>
-  <summary>
-    AC05 — Content Spoofing
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Public health endpoint</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE03 — Sniffing Attacks
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Public health endpoint</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR06 — Communication Channel Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Public health endpoint</p>
-
-  <h6>Severity</h6>
-  <p>High</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR08 — Client-Server Protocol Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Public health endpoint</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Use strong authentication protocols.</p>
 
 </details>
 
@@ -4995,86 +4750,6 @@ Name|Description|Classification
   </summary>
 
   <h6>Targeted Element</h6>
-  <p>Worker deployment control</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
-
-</details>
-
-<details>
-  <summary>
-    AC05 — Content Spoofing
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Worker deployment control</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE03 — Sniffing Attacks
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Worker deployment control</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR06 — Communication Channel Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Worker deployment control</p>
-
-  <h6>Severity</h6>
-  <p>High</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR08 — Client-Server Protocol Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Worker deployment control</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Use strong authentication protocols.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE01 — Interception
-  </summary>
-
-  <h6>Targeted Element</h6>
   <p>Source code push</p>
 
   <h6>Severity</h6>
@@ -5140,86 +4815,6 @@ Name|Description|Classification
 
   <h6>Targeted Element</h6>
   <p>Source code push</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Use strong authentication protocols.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE01 — Interception
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Build trigger</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.</p>
-
-</details>
-
-<details>
-  <summary>
-    AC05 — Content Spoofing
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Build trigger</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.</p>
-
-</details>
-
-<details>
-  <summary>
-    DE03 — Sniffing Attacks
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Build trigger</p>
-
-  <h6>Severity</h6>
-  <p>Medium</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt sensitive information when transmitted on insecure mediums to prevent interception.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR06 — Communication Channel Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Build trigger</p>
-
-  <h6>Severity</h6>
-  <p>High</p>
-
-  <h6>Mitigation</h6>
-  <p>Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.</p>
-
-</details>
-
-<details>
-  <summary>
-    CR08 — Client-Server Protocol Manipulation
-  </summary>
-
-  <h6>Targeted Element</h6>
-  <p>Build trigger</p>
 
   <h6>Severity</h6>
   <p>Medium</p>
