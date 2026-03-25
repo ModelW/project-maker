@@ -70,17 +70,17 @@ internet.maxClassification = Classification.PUBLIC
 edge = Boundary("Edge Network / CDN / Load Balancer")
 edge.levels = [1, 2]
 edge.minTLSVersion = TLSVersion.TLSv12
-edge.maxClassification = Classification.RESTRICTED # Internal but still non-sensitive
+edge.maxClassification = Classification.RESTRICTED
 
 application = Boundary("Application Runtime (DigitalOcean App Platform)")
 application.levels = [1, 2, 3]
-application.minTLSVersion = TLSVersion.TLSv12 # Incoming from Edge is TLS
+application.minTLSVersion = TLSVersion.TLSv12
 application.maxClassification = Classification.SENSITIVE
 application.description = "Managed container environment for Django and SvelteKit"
 
 internal_services = Boundary("Internal Data Services (VPC)")
 internal_services.levels = [2, 3]
-internal_services.minTLSVersion = TLSVersion.NONE 
+internal_services.minTLSVersion = TLSVersion.NONE
 internal_services.maxClassification = Classification.SENSITIVE
 
 external_services = Boundary("External SaaS Services")
@@ -90,12 +90,12 @@ external_services.minTLSVersion = TLSVersion.TLSv12
 
 administration = Boundary("Administrative Systems")
 administration.levels = [4]
-administration.maxClassification = Classification.SECRET # Higher than app data
+administration.maxClassification = Classification.SECRET
 administration.minTLSVersion = TLSVersion.TLSv12
 
 supply_chain = Boundary("Software Supply Chain")
 supply_chain.levels = [4]
-supply_chain.maxClassification = Classification.SECRET 
+supply_chain.maxClassification = Classification.SECRET
 supply_chain.minTLSVersion = TLSVersion.TLSv12
 
 dev_environment = Boundary("Development Environment")
@@ -104,7 +104,7 @@ dev_environment.maxClassification = Classification.RESTRICTED
 
 # Actors
 Attacker = Actor("Malicious Actor")
-Attacker.levels = [0] 
+Attacker.levels = [0]
 Attacker.inBoundary = internet
 Attacker.maxClassification = Classification.UNKNOWN
 
@@ -114,12 +114,12 @@ User.inBoundary = internet
 User.maxClassification = Classification.PUBLIC
 
 AuthenticatedUser = Actor("Authenticated User")
-AuthenticatedUser.levels = [1] # Same plane as Public User
+AuthenticatedUser.levels = [1]  # Same plane as Public User
 AuthenticatedUser.inBoundary = internet
 AuthenticatedUser.maxClassification = Classification.RESTRICTED
 
 Editor = Actor("CMS Editor")
-Editor.levels = [2] # Slightly "deeper" or grouped separately
+Editor.levels = [2]  # Slightly "deeper" or grouped separately
 Editor.inBoundary = internet
 Editor.maxClassification = Classification.SENSITIVE
 
@@ -299,93 +299,102 @@ error_logs = Data(
 
 # Dataflows
 user_to_browser = Dataflow(User, Browser, "User interaction")
+user_to_browser.note = "Physical/UI interaction via input devices"
 
 browser_to_frontend = Dataflow(Browser, Frontend, "HTTPS request for web pages")
 browser_to_frontend.protocol = "HTTPS"
 browser_to_frontend.dstPort = 443
+browser_to_frontend.tlsVersion = TLSVersion.TLSv13
+browser_to_frontend.implementsCommunicationProtocol = True
 
 browser_to_backend = Dataflow(Browser, Backend, "API request with session cookie")
 browser_to_backend.data = [user_session, user_credentials]
 browser_to_backend.protocol = "HTTPS"
 browser_to_backend.dstPort = 443
+browser_to_backend.tlsVersion = TLSVersion.TLSv13
+browser_to_backend.implementsCommunicationProtocol = True
 
 editor_login = Dataflow(Editor, CMS, "CMS login and content editing")
 editor_login.data = [user_credentials]
 editor_login.protocol = "HTTPS"
 editor_login.dstPort = 443
+editor_login.tlsVersion = TLSVersion.TLSv12
+editor_login.severity = 2  # Elevated risk due to administrative nature
+editor_login.implementsCommunicationProtocol = True
 
 cms_db = Dataflow(CMS, Postgres, "CMS content read/write")
 cms_db.data = [app_content]
 cms_db.protocol = "PostgreSQL"
-cms_db.dstPort = 5432
-
-frontend_api = Dataflow(Frontend, Backend, "Internal API request via platform network")
-frontend_api.protocol = "HTTP"
-frontend_api.dstPort = 8000
+cms_db.dstPort = 25061
+cms_db.tlsVersion = TLSVersion.TLSv12
+cms_db.note = "Managed DB connection via TLS (DO requirement)"
 
 backend_db = Dataflow(Backend, Postgres, "Application data queries")
 backend_db.data = [pii_data, app_content]
 backend_db.protocol = "PostgreSQL"
-backend_db.dstPort = 5432
+backend_db.dstPort = 25061
+backend_db.tlsVersion = TLSVersion.TLSv12
+backend_db.severity = 3  # High severity: contains PII
+backend_db.note = "Managed DB connection via TLS (DO requirement)"
 
 backend_cache = Dataflow(Backend, Redis, "Caching / channels / session storage")
 backend_cache.data = [user_session]
 backend_cache.protocol = "Redis"
-backend_cache.dstPort = 6379
+backend_cache.dstPort = 25061
+backend_cache.tlsVersion = TLSVersion.TLSv12
+backend_cache.note = "Internal state management with TLS"
+
+frontend_api = Dataflow(Frontend, Backend, "Internal API request")
+frontend_api.protocol = "HTTP"
+frontend_api.dstPort = 8000
+frontend_api.tlsVersion = TLSVersion.NONE
+frontend_api.note = "Internal platform isolated network communication"
+
+task_dispatch = Dataflow(Backend, Postgres, "Background job dispatch (Procrastinate)")
+task_dispatch.protocol = "PostgreSQL"
+task_dispatch.dstPort = 25061
+task_dispatch.note = "Asynchronous task queueing via DB table"
+
+worker_db = Dataflow(Worker, Postgres, "Background job queries")
+worker_db.protocol = "PostgreSQL"
+worker_db.dstPort = 25061
+worker_db.tlsVersion = TLSVersion.TLSv12
 
 backend_storage = Dataflow(Backend, Spaces, "Media uploads and asset storage")
 backend_storage.protocol = "HTTPS"
 backend_storage.dstPort = 443
-
-task_dispatch = Dataflow(Backend, Worker, "Background job dispatch")
-task_dispatch.protocol = "Procrastinate"
-task_dispatch.dstPort = 8000
-
-worker_db = Dataflow(Worker, Postgres, "Background job queries")
-worker_db.protocol = "PostgreSQL"
-worker_db.dstPort = 5432
-
-worker_storage = Dataflow(Worker, Spaces, "File processing or asset generation")
-worker_storage.protocol = "HTTPS"
-worker_storage.dstPort = 443
+backend_storage.tlsVersion = TLSVersion.TLSv12
 
 backend_errors = Dataflow(Backend, Sentry, "Application errors and traces")
 backend_errors.data = [error_logs]
 backend_errors.protocol = "HTTPS"
 backend_errors.dstPort = 443
-
-frontend_errors = Dataflow(Frontend, Sentry, "Frontend error reporting")
-frontend_errors.protocol = "HTTPS"
-frontend_errors.dstPort = 443
-
-healthcheck = Dataflow(Browser, Backend, "Public health endpoint")
-healthcheck.protocol = "HTTPS"
-healthcheck.dstPort = 443
+backend_errors.tlsVersion = TLSVersion.TLSv12
 
 admin_to_kerfu = Dataflow(PlatformAdmin, Kerfu, "Administrative access")
 admin_to_kerfu.protocol = "HTTPS"
 admin_to_kerfu.dstPort = 443
+admin_to_kerfu.tlsVersion = TLSVersion.TLSv12
+admin_to_kerfu.severity = 3
 
 kerfu_deploy = Dataflow(Kerfu, Backend, "Deployments and environment configuration")
 kerfu_deploy.protocol = "SSH"
 kerfu_deploy.dstPort = 22
-
-kerfu_worker = Dataflow(Kerfu, Worker, "Worker deployment control")
 kerfu_deploy.data = [db_connection_params]
-kerfu_worker.protocol = "SSH"
-kerfu_worker.dstPort = 22
+kerfu_deploy.note = "Includes injection of secrets via environment variables"
+kerfu_deploy.severity = 3
 
 developer_commit = Dataflow(Developer, GitHub, "Source code push")
 developer_commit.protocol = "Git/HTTPS"
 developer_commit.dstPort = 443
-
-ci_build = Dataflow(GitHub, CI, "Build trigger")
-ci_build.protocol = "Webhook/HTTPS"
-ci_build.dstPort = 443
+developer_commit.tlsVersion = TLSVersion.TLSv12
+developer_commit.note = "Code review process happens here"
 
 ci_deploy = Dataflow(CI, Kerfu, "Deployment artifacts")
 ci_deploy.protocol = "HTTPS"
 ci_deploy.dstPort = 443
+ci_deploy.tlsVersion = TLSVersion.TLSv12
+ci_deploy.severity = 2
 
 
 class ThreatCounter:
