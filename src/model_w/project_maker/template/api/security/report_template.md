@@ -1,3 +1,10 @@
+<style>
+  b[class="Very High"] {{ color: #8b0000; font-weight: bold; backgroud-color: white;}}  
+  b[class="High"] {{ color: #ff0000; font-weight: bold; backgroud-color: white;}}
+  b[class="Medium"] {{ color: #ffa500; font-weight: bold; backgroud-color: white;}}
+  b[class="Low"] {{ color: #0000ff; font-weight: bold; backgroud-color: white;}}
+</style>
+
 ## System Description
 &nbsp;
 
@@ -52,20 +59,26 @@ Name|Description|Classification
 &nbsp;
 &nbsp;
 
-{findings:repeat:
+{elements:repeat:{{item.findings:if:
+
+### Element: {{item.name}}
+
+{{item.findings:repeat:
 <details>
   <summary>
-    {{item.threat_id}} — {{item.description}}
+    <b class="{{{{item.severity}}}}">[{{{{item.severity}}}}]</b> — {{{{item.id}}}}: {{{{item.description}}}}
   </summary>
 
-  <h6>Targeted Element</h6>
-  <p>{{item.target}}</p>
+    
+    Targeted Element / Asset
+    {{{{item.target}}}}
 
-  <h6>Severity</h6>
-  <p>{{item.severity}}</p>
+    Mitigation Strategy
+    {{{{item.mitigations}}}}
 
-  <h6>Mitigation</h6>
-  <p>{{item.mitigations}}</p>
-
+    References & Standards
+    {{{{item.references}}}}
+    
 </details>
-}||
+<br/>
+}}}}}||
