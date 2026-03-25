@@ -20,7 +20,7 @@
 
 ## Dataflow Diagram - Level 0 DFD
 
-![](cawl-dfd.png)
+![Data Flow Diagram](dfd.png)
 
 &nbsp;
 
@@ -43,6 +43,11 @@ Name|Description|Classification
 &nbsp;
 
 ## Potential Threats
+
+&nbsp;
+&nbsp;
+
+**Total Threats Identified:** {tm.threat_count}
 
 &nbsp;
 &nbsp;
