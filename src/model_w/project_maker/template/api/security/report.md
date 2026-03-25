@@ -27,20 +27,20 @@ Architecture:
 
 |Assumptions|
 |-----------|
-|CSRF protection enabled via Django middleware with proper token validation| 
 |All external communication uses HTTPS with TLS 1.2+| 
-|DigitalOcean App Platform provides network isolation and security groups| 
-|Django settings use appropriate security configurations (DEBUG=False in production)| 
-|SvelteKit implements proper client-side security controls| 
-|Access logs are collected and monitored for suspicious activity| 
+|All dependencies are regularly updated and monitored for vulnerabilities| 
 |Kerfu Foo manages deployment and secrets with secure access controls| 
-|Database backups are encrypted and stored securely| 
+|Multi-factor authentication enabled for administrative access| 
+|CSRF protection enabled via Django middleware with proper token validation| 
+|DigitalOcean App Platform provides network isolation and security groups| 
 |Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
 |GitHub repository uses branch protection and requires code review| 
-|Multi-factor authentication enabled for administrative access| 
-|Redis and PostgreSQL accessible only within private network/VPC| 
-|All dependencies are regularly updated and monitored for vulnerabilities| 
 |Session authentication implemented using Django session cookies with secure flags| 
+|Django settings use appropriate security configurations (DEBUG=False in production)| 
+|Database backups are encrypted and stored securely| 
+|Redis and PostgreSQL accessible only within private network/VPC| 
+|SvelteKit implements proper client-side security controls| 
+|Access logs are collected and monitored for suspicious activity| 
 
 
 &nbsp;
@@ -103,7 +103,7 @@ Name|Description|Classification
 &nbsp;
 &nbsp;
 
-**Total Threats Identified:** 307
+**Total Threats Identified:** 325
 
 &nbsp;
 &nbsp;
@@ -591,6 +591,54 @@ Name|Description|Classification
 
 <details>
   <summary>
+    INP38 — DOM-Based XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize proper character encoding for all output produced within client-site scripts manipulating the DOM.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP39 — Reflected XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP40 — Stored XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>User Browser</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before being stored.</p>
+
+</details>
+
+<details>
+  <summary>
     AC18 — Session Hijacking - ClientSide
   </summary>
 
@@ -650,6 +698,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP01 — Buffer Overflow via Environment Variables
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Do not expose environment variable to the user.Do not use untrusted data in your environment variables. Use a language or compiler that performs automatic bounds checking. There are tools such as Sharefuzz [R.10.3] which is an environment variable fuzzer for Unix that support loading a shared library. You can use Sharefuzz to determine if you are exposing an environment variable vulnerable to buffer overflow.</p>
 
 </details>
 
@@ -746,6 +810,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC03 — Subverting Environment Variable Values
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Protect environment variables against unauthorized read and write access. Protect the configuration files which contain environment variables against illegitimate read and write access. Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Apply the least privilege principles. If a process has no legitimate reason to read an environment variable do not give that privilege.</p>
 
 </details>
 
@@ -1135,6 +1215,54 @@ Name|Description|Classification
 
 <details>
   <summary>
+    INP38 — DOM-Based XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize proper character encoding for all output produced within client-site scripts manipulating the DOM.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP39 — Reflected XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP40 — Stored XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>SvelteKit Frontend</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before being stored.</p>
+
+</details>
+
+<details>
+  <summary>
     AC18 — Session Hijacking - ClientSide
   </summary>
 
@@ -1199,6 +1327,22 @@ Name|Description|Classification
 
 <details>
   <summary>
+    INP01 — Buffer Overflow via Environment Variables
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Do not expose environment variable to the user.Do not use untrusted data in your environment variables. Use a language or compiler that performs automatic bounds checking. There are tools such as Sharefuzz [R.10.3] which is an environment variable fuzzer for Unix that support loading a shared library. You can use Sharefuzz to determine if you are exposing an environment variable vulnerable to buffer overflow.</p>
+
+</details>
+
+<details>
+  <summary>
     INP02 — Overflow Buffers
   </summary>
 
@@ -1210,6 +1354,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.</p>
+
+</details>
+
+<details>
+  <summary>
+    LB01 — API Manipulation
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Always use HTTPS and SSL Certificates. Firewall optimizations to prevent unauthorized access to or from a private network. Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API. Use IP whitelisting and rate limiting.</p>
 
 </details>
 
@@ -1242,6 +1402,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).</p>
+
+</details>
+
+<details>
+  <summary>
+    API01 — Exploit Test APIs
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Ensure that production systems to not contain sample or test APIs and that these APIs are only used in development environments.</p>
 
 </details>
 
@@ -1290,6 +1466,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC03 — Subverting Environment Variable Values
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Protect environment variables against unauthorized read and write access. Protect the configuration files which contain environment variables against illegitimate read and write access. Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Apply the least privilege principles. If a process has no legitimate reason to read an environment variable do not give that privilege.</p>
 
 </details>
 
@@ -1386,6 +1578,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.</p>
+
+</details>
+
+<details>
+  <summary>
+    API02 — Exploit Script-Based APIs
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Django API</p>
+
+  <h6>Severity</h6>
+  <p>Medium</p>
+
+  <h6>Mitigation</h6>
+  <p>Always use HTTPS and SSL Certificates. Firewall optimizations to prevent unauthorized access to or from a private network. Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API. Use IP whitelisting and rate limiting.</p>
 
 </details>
 
@@ -2223,6 +2431,54 @@ Name|Description|Classification
 
 <details>
   <summary>
+    INP38 — DOM-Based XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize proper character encoding for all output produced within client-site scripts manipulating the DOM.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP39 — Reflected XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before use.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP40 — Stored XSS
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Wagtail Admin</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before being stored.</p>
+
+</details>
+
+<details>
+  <summary>
     AC18 — Session Hijacking - ClientSide
   </summary>
 
@@ -2282,6 +2538,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.</p>
+
+</details>
+
+<details>
+  <summary>
+    INP01 — Buffer Overflow via Environment Variables
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>High</p>
+
+  <h6>Mitigation</h6>
+  <p>Do not expose environment variable to the user.Do not use untrusted data in your environment variables. Use a language or compiler that performs automatic bounds checking. There are tools such as Sharefuzz [R.10.3] which is an environment variable fuzzer for Unix that support loading a shared library. You can use Sharefuzz to determine if you are exposing an environment variable vulnerable to buffer overflow.</p>
 
 </details>
 
@@ -2378,6 +2650,22 @@ Name|Description|Classification
 
   <h6>Mitigation</h6>
   <p>Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.</p>
+
+</details>
+
+<details>
+  <summary>
+    AC03 — Subverting Environment Variable Values
+  </summary>
+
+  <h6>Targeted Element</h6>
+  <p>Background Worker (Procrastinate)</p>
+
+  <h6>Severity</h6>
+  <p>Very High</p>
+
+  <h6>Mitigation</h6>
+  <p>Protect environment variables against unauthorized read and write access. Protect the configuration files which contain environment variables against illegitimate read and write access. Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Apply the least privilege principles. If a process has no legitimate reason to read an environment variable do not give that privilege.</p>
 
 </details>
 

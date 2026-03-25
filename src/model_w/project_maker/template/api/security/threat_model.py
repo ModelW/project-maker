@@ -16,6 +16,7 @@ from pytm import (
     ExternalEntity,
     Lifetime,
     Process,
+    TLSVersion,
 )
 
 tm = TM("Model W Django + SvelteKit Platform - Comprehensive Threat Model")
@@ -113,18 +114,50 @@ Attacker.levels = [0]  # External threat
 # Processes
 Browser = Process("User Browser")
 Browser.inBoundary = internet
+Browser.levels = [1]
+Browser.OS = "Various"
+Browser.allowsClientSideScripting = True  # Necessary for SvelteKit/JS execution
+Browser.codeType = "Unmanaged"
 
 Frontend = Process("SvelteKit Frontend")
 Frontend.inBoundary = application
+Frontend.levels = [2]
+Frontend.OS = "Linux/Docker"
+Frontend.allowsClientSideScripting = True
+Frontend.codeType = "Managed"
+Frontend.implementsAPI = False
+Frontend.maxClassification = Classification.SENSITIVE
+Frontend.minTLSVersion = TLSVersion.TLSv12
+Frontend.tracksExecutionFlow = True
+Frontend.usesEnvironmentVariables = True  # Model W uses env for config
 
 Backend = Process("Django API")
 Backend.inBoundary = application
+Backend.levels = [2]
+Backend.OS = "Linux/Docker"
+Backend.allowsClientSideScripting = False
+Backend.codeType = "Managed"
+Backend.implementsAPI = True
+Backend.maxClassification = Classification.SENSITIVE
+Backend.minTLSVersion = TLSVersion.TLSv12
+Backend.tracksExecutionFlow = True
+Backend.usesEnvironmentVariables = True
 
 CMS = Process("Wagtail Admin")
 CMS.inBoundary = application
+CMS.levels = [3]
+CMS.codeType = "Managed"
+CMS.implementsAPI = False
+CMS.allowsClientSideScripting = True  # Wagtail admin uses significant JS
+CMS.maxClassification = Classification.SENSITIVE
 
 Worker = Process("Background Worker (Procrastinate)")
 Worker.inBoundary = application
+Worker.levels = [2]
+Worker.OS = "Linux/Docker"
+Worker.codeType = "Managed"
+Worker.handlesResources = True  # Handles file system/storage tasks
+Worker.usesEnvironmentVariables = True
 
 
 # Datastores
