@@ -8,10 +8,13 @@ from pytm import (
     TM,
     Actor,
     Boundary,
+    Classification,
+    Data,
     Dataflow,
     Datastore,
     DatastoreType,
     ExternalEntity,
+    Lifetime,
     Process,
 )
 
@@ -175,6 +178,70 @@ CI = ExternalEntity("CI/CD Pipeline")
 CI.inBoundary = supply_chain
 
 
+# Data
+user_session = Data(
+    "User Session Cookie",
+    description="Django session ID used for authentication",
+    classification=Classification.SENSITIVE,
+    isPII=False,
+    isCredentials=True,
+    credentialsLife=Lifetime.SHORT,
+    isStored=True,
+    isSourceEncryptedAtRest=True,
+    isDestEncryptedAtRest=True,
+)
+
+user_credentials = Data(
+    "User Credentials",
+    description="Username and Password for login",
+    classification=Classification.SENSITIVE,
+    isPII=True,
+    isCredentials=True,
+    credentialsLife=Lifetime.MANUAL,
+    isStored=True,
+    isSourceEncryptedAtRest=False,  # Often cleartext in memory during login
+    isDestEncryptedAtRest=True,
+)
+
+app_content = Data(
+    "Application Content",
+    description="General CMS content and public data",
+    classification=Classification.PUBLIC,
+    isPII=False,
+    isCredentials=False,
+    isStored=True,
+)
+
+pii_data = Data(
+    "User Profile Data",
+    description="Names, emails, and profile information",
+    classification=Classification.SENSITIVE,
+    isPII=True,
+    isCredentials=False,
+    isStored=True,
+    isDestEncryptedAtRest=True,
+)
+
+db_connection_params = Data(
+    "Database Secrets",
+    description="Credentials used by Django to connect to Postgres/Redis",
+    classification=Classification.RESTRICTED,
+    isPII=False,
+    isCredentials=True,
+    credentialsLife=Lifetime.HARDCODED,
+    isStored=True,
+    isSourceEncryptedAtRest=True,
+)
+
+error_logs = Data(
+    "Error Traces",
+    description="Stack traces and debug info sent to Sentry",
+    classification=Classification.SENSITIVE,
+    isPII=True,
+    isCredentials=False,
+    isStored=True,
+)
+
 # Dataflows
 user_to_browser = Dataflow(User, Browser, "User interaction")
 
@@ -183,14 +250,17 @@ browser_to_frontend.protocol = "HTTPS"
 browser_to_frontend.dstPort = 443
 
 browser_to_backend = Dataflow(Browser, Backend, "API request with session cookie")
+browser_to_backend.data = [user_session, user_credentials]
 browser_to_backend.protocol = "HTTPS"
 browser_to_backend.dstPort = 443
 
 editor_login = Dataflow(Editor, CMS, "CMS login and content editing")
+editor_login.data = [user_credentials]
 editor_login.protocol = "HTTPS"
 editor_login.dstPort = 443
 
 cms_db = Dataflow(CMS, Postgres, "CMS content read/write")
+cms_db.data = [app_content]
 cms_db.protocol = "PostgreSQL"
 cms_db.dstPort = 5432
 
@@ -199,10 +269,12 @@ frontend_api.protocol = "HTTP"
 frontend_api.dstPort = 8000
 
 backend_db = Dataflow(Backend, Postgres, "Application data queries")
+backend_db.data = [pii_data, app_content]
 backend_db.protocol = "PostgreSQL"
 backend_db.dstPort = 5432
 
 backend_cache = Dataflow(Backend, Redis, "Caching / channels / session storage")
+backend_cache.data = [user_session]
 backend_cache.protocol = "Redis"
 backend_cache.dstPort = 6379
 
@@ -223,6 +295,7 @@ worker_storage.protocol = "HTTPS"
 worker_storage.dstPort = 443
 
 backend_errors = Dataflow(Backend, Sentry, "Application errors and traces")
+backend_errors.data = [error_logs]
 backend_errors.protocol = "HTTPS"
 backend_errors.dstPort = 443
 
@@ -243,6 +316,7 @@ kerfu_deploy.protocol = "SSH"
 kerfu_deploy.dstPort = 22
 
 kerfu_worker = Dataflow(Kerfu, Worker, "Worker deployment control")
+kerfu_deploy.data = [db_connection_params]
 kerfu_worker.protocol = "SSH"
 kerfu_worker.dstPort = 22
 
@@ -265,14 +339,16 @@ class ThreatCounter:
     If the template engine had a way to do findings.length or something,
     we wouldn't need this, but couldn't find a way to access the findings count.
     """
+
     def __init__(self, tm_instance):
         """Store a reference to the TM instance to access findings after processing."""
         self.tm = tm_instance
+
     def __str__(self):
         """Return the count of findings as a string for display in the template."""
         return str(len(self.tm.findings))
 
-if __name__ == "__main__":
 
-    tm.threat_count = ThreatCounter(tm) # pyright: ignore[reportAttributeAccessIssue]
+if __name__ == "__main__":
+    tm.threat_count = ThreatCounter(tm)  # pyright: ignore[reportAttributeAccessIssue]
     tm.process()
