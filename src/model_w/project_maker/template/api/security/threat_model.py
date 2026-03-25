@@ -222,16 +222,24 @@ Spaces.type = DatastoreType.AWS_S3  # Spaces uses the S3-compatible API
 # External Entities
 Sentry = ExternalEntity("Sentry Monitoring")
 Sentry.inBoundary = external_services
+Sentry.description = "SaaS Error tracking and performance monitoring"
+Sentry.OS = "SaaS"
 
 Kerfu = ExternalEntity("Kerfu Foo Deployment Platform")
 Kerfu.inBoundary = administration
+Kerfu.description = "Deployment orchestration and secret management"
+Kerfu.OS = "Linux"
+Kerfu.handlesResources = True
 
 GitHub = ExternalEntity("GitHub Source Control")
 GitHub.inBoundary = supply_chain
+GitHub.description = "Remote VCS and pull request management"
+GitHub.OS = "SaaS"
 
 CI = ExternalEntity("CI/CD Pipeline")
 CI.inBoundary = supply_chain
-
+CI.description = "Automated build and test environment"
+CI.inScope = True
 
 # Data
 user_session = Data(

@@ -27,20 +27,20 @@ Architecture:
 
 |Assumptions|
 |-----------|
-|DigitalOcean App Platform provides network isolation and security groups| 
-|Redis and PostgreSQL accessible only within private network/VPC| 
-|GitHub repository uses branch protection and requires code review| 
-|Session authentication implemented using Django session cookies with secure flags| 
-|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
-|All dependencies are regularly updated and monitored for vulnerabilities| 
 |Multi-factor authentication enabled for administrative access| 
-|Database backups are encrypted and stored securely| 
-|All external communication uses HTTPS with TLS 1.2+| 
-|CSRF protection enabled via Django middleware with proper token validation| 
+|Redis and PostgreSQL accessible only within private network/VPC| 
 |Django settings use appropriate security configurations (DEBUG=False in production)| 
-|Access logs are collected and monitored for suspicious activity| 
-|Kerfu Foo manages deployment and secrets with secure access controls| 
+|Database backups are encrypted and stored securely| 
+|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
+|CSRF protection enabled via Django middleware with proper token validation| 
 |SvelteKit implements proper client-side security controls| 
+|DigitalOcean App Platform provides network isolation and security groups| 
+|GitHub repository uses branch protection and requires code review| 
+|Kerfu Foo manages deployment and secrets with secure access controls| 
+|All dependencies are regularly updated and monitored for vulnerabilities| 
+|Session authentication implemented using Django session cookies with secure flags| 
+|All external communication uses HTTPS with TLS 1.2+| 
+|Access logs are collected and monitored for suspicious activity| 
 
 
 &nbsp;
