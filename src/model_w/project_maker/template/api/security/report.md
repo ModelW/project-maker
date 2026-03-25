@@ -22,12 +22,12 @@ GitHub source control
 |Assumptions|
 |-----------|
 |Session authentication implemented using Django session cookies| 
-|Public object storage used only for non-sensitive media assets| 
-|Redis and PostgreSQL accessible only within private network| 
-|All external communication uses HTTPS| 
-|DigitalOcean App Platform provides network isolation| 
 |Kerfu Foo manages deployment and secrets| 
+|DigitalOcean App Platform provides network isolation| 
+|Public object storage used only for non-sensitive media assets| 
 |CSRF protection enabled via Django middleware| 
+|All external communication uses HTTPS| 
+|Redis and PostgreSQL accessible only within private network| 
 
 
 &nbsp;
@@ -38,7 +38,7 @@ GitHub source control
 
 ## Dataflow Diagram - Level 0 DFD
 
-![](cawl-dfd.png)
+![Data Flow Diagram](dfd.png)
 
 &nbsp;
 
@@ -80,6 +80,11 @@ Name|Description|Classification
 &nbsp;
 
 ## Potential Threats
+
+&nbsp;
+&nbsp;
+
+**Total Threats Identified:** 287
 
 &nbsp;
 &nbsp;
