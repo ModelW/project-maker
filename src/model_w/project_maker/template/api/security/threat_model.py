@@ -63,27 +63,44 @@ tm.assumptions = [
 
 # Boundaries
 internet = Boundary("Public Internet")
+internet.levels = [1, 2, 3]
+internet.inScope = False
+internet.maxClassification = Classification.PUBLIC
+
 edge = Boundary("Edge Network / CDN / Load Balancer")
-edge.levels = [1]
+edge.levels = [1, 2]
+edge.minTLSVersion = TLSVersion.TLSv12
+edge.maxClassification = Classification.RESTRICTED # Internal but still non-sensitive
 
 application = Boundary("Application Runtime (DigitalOcean App Platform)")
-application.levels = [2]
+application.levels = [1, 2, 3]
+application.minTLSVersion = TLSVersion.TLSv12 # Incoming from Edge is TLS
+application.maxClassification = Classification.SENSITIVE
+application.description = "Managed container environment for Django and SvelteKit"
 
 internal_services = Boundary("Internal Data Services (VPC)")
-internal_services.levels = [3]
+internal_services.levels = [2, 3]
+internal_services.minTLSVersion = TLSVersion.NONE 
+internal_services.maxClassification = Classification.SENSITIVE
 
 external_services = Boundary("External SaaS Services")
-external_services.levels = [1]
+external_services.levels = [1, 2, 3]
+external_services.maxClassification = Classification.SENSITIVE
+external_services.minTLSVersion = TLSVersion.TLSv12
 
 administration = Boundary("Administrative Systems")
 administration.levels = [4]
+administration.maxClassification = Classification.SECRET # Higher than app data
+administration.minTLSVersion = TLSVersion.TLSv12
 
 supply_chain = Boundary("Software Supply Chain")
 supply_chain.levels = [4]
+supply_chain.maxClassification = Classification.SECRET 
+supply_chain.minTLSVersion = TLSVersion.TLSv12
 
 dev_environment = Boundary("Development Environment")
 dev_environment.levels = [5]
-
+dev_environment.maxClassification = Classification.RESTRICTED
 
 # Actors
 User = Actor("Public User")
