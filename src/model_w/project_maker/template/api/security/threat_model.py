@@ -103,30 +103,35 @@ dev_environment.levels = [5]
 dev_environment.maxClassification = Classification.RESTRICTED
 
 # Actors
+Attacker = Actor("Malicious Actor")
+Attacker.levels = [0] 
+Attacker.inBoundary = internet
+Attacker.maxClassification = Classification.UNKNOWN
+
 User = Actor("Public User")
-User.inBoundary = internet
 User.levels = [1]
+User.inBoundary = internet
+User.maxClassification = Classification.PUBLIC
 
 AuthenticatedUser = Actor("Authenticated User")
+AuthenticatedUser.levels = [1] # Same plane as Public User
 AuthenticatedUser.inBoundary = internet
-AuthenticatedUser.levels = [2]
+AuthenticatedUser.maxClassification = Classification.RESTRICTED
 
 Editor = Actor("CMS Editor")
+Editor.levels = [2] # Slightly "deeper" or grouped separately
 Editor.inBoundary = internet
-Editor.levels = [3]
+Editor.maxClassification = Classification.SENSITIVE
 
 Developer = Actor("Developer")
+Developer.levels = [2]
 Developer.inBoundary = dev_environment
-Developer.levels = [4]
+Developer.maxClassification = Classification.SECRET
 
 PlatformAdmin = Actor("Platform Administrator")
+PlatformAdmin.levels = [2]
 PlatformAdmin.inBoundary = administration
-PlatformAdmin.levels = [5]
-
-Attacker = Actor("Malicious Actor")
-Attacker.inBoundary = internet
-Attacker.levels = [0]  # External threat
-
+PlatformAdmin.maxClassification = Classification.TOP_SECRET
 
 # Processes
 Browser = Process("User Browser")
