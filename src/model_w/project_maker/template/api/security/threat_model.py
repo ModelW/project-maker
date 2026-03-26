@@ -153,40 +153,32 @@ Frontend.controls.usesStrongSessionIdentifiers = True  # Django session security
 Frontend.controls.usesSecureFunctions = True
 Frontend.controls.validatesInput = True
 
-Backend = Process("Django API")
-Backend.inBoundary = application
-Backend.levels = [2]
-Backend.OS = "Linux/Docker"
-Backend.allowsClientSideScripting = False
-Backend.codeType = "Managed"
-Backend.implementsAPI = True
-Backend.maxClassification = Classification.SENSITIVE
-Backend.minTLSVersion = TLSVersion.TLSv12
-Backend.tracksExecutionFlow = True
-Backend.usesEnvironmentVariables = True
-# Security Controls
-Backend.controls.implementsAuthenticationScheme = True  # Django auth
-Backend.controls.implementsCSRFToken = True  # Django CSRF protection
-Backend.controls.implementsServerSideValidation = True  # Django forms/DRF serializers
-Backend.controls.validatesInput = True  # Input validation
-Backend.controls.sanitizesInput = True  # Django template auto-escaping
-Backend.controls.encryptsSessionData = True  # Django session encryption
-Backend.controls.usesStrongSessionIdentifiers = True  # Django session security
-Backend.controls.checksInputBounds = True  # Django form field validation
-Backend.controls.usesSecureFunctions = True
-
-CMS = Process("Wagtail Admin")
-CMS.inBoundary = application
-CMS.levels = [3]
-CMS.codeType = "Managed"
-CMS.implementsAPI = False
-CMS.allowsClientSideScripting = True  # Wagtail admin uses significant JS
-CMS.maxClassification = Classification.SENSITIVE
-# Security Controls
-CMS.controls.implementsAuthenticationScheme = True  # Django admin auth required
-CMS.controls.implementsPOLP = True  # Wagtail permission system
-CMS.controls.hasAccessControl = True  # Admin interface access control
-CMS.controls.usesMFA = False
+# Django Application (combines Django API and Wagtail Admin into single process)
+# Both run in same container/process, different URL endpoints
+DjangoApp = Process("Django Application (API + Wagtail)")
+DjangoApp.inBoundary = application
+DjangoApp.levels = [2, 3]  # Multiple levels for different functions
+DjangoApp.OS = "Linux/Docker"
+DjangoApp.allowsClientSideScripting = True  # Wagtail admin uses JS
+DjangoApp.codeType = "Managed"
+DjangoApp.implementsAPI = True
+DjangoApp.maxClassification = Classification.SENSITIVE
+DjangoApp.minTLSVersion = TLSVersion.TLSv12
+DjangoApp.tracksExecutionFlow = True
+DjangoApp.usesEnvironmentVariables = True
+# Security Controls (apply to entire Django application)
+DjangoApp.controls.implementsAuthenticationScheme = True  # Django auth
+DjangoApp.controls.implementsCSRFToken = True  # Django CSRF protection
+DjangoApp.controls.implementsServerSideValidation = True  # Django forms/DRF serializers
+DjangoApp.controls.validatesInput = True  # Input validation
+DjangoApp.controls.sanitizesInput = True  # Django template auto-escaping
+DjangoApp.controls.encryptsSessionData = True  # Django session encryption
+DjangoApp.controls.usesStrongSessionIdentifiers = True  # Django session security
+DjangoApp.controls.checksInputBounds = True  # Django form field validation
+DjangoApp.controls.usesSecureFunctions = True
+DjangoApp.controls.implementsPOLP = True  # Wagtail permission system
+DjangoApp.controls.hasAccessControl = True  # Admin interface access control
+DjangoApp.controls.usesMFA = False
 
 Worker = Process("Background Worker (Procrastinate)")
 Worker.inBoundary = application
@@ -389,75 +381,82 @@ browser_to_frontend.controls.authenticatesDestination = (
 )
 browser_to_frontend.controls.checksDestinationRevocation = True  # OCSP/CRL checking
 
-# Browser -> Backend (HTTPS via DigitalOcean edge)
-browser_to_backend = Dataflow(Browser, Backend, "HTTPS request to Django API")
-browser_to_backend.data = [
+# Browser -> Django API endpoints (HTTPS via DigitalOcean edge)
+browser_to_django_api = Dataflow(Browser, DjangoApp, "HTTPS request to Django API")
+browser_to_django_api.data = [
     api_request_data,
     user_session,
     user_credentials,
     file_uploads,
 ]
-browser_to_backend.protocol = "HTTPS"
-browser_to_backend.dstPort = 443
-browser_to_backend.tlsVersion = TLSVersion.TLSv12
-browser_to_backend.implementsCommunicationProtocol = True
-browser_to_backend.note = "TLS termination at DigitalOcean edge"
+browser_to_django_api.protocol = "HTTPS"
+browser_to_django_api.dstPort = 443
+browser_to_django_api.tlsVersion = TLSVersion.TLSv12
+browser_to_django_api.implementsCommunicationProtocol = True
+browser_to_django_api.note = "TLS termination at DigitalOcean edge"
 # Security Controls
-browser_to_backend.controls.isEncrypted = True  # HTTPS encryption
-browser_to_backend.controls.authenticatesDestination = (
+browser_to_django_api.controls.isEncrypted = True  # HTTPS encryption
+browser_to_django_api.controls.authenticatesDestination = (
     True  # TLS certificate validation
 )
-browser_to_backend.controls.validatesInput = True  # Backend validates all input
+browser_to_django_api.controls.validatesInput = True  # Django validates all input
 
-# Browser -> CMS (HTTPS via DigitalOcean edge)
-browser_to_cms = Dataflow(Browser, CMS, "HTTPS request to Wagtail Admin")
-browser_to_cms.data = [user_credentials, file_uploads, app_content]
-browser_to_cms.protocol = "HTTPS"
-browser_to_cms.dstPort = 443
-browser_to_cms.tlsVersion = TLSVersion.TLSv12
-browser_to_cms.severity = 2  # Elevated risk due to administrative nature
-browser_to_cms.implementsCommunicationProtocol = True
-browser_to_cms.note = "Admin interface via DigitalOcean edge"
+# Browser -> Wagtail Admin (HTTPS via DigitalOcean edge)
+browser_to_wagtail_admin = Dataflow(
+    Browser, DjangoApp, "HTTPS request to Wagtail Admin"
+)
+browser_to_wagtail_admin.data = [user_credentials, file_uploads, app_content]
+browser_to_wagtail_admin.protocol = "HTTPS"
+browser_to_wagtail_admin.dstPort = 443
+browser_to_wagtail_admin.tlsVersion = TLSVersion.TLSv12
+browser_to_wagtail_admin.severity = 2  # Elevated risk due to administrative nature
+browser_to_wagtail_admin.implementsCommunicationProtocol = True
+browser_to_wagtail_admin.note = (
+    "Admin interface via DigitalOcean edge - same Django process, different URL path"
+)
 # Security Controls
-browser_to_cms.controls.isEncrypted = True  # HTTPS encryption
-browser_to_cms.controls.authenticatesDestination = True  # TLS certificate validation
+browser_to_wagtail_admin.controls.isEncrypted = True  # HTTPS encryption
+browser_to_wagtail_admin.controls.authenticatesDestination = (
+    True  # TLS certificate validation
+)
 
-cms_db = Dataflow(CMS, Postgres, "CMS content read/write")
-cms_db.data = [app_content]
-cms_db.protocol = "PostgreSQL"
-cms_db.dstPort = 25061
-cms_db.tlsVersion = TLSVersion.TLSv12
-cms_db.note = "Managed DB connection via TLS (DO requirement)"
+# Wagtail database access (CMS functionality within Django)
+wagtail_db = Dataflow(DjangoApp, Postgres, "CMS content read/write via Wagtail")
+wagtail_db.data = [app_content]
+wagtail_db.protocol = "PostgreSQL"
+wagtail_db.dstPort = 25061
+wagtail_db.tlsVersion = TLSVersion.TLSv12
+wagtail_db.note = "Managed DB connection via TLS (DO requirement)"
 
-backend_db = Dataflow(Backend, Postgres, "Application data queries")
-backend_db.data = [pii_data, app_content]
-backend_db.protocol = "PostgreSQL"
-backend_db.dstPort = 25061
-backend_db.tlsVersion = TLSVersion.TLSv12
-backend_db.severity = 3  # High severity: contains PII
-backend_db.note = "Managed DB connection via TLS (DO requirement)"
+django_api_db = Dataflow(DjangoApp, Postgres, "Application data queries")
+django_api_db.data = [pii_data, app_content]
+django_api_db.protocol = "PostgreSQL"
+django_api_db.dstPort = 25061
+django_api_db.tlsVersion = TLSVersion.TLSv12
+django_api_db.severity = 3  # High severity: contains PII
+django_api_db.note = "Managed DB connection via TLS (DO requirement)"
 # Security Controls
-backend_db.controls.isEncrypted = True  # TLS encryption
-backend_db.controls.authenticatesSource = True  # Database user authentication
-backend_db.controls.authorizesSource = True  # Database permissions
-backend_db.controls.usesParameterizedInput = True  # SQL parameterization
-backend_db.controls.usesSecureFunctions = True  # Django ORM protections
+django_api_db.controls.isEncrypted = True  # TLS encryption
+django_api_db.controls.authenticatesSource = True  # Database user authentication
+django_api_db.controls.authorizesSource = True  # Database permissions
+django_api_db.controls.usesParameterizedInput = True  # SQL parameterization
+django_api_db.controls.usesSecureFunctions = True  # Django ORM protections
 
-backend_cache = Dataflow(Backend, Redis, "Caching / channels / session storage")
-backend_cache.data = [user_session]
-backend_cache.protocol = "Redis"
-backend_cache.dstPort = 25061
-backend_cache.tlsVersion = TLSVersion.TLSv12
-backend_cache.note = "Internal state management with TLS"
+django_cache = Dataflow(DjangoApp, Redis, "Caching / channels / session storage")
+django_cache.data = [user_session]
+django_cache.protocol = "Redis"
+django_cache.dstPort = 25061
+django_cache.tlsVersion = TLSVersion.TLSv12
+django_cache.note = "Internal state management with TLS"
 
-frontend_api = Dataflow(Frontend, Backend, "Internal API request")
-frontend_api.data = [api_request_data, user_session]
-frontend_api.protocol = "HTTP"
-frontend_api.dstPort = 8000
-frontend_api.tlsVersion = TLSVersion.NONE
-frontend_api.note = "Internal platform isolated network communication"
+frontend_to_django = Dataflow(Frontend, DjangoApp, "Internal API request")
+frontend_to_django.data = [api_request_data, user_session]
+frontend_to_django.protocol = "HTTP"
+frontend_to_django.dstPort = 8000
+frontend_to_django.tlsVersion = TLSVersion.NONE
+frontend_to_django.note = "Internal platform isolated network communication"
 
-task_dispatch = Dataflow(Backend, Postgres, "Background job dispatch (Procrastinate)")
+task_dispatch = Dataflow(DjangoApp, Postgres, "Background job dispatch (Procrastinate)")
 task_dispatch.data = [background_job_data]
 task_dispatch.protocol = "PostgreSQL"
 task_dispatch.dstPort = 25061
@@ -469,16 +468,16 @@ worker_db.protocol = "PostgreSQL"
 worker_db.dstPort = 25061
 worker_db.tlsVersion = TLSVersion.TLSv12
 
-backend_storage = Dataflow(Backend, Spaces, "Media uploads and asset storage")
-backend_storage.data = [file_uploads]
-backend_storage.protocol = "HTTPS"
-backend_storage.dstPort = 443
-backend_storage.tlsVersion = TLSVersion.TLSv12
+django_storage = Dataflow(DjangoApp, Spaces, "Media uploads and asset storage")
+django_storage.data = [file_uploads]
+django_storage.protocol = "HTTPS"
+django_storage.dstPort = 443
+django_storage.tlsVersion = TLSVersion.TLSv12
 # Security Controls
-backend_storage.controls.isEncrypted = True  # HTTPS encryption
-backend_storage.controls.authenticatesSource = True  # S3 access key authentication
-backend_storage.controls.authorizesSource = True  # IAM/bucket policies
-backend_storage.controls.validatesContentType = True  # File type validation
+django_storage.controls.isEncrypted = True  # HTTPS encryption
+django_storage.controls.authenticatesSource = True  # S3 access key authentication
+django_storage.controls.authorizesSource = True  # IAM/bucket policies
+django_storage.controls.validatesContentType = True  # File type validation
 
 worker_storage = Dataflow(Worker, Spaces, "File processing output")
 worker_storage.data = [file_uploads]
@@ -488,11 +487,11 @@ worker_storage.tlsVersion = TLSVersion.TLSv12
 worker_storage.note = "Background workers writing processed files to storage"
 
 
-backend_errors = Dataflow(Backend, Sentry, "Application errors and traces")
-backend_errors.data = [error_logs]
-backend_errors.protocol = "HTTPS"
-backend_errors.dstPort = 443
-backend_errors.tlsVersion = TLSVersion.TLSv12
+django_errors = Dataflow(DjangoApp, Sentry, "Application errors and traces")
+django_errors.data = [error_logs]
+django_errors.protocol = "HTTPS"
+django_errors.dstPort = 443
+django_errors.tlsVersion = TLSVersion.TLSv12
 
 admin_to_kerfu = Dataflow(PlatformAdmin, Kerfu, "Administrative access")
 admin_to_kerfu.data = [config_secrets]
@@ -501,7 +500,7 @@ admin_to_kerfu.dstPort = 443
 admin_to_kerfu.tlsVersion = TLSVersion.TLSv12
 admin_to_kerfu.severity = 3
 
-kerfu_deploy = Dataflow(Kerfu, Backend, "Deployments and environment configuration")
+kerfu_deploy = Dataflow(Kerfu, DjangoApp, "Deployments and environment configuration")
 kerfu_deploy.protocol = "SSH"
 kerfu_deploy.dstPort = 22
 kerfu_deploy.data = [db_connection_params, config_secrets]
