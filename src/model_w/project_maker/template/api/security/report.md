@@ -34,20 +34,19 @@ Architecture:
 
 |Assumptions|
 |-----------|
-|All external communication uses HTTPS with TLS 1.2+| 
-|Redis and PostgreSQL accessible only within private network/VPC| 
-|CSRF protection enabled via Django middleware with proper token validation| 
-|GitHub repository uses branch protection and requires code review| 
-|Multi-factor authentication enabled for administrative access| 
-|Database backups are encrypted and stored securely| 
-|Session authentication implemented using Django session cookies with secure flags| 
-|SvelteKit implements proper client-side security controls| 
-|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
+|Kerfu Foo manages deployment and secrets with secure access controls| 
+|All dependencies are regularly updated and monitored for vulnerabilities| 
 |Access logs are collected and monitored for suspicious activity| 
 |DigitalOcean App Platform provides network isolation and security groups| 
+|Session authentication implemented using Django session cookies with secure flags| 
+|Redis and PostgreSQL accessible only within private network/VPC| 
+|SvelteKit implements proper client-side security controls| 
 |Django settings use appropriate security configurations (DEBUG=False in production)| 
-|All dependencies are regularly updated and monitored for vulnerabilities| 
-|Kerfu Foo manages deployment and secrets with secure access controls| 
+|Database backups are encrypted and stored securely| 
+|All external communication uses HTTPS with TLS 1.2+| 
+|CSRF protection enabled via Django middleware with proper token validation| 
+|GitHub repository uses branch protection and requires code review| 
+|Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets| 
 
 
 &nbsp;
@@ -67,22 +66,23 @@ Architecture:
 
 Name|From|To |Data|Protocol|Port
 |:----:|:----:|:---:|:----:|:--------:|:----:|
-|Dataflow(User interaction)|Actor(Public User)|Process(User Browser)|[]||-1|
-|Dataflow(HTTPS request for web pages)|Process(User Browser)|Process(SvelteKit Frontend)|[]|HTTPS|443|
-|Dataflow(API request with session cookie)|Process(User Browser)|Process(Django API)|User Credentials, User Session Cookie|HTTPS|443|
-|Dataflow(CMS login and content editing)|Actor(CMS Editor)|Process(Wagtail Admin)|User Credentials|HTTPS|443|
+|Dataflow(User interaction)|Actor(Public User)|ExternalEntity(User Browser)|[]||-1|
+|Dataflow(HTTPS request to SvelteKit)|ExternalEntity(User Browser)|Process(SvelteKit Frontend)|API Request/Response, User Session Cookie|HTTPS|443|
+|Dataflow(HTTPS request to Django API)|ExternalEntity(User Browser)|Process(Django API)|API Request/Response, Uploaded Files, User Credentials, User Session Cookie|HTTPS|443|
+|Dataflow(HTTPS request to Wagtail Admin)|ExternalEntity(User Browser)|Process(Wagtail Admin)|Application Content, Uploaded Files, User Credentials|HTTPS|443|
 |Dataflow(CMS content read/write)|Process(Wagtail Admin)|Datastore(PostgreSQL Database)|Application Content|PostgreSQL|25061|
 |Dataflow(Application data queries)|Process(Django API)|Datastore(PostgreSQL Database)|Application Content, User Profile Data|PostgreSQL|25061|
 |Dataflow(Caching / channels / session storage)|Process(Django API)|Datastore(Redis Cache / Channels)|User Session Cookie|Redis|25061|
-|Dataflow(Internal API request)|Process(SvelteKit Frontend)|Process(Django API)|[]|HTTP|8000|
-|Dataflow(Background job dispatch (Procrastinate))|Process(Django API)|Datastore(PostgreSQL Database)|[]|PostgreSQL|25061|
-|Dataflow(Background job queries)|Process(Background Worker (Procrastinate))|Datastore(PostgreSQL Database)|[]|PostgreSQL|25061|
-|Dataflow(Media uploads and asset storage)|Process(Django API)|Datastore(DigitalOcean Spaces Object Storage)|[]|HTTPS|443|
+|Dataflow(Internal API request)|Process(SvelteKit Frontend)|Process(Django API)|API Request/Response, User Session Cookie|HTTP|8000|
+|Dataflow(Background job dispatch (Procrastinate))|Process(Django API)|Datastore(PostgreSQL Database)|Background Job Parameters|PostgreSQL|25061|
+|Dataflow(Background job queries)|Process(Background Worker (Procrastinate))|Datastore(PostgreSQL Database)|Background Job Parameters, User Profile Data|PostgreSQL|25061|
+|Dataflow(Media uploads and asset storage)|Process(Django API)|Datastore(DigitalOcean Spaces Object Storage)|Uploaded Files|HTTPS|443|
+|Dataflow(File processing output)|Process(Background Worker (Procrastinate))|Datastore(DigitalOcean Spaces Object Storage)|Uploaded Files|HTTPS|443|
 |Dataflow(Application errors and traces)|Process(Django API)|ExternalEntity(Sentry Monitoring)|Error Traces|HTTPS|443|
-|Dataflow(Administrative access)|Actor(Platform Administrator)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
-|Dataflow(Deployments and environment configuration)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Django API)|Database Secrets|SSH|22|
-|Dataflow(Source code push)|Actor(Developer)|ExternalEntity(GitHub Source Control)|[]|Git/HTTPS|443|
-|Dataflow(Deployment artifacts)|ExternalEntity(CI/CD Pipeline)|ExternalEntity(Kerfu Foo Deployment Platform)|[]|HTTPS|443|
+|Dataflow(Administrative access)|Actor(Platform Administrator)|ExternalEntity(Kerfu Foo Deployment Platform)|Configuration Secrets|HTTPS|443|
+|Dataflow(Deployments and environment configuration)|ExternalEntity(Kerfu Foo Deployment Platform)|Process(Django API)|Configuration Secrets, Database Secrets|SSH|22|
+|Dataflow(Source code push)|Actor(Developer)|ExternalEntity(GitHub Source Control)|API Request/Response|Git/HTTPS|443|
+|Dataflow(Deployment artifacts)|ExternalEntity(CI/CD Pipeline)|ExternalEntity(Kerfu Foo Deployment Platform)|Configuration Secrets|HTTPS|443|
 
 
 ## Data Dictionary
@@ -96,6 +96,10 @@ Name|Description|Classification
 |Data(User Profile Data)|Names, emails, and profile information|Classification.SENSITIVE|
 |Data(Database Secrets)|Credentials used by Django to connect to Postgres/Redis|Classification.RESTRICTED|
 |Data(Error Traces)|Stack traces and debug info sent to Sentry|Classification.SENSITIVE|
+|Data(Uploaded Files)|User-uploaded images, documents, and media files|Classification.RESTRICTED|
+|Data(Background Job Parameters)|Data passed to background workers for processing|Classification.SENSITIVE|
+|Data(API Request/Response)|Non-sensitive API payloads and responses|Classification.PUBLIC|
+|Data(Configuration Secrets)|Environment variables, API keys, and service credentials|Classification.SECRET|
 
 
 &nbsp;
@@ -105,681 +109,11 @@ Name|Description|Classification
 &nbsp;
 &nbsp;
 
-**Total Threats Identified:** 300
+**Total Threats Identified:** 246
 
 &nbsp;
 &nbsp;
 
-
-
-### Element: User Browser
-
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 1: Overflow Buffers
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/100.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/119.html, http://cwe.mitre.org/data/definitions/680.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 2: Authentication Abuse/ByPass
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/114.html, http://cwe.mitre.org/data/definitions/287.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 3: Double Encoding
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/173.html, http://cwe.mitre.org/data/definitions/177.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 4: Privilege Abuse
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/122.html, http://cwe.mitre.org/data/definitions/732.html, http://cwe.mitre.org/data/definitions/269.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 5: Buffer Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/123.html, http://cwe.mitre.org/data/definitions/119.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 6: Flooding
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Ensure that protocols have specific limits of scale configured. Specify expectations for capabilities and dictate which behaviors are acceptable when resource allocation reaches limits. Uniformly throttle all requests in order to make it more difficult to consume resources more quickly than they can again be freed.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/125.html, http://cwe.mitre.org/data/definitions/404.html, http://cwe.mitre.org/data/definitions/770.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 7: Excessive Allocation
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Limit the amount of resources that are accessible to unprivileged users. Assume all input is malicious. Consider all potentially relevant properties when validating input. Consider uniformly throttling all requests in order to make it more difficult to consume resources more quickly than they can again be freed. Use resource-limiting settings, if possible.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/130.html, http://cwe.mitre.org/data/definitions/770.html, http://cwe.mitre.org/data/definitions/404.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 8: Format String Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/135.html, http://cwe.mitre.org/data/definitions/134.html, http://cwe.mitre.org/data/definitions/133.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 9: Client-side Injection-induced Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/14.html, http://cwe.mitre.org/data/definitions/74.html, http://cwe.mitre.org/data/definitions/353.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 10: Command Delimiters
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/15.html, http://cwe.mitre.org/data/definitions/146.html, http://cwe.mitre.org/data/definitions/77.html, http://cwe.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/154.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 11: Input Data Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Validation of user input for type, length, data-range, format, etc.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/153.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 12: Dictionary-based Password Attack
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/16.html, http://cwe.mitre.org/data/definitions/521.html, http://cwe.mitre.org/data/definitions/262.html, http://cwe.mitre.org/data/definitions/263.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 13: Principal Spoof
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Employ robust authentication processes (e.g., multi-factor authentication).
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/195.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 14: iFrame Overlay
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Configuration: Disable iFrames in the Web browser.Operation: When maintaining an authenticated session with a privileged target system, do not use the same browser to navigate to unfamiliar sites to perform other activities. Finish working with the target system and logout first before proceeding to other tasks.Operation: If using the Firefox browser, use the NoScript plug-in that will help forbid iFrames.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/222.html, http://cwe.mitre.org/data/definitions/1021.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 15: File Content Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/23.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 16: Privilege Escalation
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/233.html, http://cwe.mitre.org/data/definitions/269.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 17: Hijacking a privileged process
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/234.html, http://cwe.mitre.org/data/definitions/732.html, http://cwe.mitre.org/data/definitions/648.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 18: Catching exception throw/signal from privileged block
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/236.html, http://cwe.mitre.org/data/definitions/270.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 19: Filter Failure through Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/24.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/680.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 20: Resource Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/240.html, https://capec.mitre.org/data/definitions/240.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 21: Code Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/242.html, http://cwe.mitre.org/data/definitions/94.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 22: XSS Targeting HTML Attributes
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/243.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 23: XSS Targeting URI Placeholders
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Use browser technologies that do not allow client side scripting.Design: Utilize strict type, character, and encoding enforcement.Implementation: Ensure all content that is delivered to client is sanitized against an acceptable content specification.Implementation: Ensure all content coming from the client is using the same encoding; if not, the server-side application must canonicalize the data before applying any filtering.Implementation: Perform input validation for all remote content, including remote and user-generated contentImplementation: Perform output validation for all remote content.Implementation: Disable scripting languages such as JavaScript in browserImplementation: Patching software. There are many attack vectors for XSS on the client side and the server side. Many vulnerabilities are fixed in service packs for browser, web servers, and plug in technologies, staying current on patch release that deal with XSS countermeasures mitigates this.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/244.html, http://cwe.mitre.org/data/definitions/83.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 24: XSS Using Doubled Characters
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and sanitize all user supplied fields.Implementation: The victim should configure the browser to minimize active content from untrusted sources.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/245.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 25: XSS Using Invalid Characters
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/247.html, https://cwe.mitre.org/data/definitions/86.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 26: Command Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/248.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 27: XML Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Strong input validation - All user-controllable input must be validated and filtered for illegal characters as well as content that can be interpreted in the context of an XML data or a query. Use of custom error pages - Attackers can glean information about the nature of queries from descriptive error messages. Input validation must be coupled with customized error pages that inform about an error without disclosing information about the database or application.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/250.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 28: Remote Code Inclusion
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/253.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 29: Leverage Alternate Encoding
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/267.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 30: Schema Poisoning
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/271.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 31: DOM-Based XSS
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use browser technologies that do not allow client-side scripting.Utilize proper character encoding for all output produced within client-site scripts manipulating the DOM.Ensure that all user-supplied input is validated before use.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/588.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 32: Reflected XSS
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before use.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/591.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 33: Stored XSS
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use browser technologies that do not allow client-side scripting.Utilize strict type, character, and encoding enforcement.Ensure that all user-supplied input is validated before being stored.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/592.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 34: Session Hijacking - ClientSide
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Properly encrypt and sign identity tokens in transit, and use industry standard session key generation mechanisms that utilize high amount of entropy to generate the session key. Many standard web and application servers will perform this task on your behalf. Utilize a session timeout for all sessions. If the user does not explicitly logout, terminate their session after this period of inactivity. If the user logs back in then a new session key should be generated.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/593.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 35: Argument Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/6.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 36: Reusing Session IDs (aka Session Replay) - ClientSide
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Always invalidate a session ID after the user logout.Setup a session time out for the session IDs.Protect the communication between the client and server. For instance it is best practice to use SSL to mitigate man in the middle attack.Do not code send session ID with GET method, otherwise the session ID will be copied to the URL. In general avoid writing session IDs in the URLs. URLs can get logged in log files, which are vulnerable to an attacker.Encrypt the session data associated with the session ID.Use multifactor authentication.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/60.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 37: Cross Site Request Forgery
-  </summary>
-
-    
-    Targeted Element / Asset
-    User Browser
-
-    Mitigation Strategy
-    Use cryptographic tokens to associate a request with a specific action. The token can be regenerated at every request so that if a request with an invalid token is encountered, it can be reliably discarded. The token is considered invalid if it arrived with a request other than the action it was supposed to be associated with.Although less reliable, the use of the optional HTTP Referrer header can also be used to determine whether an incoming request was actually one that the user is authorized for, in the current context.Additionally, the user can also be prompted to confirm an action every time an action concerning potentially sensitive data is invoked. This way, even if the attacker manages to get the user to click on a malicious link and request the desired action, the user has a chance to recover by denying confirmation. This solution is also implicitly tied to using a second factor of authentication before performing such actions.In general, every request must be checked for the appropriate authentication token as well as authorization in the current session context.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/62.html
-    
-</details>
-<br/>
 
 
 ### Element: SvelteKit Frontend
@@ -787,43 +121,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 38: Buffer Overflow via Environment Variables
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    Do not expose environment variable to the user.Do not use untrusted data in your environment variables. Use a language or compiler that performs automatic bounds checking. There are tools such as Sharefuzz [R.10.3] which is an environment variable fuzzer for Unix that support loading a shared library. You can use Sharefuzz to determine if you are exposing an environment variable vulnerable to buffer overflow.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/10.html, CVE-1999-0906, CVE-1999-0046, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/119.html, http://cwe.mitre.org/data/definitions/680.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 39: Overflow Buffers
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/100.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/119.html, http://cwe.mitre.org/data/definitions/680.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 40: Authentication Abuse/ByPass
+    <b class="Medium">[Medium]</b> — 1: Authentication Abuse/ByPass
   </summary>
 
     
@@ -841,7 +139,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 41: Double Encoding
+    <b class="Medium">[Medium]</b> — 2: Double Encoding
   </summary>
 
     
@@ -859,7 +157,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 42: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 3: Privilege Abuse
   </summary>
 
     
@@ -877,25 +175,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 43: Buffer Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/123.html, http://cwe.mitre.org/data/definitions/119.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 44: Flooding
+    <b class="Medium">[Medium]</b> — 4: Flooding
   </summary>
 
     
@@ -913,7 +193,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 45: Subverting Environment Variable Values
+    <b class="Very High">[Very High]</b> — 5: Subverting Environment Variable Values
   </summary>
 
     
@@ -931,7 +211,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 46: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 6: Excessive Allocation
   </summary>
 
     
@@ -949,7 +229,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 47: Format String Injection
+    <b class="High">[High]</b> — 7: Format String Injection
   </summary>
 
     
@@ -967,61 +247,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 48: Client-side Injection-induced Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/14.html, http://cwe.mitre.org/data/definitions/74.html, http://cwe.mitre.org/data/definitions/353.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 49: Command Delimiters
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/15.html, http://cwe.mitre.org/data/definitions/146.html, http://cwe.mitre.org/data/definitions/77.html, http://cwe.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/154.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 50: Input Data Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    Validation of user input for type, length, data-range, format, etc.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/153.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 51: Dictionary-based Password Attack
+    <b class="High">[High]</b> — 8: Dictionary-based Password Attack
   </summary>
 
     
@@ -1039,7 +265,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 52: Principal Spoof
+    <b class="Medium">[Medium]</b> — 9: Principal Spoof
   </summary>
 
     
@@ -1057,7 +283,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 53: iFrame Overlay
+    <b class="High">[High]</b> — 10: iFrame Overlay
   </summary>
 
     
@@ -1075,7 +301,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 54: File Content Injection
+    <b class="Very High">[Very High]</b> — 11: File Content Injection
   </summary>
 
     
@@ -1093,7 +319,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 55: Privilege Escalation
+    <b class="High">[High]</b> — 12: Privilege Escalation
   </summary>
 
     
@@ -1111,7 +337,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 56: Hijacking a privileged process
+    <b class="Medium">[Medium]</b> — 13: Hijacking a privileged process
   </summary>
 
     
@@ -1129,7 +355,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 57: Catching exception throw/signal from privileged block
+    <b class="Very High">[Very High]</b> — 14: Catching exception throw/signal from privileged block
   </summary>
 
     
@@ -1147,25 +373,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 58: Filter Failure through Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    SvelteKit Frontend
-
-    Mitigation Strategy
-    Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/24.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/680.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 59: Resource Injection
+    <b class="High">[High]</b> — 15: Resource Injection
   </summary>
 
     
@@ -1183,7 +391,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 60: Code Injection
+    <b class="High">[High]</b> — 16: Code Injection
   </summary>
 
     
@@ -1201,7 +409,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 61: XSS Targeting HTML Attributes
+    <b class="Medium">[Medium]</b> — 17: XSS Targeting HTML Attributes
   </summary>
 
     
@@ -1219,7 +427,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 62: XSS Targeting URI Placeholders
+    <b class="High">[High]</b> — 18: XSS Targeting URI Placeholders
   </summary>
 
     
@@ -1237,7 +445,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 63: XSS Using Doubled Characters
+    <b class="Medium">[Medium]</b> — 19: XSS Using Doubled Characters
   </summary>
 
     
@@ -1255,7 +463,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 64: XSS Using Invalid Characters
+    <b class="Medium">[Medium]</b> — 20: XSS Using Invalid Characters
   </summary>
 
     
@@ -1273,7 +481,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 65: Command Injection
+    <b class="High">[High]</b> — 21: Command Injection
   </summary>
 
     
@@ -1291,7 +499,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 66: XML Injection
+    <b class="High">[High]</b> — 22: XML Injection
   </summary>
 
     
@@ -1309,7 +517,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 67: Remote Code Inclusion
+    <b class="High">[High]</b> — 23: Remote Code Inclusion
   </summary>
 
     
@@ -1327,7 +535,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 68: Leverage Alternate Encoding
+    <b class="High">[High]</b> — 24: Leverage Alternate Encoding
   </summary>
 
     
@@ -1345,7 +553,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 69: Schema Poisoning
+    <b class="High">[High]</b> — 25: Schema Poisoning
   </summary>
 
     
@@ -1363,7 +571,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 70: DOM-Based XSS
+    <b class="Very High">[Very High]</b> — 26: DOM-Based XSS
   </summary>
 
     
@@ -1381,7 +589,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 71: Reflected XSS
+    <b class="Very High">[Very High]</b> — 27: Reflected XSS
   </summary>
 
     
@@ -1399,7 +607,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 72: Stored XSS
+    <b class="Very High">[Very High]</b> — 28: Stored XSS
   </summary>
 
     
@@ -1417,7 +625,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 73: Session Hijacking - ClientSide
+    <b class="Very High">[Very High]</b> — 29: Session Hijacking - ClientSide
   </summary>
 
     
@@ -1435,7 +643,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 74: Argument Injection
+    <b class="High">[High]</b> — 30: Argument Injection
   </summary>
 
     
@@ -1453,7 +661,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 75: Reusing Session IDs (aka Session Replay) - ClientSide
+    <b class="High">[High]</b> — 31: Reusing Session IDs (aka Session Replay) - ClientSide
   </summary>
 
     
@@ -1471,7 +679,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 76: Cross Site Request Forgery
+    <b class="Very High">[Very High]</b> — 32: Cross Site Request Forgery
   </summary>
 
     
@@ -1493,61 +701,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 77: Buffer Overflow via Environment Variables
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Do not expose environment variable to the user.Do not use untrusted data in your environment variables. Use a language or compiler that performs automatic bounds checking. There are tools such as Sharefuzz [R.10.3] which is an environment variable fuzzer for Unix that support loading a shared library. You can use Sharefuzz to determine if you are exposing an environment variable vulnerable to buffer overflow.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/10.html, CVE-1999-0906, CVE-1999-0046, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/119.html, http://cwe.mitre.org/data/definitions/680.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 78: Overflow Buffers
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Use a language or compiler that performs automatic bounds checking. Use secure functions not vulnerable to buffer overflow. If you have to use dangerous functions, make sure that you do boundary checking. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Use OS-level preventative functionality. Not a complete solution. Utilize static source code analysis tools to identify potential buffer overflow weaknesses in the software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/100.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/119.html, http://cwe.mitre.org/data/definitions/680.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 79: API Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Always use HTTPS and SSL Certificates. Firewall optimizations to prevent unauthorized access to or from a private network. Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API. Use IP whitelisting and rate limiting.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/113.html, http://cwe.mitre.org/data/definitions/227.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 80: Authentication Abuse/ByPass
+    <b class="Medium">[Medium]</b> — 33: Authentication Abuse/ByPass
   </summary>
 
     
@@ -1565,25 +719,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 81: Double Encoding
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input. Be aware of the threat of alternative method of data encoding and obfuscation technique such as IP address encoding. When client input is required from web-based forms, avoid using the GET method to submit data, as the method causes the form data to be appended to the URL and is easily manipulated. Instead, use the POST method whenever possible. Any security checks should occur after the data has been decoded and validated as correct data format. Do not repeat decoding process, if bad character are left after decoding process, treat the data as suspicious, and fail the validation process.Refer to the RFCs to safely decode URL. Regular expression can be used to match safe URL patterns. However, that may discard valid URL requests if the regular expression is too restrictive. There are tools to scan HTTP requests to the server for valid URL such as URLScan from Microsoft (http://www.microsoft.com/technet/security/tools/urlscan.mspx).
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/173.html, http://cwe.mitre.org/data/definitions/177.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 82: Exploit Test APIs
+    <b class="High">[High]</b> — 34: Exploit Test APIs
   </summary>
 
     
@@ -1601,7 +737,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 83: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 35: Privilege Abuse
   </summary>
 
     
@@ -1619,25 +755,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 84: Buffer Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    To help protect an application from buffer manipulation attacks, a number of potential mitigations can be leveraged. Before starting the development of the application, consider using a code language (e.g., Java) or compiler that limits the ability of developers to act beyond the bounds of a buffer. If the chosen language is susceptible to buffer related issues (e.g., C) then consider using secure functions instead of those vulnerable to buffer manipulations. If a potentially dangerous function must be used, make sure that proper boundary checking is performed. Additionally, there are often a number of compiler-based mechanisms (e.g., StackGuard, ProPolice and the Microsoft Visual Studio /GS flag) that can help identify and protect against potential buffer issues. Finally, there may be operating system level preventative functionality that can be applied.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/123.html, http://cwe.mitre.org/data/definitions/119.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 85: Flooding
+    <b class="Medium">[Medium]</b> — 36: Flooding
   </summary>
 
     
@@ -1655,7 +773,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 86: Subverting Environment Variable Values
+    <b class="Very High">[Very High]</b> — 37: Subverting Environment Variable Values
   </summary>
 
     
@@ -1673,7 +791,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 87: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 38: Excessive Allocation
   </summary>
 
     
@@ -1691,115 +809,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 88: Format String Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Limit the usage of formatting string functions. Strong input validation - All user-controllable input must be validated and filtered for illegal formatting characters.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/135.html, http://cwe.mitre.org/data/definitions/134.html, http://cwe.mitre.org/data/definitions/133.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 89: Client-side Injection-induced Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    The client software should not install untrusted code from a non-authenticated server. The client software should have the latest patches and should be audited for vulnerabilities before being used to communicate with potentially hostile servers. Perform input validation for length of buffer inputs. Use a language or compiler that performs automatic bounds checking. Use an abstraction library to abstract away risky APIs. Not a complete solution. Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution. Ensure all buffer uses are consistently bounds-checked. Use OS-level preventative functionality. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/14.html, http://cwe.mitre.org/data/definitions/74.html, http://cwe.mitre.org/data/definitions/353.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 90: Command Delimiters
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Design: Perform whitelist validation against a positive specification for command length, type, and parameters.Design: Limit program privileges, so if commands circumvent program input validation or filter routines then commands do not running under a privileged accountImplementation: Perform input validation for all remote content.Implementation: Use type conversions such as JDBC prepared statements.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/15.html, http://cwe.mitre.org/data/definitions/146.html, http://cwe.mitre.org/data/definitions/77.html, http://cwe.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/154.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 91: Input Data Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Validation of user input for type, length, data-range, format, etc.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/153.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 92: Dictionary-based Password Attack
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/16.html, http://cwe.mitre.org/data/definitions/521.html, http://cwe.mitre.org/data/definitions/262.html, http://cwe.mitre.org/data/definitions/263.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 93: Exploit Script-Based APIs
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Always use HTTPS and SSL Certificates. Firewall optimizations to prevent unauthorized access to or from a private network. Use strong authentication and authorization mechanisms. A proven protocol is OAuth 2.0, which enables a third-party application to obtain limited access to an API. Use IP whitelisting and rate limiting.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/160.html, http://cwe.mitre.org/data/definitions/346.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 94: Principal Spoof
+    <b class="Medium">[Medium]</b> — 39: Principal Spoof
   </summary>
 
     
@@ -1817,7 +827,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 95: iFrame Overlay
+    <b class="High">[High]</b> — 40: iFrame Overlay
   </summary>
 
     
@@ -1835,25 +845,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 96: File Content Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/23.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 97: Privilege Escalation
+    <b class="High">[High]</b> — 41: Privilege Escalation
   </summary>
 
     
@@ -1871,7 +863,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 98: Hijacking a privileged process
+    <b class="Medium">[Medium]</b> — 42: Hijacking a privileged process
   </summary>
 
     
@@ -1889,7 +881,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 99: Catching exception throw/signal from privileged block
+    <b class="Very High">[Very High]</b> — 43: Catching exception throw/signal from privileged block
   </summary>
 
     
@@ -1907,79 +899,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 100: Filter Failure through Buffer Overflow
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Make sure that ANY failure occurring in the filtering or input validation routine is properly handled and that offending input is NOT allowed to go through. Basically make sure that the vault is closed when failure occurs.Pre-design: Use a language or compiler that performs automatic bounds checking.Pre-design through Build: Compiler-based canary mechanisms such as StackGuard, ProPolice and the Microsoft Visual Studio /GS flag. Unless this provides automatic bounds checking, it is not a complete solution.Operational: Use OS-level preventative functionality. Not a complete solution.Design: Use an abstraction library to abstract away risky APIs. Not a complete solution.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/24.html, http://cwe.mitre.org/data/definitions/120.html, http://cwe.mitre.org/data/definitions/680.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 101: Resource Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Ensure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/240.html, https://capec.mitre.org/data/definitions/240.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 102: Code Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Utilize strict type, character, and encoding enforcementEnsure all input content that is delivered to client is sanitized against an acceptable content specification.Perform input validation for all content.Enforce regular patching of software.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/242.html, http://cwe.mitre.org/data/definitions/94.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 103: XSS Targeting HTML Attributes
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list all input including that which is not expected to have any scripting content.Implementation: The victim should configure the browser to minimize active content from untrusted sources.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/243.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 104: XSS Targeting URI Placeholders
+    <b class="High">[High]</b> — 44: XSS Targeting URI Placeholders
   </summary>
 
     
@@ -1997,7 +917,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 105: XSS Using Doubled Characters
+    <b class="Medium">[Medium]</b> — 45: XSS Using Doubled Characters
   </summary>
 
     
@@ -2015,43 +935,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 106: XSS Using Invalid Characters
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Design: Use libraries and templates that minimize unfiltered input.Implementation: Normalize, filter and white list any input that will be included in any subsequent web pages or back end operations.Implementation: The victim should configure the browser to minimize active content from untrusted sources.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/247.html, https://cwe.mitre.org/data/definitions/86.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 107: Command Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    All user-controllable input should be validated and filtered for potentially unwanted characters. Whitelisting input is desired, but if a blacklisting approach is necessary, then focusing on command related terms and delimiters is necessary.Input should be encoded prior to use in commands to make sure command related characters are not treated as part of the command. For example, quotation characters may need to be encoded so that the application does not treat the quotation as a delimiter.Input should be parameterized, or restricted to data sections of a command, thus removing the chance that the input will be treated as part of the command itself.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/248.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 108: XML Injection
+    <b class="High">[High]</b> — 46: XML Injection
   </summary>
 
     
@@ -2069,43 +953,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 109: Remote Code Inclusion
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Minimize attacks by input validation and sanitization of any user data that will be used by the target application to locate a remote file to be included.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/253.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 110: Leverage Alternate Encoding
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Assume all input might use an improper representation. Use canonicalized data inside the application; all data must be converted into the representation used inside the application (UTF-8, UTF-16, etc.)Assume all input is malicious. Create a white list that defines all valid input to the software system based on the requirements specifications. Input that does not match against the white list should not be permitted to enter into the system. Test your decoding process against malicious input.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/267.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 111: Schema Poisoning
+    <b class="High">[High]</b> — 47: Schema Poisoning
   </summary>
 
     
@@ -2123,7 +971,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 112: Session Hijacking - ClientSide
+    <b class="Very High">[Very High]</b> — 48: Session Hijacking - ClientSide
   </summary>
 
     
@@ -2141,25 +989,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 113: Argument Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Django API
-
-    Mitigation Strategy
-    Design: Do not program input values directly on command shell, instead treat user input as guilty until proven innocent. Build a function that takes user input and converts it to applications specific types and values, stripping or filtering out all unauthorized commands and characters in the process.Design: Limit program privileges, so if metacharacters or other methods circumvent program input validation routines and shell access is attained then it is not running under a privileged account. chroot jails create a sandbox for the application to execute in, making it more difficult for an attacker to elevate privilege even in the case that a compromise has occurred.Implementation: Implement an audit log that is written to a separate host, in the event of a compromise the audit log may be able to provide evidence and details of the compromise.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/6.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 114: Reusing Session IDs (aka Session Replay) - ClientSide
+    <b class="High">[High]</b> — 49: Reusing Session IDs (aka Session Replay) - ClientSide
   </summary>
 
     
@@ -2177,7 +1007,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 115: Cross Site Request Forgery
+    <b class="Very High">[Very High]</b> — 50: Cross Site Request Forgery
   </summary>
 
     
@@ -2199,7 +1029,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 116: Overflow Buffers
+    <b class="Very High">[Very High]</b> — 51: Overflow Buffers
   </summary>
 
     
@@ -2217,7 +1047,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 117: Authentication Abuse/ByPass
+    <b class="Medium">[Medium]</b> — 52: Authentication Abuse/ByPass
   </summary>
 
     
@@ -2235,7 +1065,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 118: Double Encoding
+    <b class="Medium">[Medium]</b> — 53: Double Encoding
   </summary>
 
     
@@ -2253,7 +1083,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 119: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 54: Privilege Abuse
   </summary>
 
     
@@ -2271,7 +1101,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 120: Buffer Manipulation
+    <b class="Very High">[Very High]</b> — 55: Buffer Manipulation
   </summary>
 
     
@@ -2289,7 +1119,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 121: Flooding
+    <b class="Medium">[Medium]</b> — 56: Flooding
   </summary>
 
     
@@ -2307,7 +1137,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 122: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 57: Excessive Allocation
   </summary>
 
     
@@ -2325,7 +1155,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 123: Format String Injection
+    <b class="High">[High]</b> — 58: Format String Injection
   </summary>
 
     
@@ -2343,7 +1173,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 124: Client-side Injection-induced Buffer Overflow
+    <b class="High">[High]</b> — 59: Client-side Injection-induced Buffer Overflow
   </summary>
 
     
@@ -2361,7 +1191,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 125: Command Delimiters
+    <b class="High">[High]</b> — 60: Command Delimiters
   </summary>
 
     
@@ -2379,7 +1209,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 126: Input Data Manipulation
+    <b class="Medium">[Medium]</b> — 61: Input Data Manipulation
   </summary>
 
     
@@ -2397,25 +1227,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 127: Dictionary-based Password Attack
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Create a strong password policy and ensure that your system enforces this policy.Implement an intelligent password throttling mechanism. Care must be taken to assure that these mechanisms do not excessively enable account lockout attacks such as CAPEC-02.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/16.html, http://cwe.mitre.org/data/definitions/521.html, http://cwe.mitre.org/data/definitions/262.html, http://cwe.mitre.org/data/definitions/263.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 128: Principal Spoof
+    <b class="Medium">[Medium]</b> — 62: Principal Spoof
   </summary>
 
     
@@ -2433,7 +1245,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 129: iFrame Overlay
+    <b class="High">[High]</b> — 63: iFrame Overlay
   </summary>
 
     
@@ -2451,79 +1263,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 130: File Content Injection
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Design: Enforce principle of least privilegeDesign: Validate all input for content including files. Ensure that if files and remote content must be accepted that once accepted, they are placed in a sandbox type location so that lower assurance clients cannot write up to higher assurance processes (like Web server processes for example)Design: Execute programs with constrained privileges, so parent process does not open up further vulnerabilities. Ensure that all directories, temporary directories and files, and memory are executing with limited privileges to protect against remote execution.Design: Proxy communication to host, so that communications are terminated at the proxy, sanitizing the requests before forwarding to server host.Implementation: Virus scanning on hostImplementation: Host integrity monitoring for critical files, directories, and processes. The goal of host integrity monitoring is to be aware when a security issue has occurred so that incident response and other forensic activities can begin.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/23.html, http://cwe.mitre.org/data/definitions/20.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 131: Privilege Escalation
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/233.html, http://cwe.mitre.org/data/definitions/269.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 132: Hijacking a privileged process
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Very carefully manage the setting, management, and handling of privileges. Explicitly manage trust zones in the software. Follow the principle of least privilege when assigning access rights to entities in a software system. Implement separation of privilege - Require multiple conditions to be met before permitting access to a system resource.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/234.html, http://cwe.mitre.org/data/definitions/732.html, http://cwe.mitre.org/data/definitions/648.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 133: Catching exception throw/signal from privileged block
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Application Architects must be careful to design callback, signal, and similar asynchronous constructs such that they shed excess privilege prior to handing control to user-written (thus untrusted) code.Application Architects must be careful to design privileged code blocks such that upon return (successful, failed, or unpredicted) that privilege is shed prior to leaving the block/scope.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/236.html, http://cwe.mitre.org/data/definitions/270.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 134: Filter Failure through Buffer Overflow
+    <b class="High">[High]</b> — 64: Filter Failure through Buffer Overflow
   </summary>
 
     
@@ -2541,7 +1281,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 135: Resource Injection
+    <b class="High">[High]</b> — 65: Resource Injection
   </summary>
 
     
@@ -2559,7 +1299,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 136: Code Injection
+    <b class="High">[High]</b> — 66: Code Injection
   </summary>
 
     
@@ -2577,7 +1317,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 137: XSS Targeting HTML Attributes
+    <b class="Medium">[Medium]</b> — 67: XSS Targeting HTML Attributes
   </summary>
 
     
@@ -2595,7 +1335,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 138: XSS Targeting URI Placeholders
+    <b class="High">[High]</b> — 68: XSS Targeting URI Placeholders
   </summary>
 
     
@@ -2613,7 +1353,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 139: XSS Using Doubled Characters
+    <b class="Medium">[Medium]</b> — 69: XSS Using Doubled Characters
   </summary>
 
     
@@ -2631,7 +1371,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 140: XSS Using Invalid Characters
+    <b class="Medium">[Medium]</b> — 70: XSS Using Invalid Characters
   </summary>
 
     
@@ -2649,7 +1389,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 141: Command Injection
+    <b class="High">[High]</b> — 71: Command Injection
   </summary>
 
     
@@ -2667,7 +1407,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 142: XML Injection
+    <b class="High">[High]</b> — 72: XML Injection
   </summary>
 
     
@@ -2685,7 +1425,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 143: Remote Code Inclusion
+    <b class="High">[High]</b> — 73: Remote Code Inclusion
   </summary>
 
     
@@ -2703,7 +1443,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 144: Leverage Alternate Encoding
+    <b class="High">[High]</b> — 74: Leverage Alternate Encoding
   </summary>
 
     
@@ -2721,25 +1461,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 145: Schema Poisoning
-  </summary>
-
-    
-    Targeted Element / Asset
-    Wagtail Admin
-
-    Mitigation Strategy
-    Design: Protect the schema against unauthorized modification.Implementation: For applications that use a known schema, use a local copy or a known good repository instead of the schema reference supplied in the schema document.Implementation: For applications that leverage remote schemas, use the HTTPS protocol to prevent modification of traffic in transit and to avoid unauthorized modification.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/271.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 146: DOM-Based XSS
+    <b class="Very High">[Very High]</b> — 75: DOM-Based XSS
   </summary>
 
     
@@ -2757,7 +1479,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 147: Reflected XSS
+    <b class="Very High">[Very High]</b> — 76: Reflected XSS
   </summary>
 
     
@@ -2775,7 +1497,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 148: Stored XSS
+    <b class="Very High">[Very High]</b> — 77: Stored XSS
   </summary>
 
     
@@ -2793,7 +1515,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 149: Session Hijacking - ClientSide
+    <b class="Very High">[Very High]</b> — 78: Session Hijacking - ClientSide
   </summary>
 
     
@@ -2811,7 +1533,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 150: Argument Injection
+    <b class="High">[High]</b> — 79: Argument Injection
   </summary>
 
     
@@ -2829,7 +1551,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 151: Reusing Session IDs (aka Session Replay) - ClientSide
+    <b class="High">[High]</b> — 80: Reusing Session IDs (aka Session Replay) - ClientSide
   </summary>
 
     
@@ -2847,7 +1569,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 152: Cross Site Request Forgery
+    <b class="Very High">[Very High]</b> — 81: Cross Site Request Forgery
   </summary>
 
     
@@ -2869,7 +1591,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 153: Buffer Overflow via Environment Variables
+    <b class="High">[High]</b> — 82: Buffer Overflow via Environment Variables
   </summary>
 
     
@@ -2887,7 +1609,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 154: Overflow Buffers
+    <b class="Very High">[Very High]</b> — 83: Overflow Buffers
   </summary>
 
     
@@ -2905,7 +1627,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 155: Authentication Abuse/ByPass
+    <b class="Medium">[Medium]</b> — 84: Authentication Abuse/ByPass
   </summary>
 
     
@@ -2923,7 +1645,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 156: Double Encoding
+    <b class="Medium">[Medium]</b> — 85: Double Encoding
   </summary>
 
     
@@ -2941,7 +1663,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 157: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 86: Privilege Abuse
   </summary>
 
     
@@ -2959,7 +1681,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 158: Buffer Manipulation
+    <b class="Very High">[Very High]</b> — 87: Buffer Manipulation
   </summary>
 
     
@@ -2977,7 +1699,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 159: Flooding
+    <b class="Medium">[Medium]</b> — 88: Flooding
   </summary>
 
     
@@ -2995,7 +1717,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 160: Subverting Environment Variable Values
+    <b class="Very High">[Very High]</b> — 89: Subverting Environment Variable Values
   </summary>
 
     
@@ -3013,7 +1735,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 161: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 90: Excessive Allocation
   </summary>
 
     
@@ -3031,7 +1753,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 162: Format String Injection
+    <b class="High">[High]</b> — 91: Format String Injection
   </summary>
 
     
@@ -3049,7 +1771,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 163: Client-side Injection-induced Buffer Overflow
+    <b class="High">[High]</b> — 92: Client-side Injection-induced Buffer Overflow
   </summary>
 
     
@@ -3067,7 +1789,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 164: Command Delimiters
+    <b class="High">[High]</b> — 93: Command Delimiters
   </summary>
 
     
@@ -3085,7 +1807,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 165: Input Data Manipulation
+    <b class="Medium">[Medium]</b> — 94: Input Data Manipulation
   </summary>
 
     
@@ -3103,7 +1825,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 166: Dictionary-based Password Attack
+    <b class="High">[High]</b> — 95: Dictionary-based Password Attack
   </summary>
 
     
@@ -3121,7 +1843,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 167: Principal Spoof
+    <b class="Medium">[Medium]</b> — 96: Principal Spoof
   </summary>
 
     
@@ -3139,7 +1861,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 168: iFrame Overlay
+    <b class="High">[High]</b> — 97: iFrame Overlay
   </summary>
 
     
@@ -3157,7 +1879,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 169: File Content Injection
+    <b class="Very High">[Very High]</b> — 98: File Content Injection
   </summary>
 
     
@@ -3175,7 +1897,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 170: Privilege Escalation
+    <b class="High">[High]</b> — 99: Privilege Escalation
   </summary>
 
     
@@ -3193,7 +1915,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 171: Hijacking a privileged process
+    <b class="Medium">[Medium]</b> — 100: Hijacking a privileged process
   </summary>
 
     
@@ -3211,7 +1933,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 172: Catching exception throw/signal from privileged block
+    <b class="Very High">[Very High]</b> — 101: Catching exception throw/signal from privileged block
   </summary>
 
     
@@ -3229,7 +1951,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 173: Filter Failure through Buffer Overflow
+    <b class="High">[High]</b> — 102: Filter Failure through Buffer Overflow
   </summary>
 
     
@@ -3247,7 +1969,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 174: Resource Injection
+    <b class="High">[High]</b> — 103: Resource Injection
   </summary>
 
     
@@ -3265,7 +1987,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 175: Code Injection
+    <b class="High">[High]</b> — 104: Code Injection
   </summary>
 
     
@@ -3283,7 +2005,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 176: XSS Targeting HTML Attributes
+    <b class="Medium">[Medium]</b> — 105: XSS Targeting HTML Attributes
   </summary>
 
     
@@ -3301,7 +2023,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 177: XSS Targeting URI Placeholders
+    <b class="High">[High]</b> — 106: XSS Targeting URI Placeholders
   </summary>
 
     
@@ -3319,7 +2041,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 178: XSS Using Doubled Characters
+    <b class="Medium">[Medium]</b> — 107: XSS Using Doubled Characters
   </summary>
 
     
@@ -3337,7 +2059,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 179: XSS Using Invalid Characters
+    <b class="Medium">[Medium]</b> — 108: XSS Using Invalid Characters
   </summary>
 
     
@@ -3355,7 +2077,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 180: Command Injection
+    <b class="High">[High]</b> — 109: Command Injection
   </summary>
 
     
@@ -3373,7 +2095,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 181: XML Injection
+    <b class="High">[High]</b> — 110: XML Injection
   </summary>
 
     
@@ -3391,7 +2113,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 182: Remote Code Inclusion
+    <b class="High">[High]</b> — 111: Remote Code Inclusion
   </summary>
 
     
@@ -3409,7 +2131,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 183: Leverage Alternate Encoding
+    <b class="High">[High]</b> — 112: Leverage Alternate Encoding
   </summary>
 
     
@@ -3427,7 +2149,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 184: Schema Poisoning
+    <b class="High">[High]</b> — 113: Schema Poisoning
   </summary>
 
     
@@ -3445,7 +2167,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 185: Session Hijacking - ClientSide
+    <b class="Very High">[Very High]</b> — 114: Session Hijacking - ClientSide
   </summary>
 
     
@@ -3463,7 +2185,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 186: Argument Injection
+    <b class="High">[High]</b> — 115: Argument Injection
   </summary>
 
     
@@ -3481,7 +2203,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 187: Reusing Session IDs (aka Session Replay) - ClientSide
+    <b class="High">[High]</b> — 116: Reusing Session IDs (aka Session Replay) - ClientSide
   </summary>
 
     
@@ -3499,7 +2221,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 188: Cross Site Request Forgery
+    <b class="Very High">[Very High]</b> — 117: Cross Site Request Forgery
   </summary>
 
     
@@ -3521,7 +2243,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 189: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 118: Privilege Abuse
   </summary>
 
     
@@ -3539,7 +2261,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 190: Shared Data Manipulation
+    <b class="Medium">[Medium]</b> — 119: Shared Data Manipulation
   </summary>
 
     
@@ -3557,7 +2279,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 191: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 120: Excessive Allocation
   </summary>
 
     
@@ -3575,7 +2297,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Low">[Low]</b> — 192: Encryption Brute Forcing
+    <b class="Low">[Low]</b> — 121: Encryption Brute Forcing
   </summary>
 
     
@@ -3593,7 +2315,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 193: Audit Log Manipulation
+    <b class="High">[High]</b> — 122: Audit Log Manipulation
   </summary>
 
     
@@ -3615,7 +2337,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 194: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 123: Privilege Abuse
   </summary>
 
     
@@ -3633,7 +2355,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 195: Shared Data Manipulation
+    <b class="Medium">[Medium]</b> — 124: Shared Data Manipulation
   </summary>
 
     
@@ -3651,7 +2373,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 196: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 125: Excessive Allocation
   </summary>
 
     
@@ -3669,7 +2391,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Low">[Low]</b> — 197: Encryption Brute Forcing
+    <b class="Low">[Low]</b> — 126: Encryption Brute Forcing
   </summary>
 
     
@@ -3687,7 +2409,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 198: Audit Log Manipulation
+    <b class="High">[High]</b> — 127: Audit Log Manipulation
   </summary>
 
     
@@ -3709,7 +2431,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 199: Privilege Abuse
+    <b class="Medium">[Medium]</b> — 128: Privilege Abuse
   </summary>
 
     
@@ -3727,7 +2449,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 200: Shared Data Manipulation
+    <b class="Medium">[Medium]</b> — 129: Shared Data Manipulation
   </summary>
 
     
@@ -3745,7 +2467,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 201: Excessive Allocation
+    <b class="Medium">[Medium]</b> — 130: Excessive Allocation
   </summary>
 
     
@@ -3763,7 +2485,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Low">[Low]</b> — 202: Encryption Brute Forcing
+    <b class="Low">[Low]</b> — 131: Encryption Brute Forcing
   </summary>
 
     
@@ -3781,7 +2503,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 203: Audit Log Manipulation
+    <b class="High">[High]</b> — 132: Audit Log Manipulation
   </summary>
 
     
@@ -3803,7 +2525,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 204: Interception
+    <b class="Medium">[Medium]</b> — 133: Interception
   </summary>
 
     
@@ -3821,7 +2543,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 205: Content Spoofing
+    <b class="Medium">[Medium]</b> — 134: Content Spoofing
   </summary>
 
     
@@ -3839,7 +2561,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 206: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 135: Sniffing Attacks
   </summary>
 
     
@@ -3857,7 +2579,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 207: Communication Channel Manipulation
+    <b class="High">[High]</b> — 136: Communication Channel Manipulation
   </summary>
 
     
@@ -3875,7 +2597,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 208: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 137: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -3892,53 +2614,17 @@ Name|Description|Classification
 <br/>
 
 
-### Element: HTTPS request for web pages
+### Element: HTTPS request to SvelteKit
 
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 209: Interception
+    <b class="Medium">[Medium]</b> — 138: Sniffing Attacks
   </summary>
 
     
     Targeted Element / Asset
-    HTTPS request for web pages
-
-    Mitigation Strategy
-    Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/117.html, http://cwe.mitre.org/data/definitions/319.html, https://cwe.mitre.org/data/definitions/299.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 210: Content Spoofing
-  </summary>
-
-    
-    Targeted Element / Asset
-    HTTPS request for web pages
-
-    Mitigation Strategy
-    Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/148.html, http://cwe.mitre.org/data/definitions/345.html, https://cwe.mitre.org/data/definitions/299.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 211: Sniffing Attacks
-  </summary>
-
-    
-    Targeted Element / Asset
-    HTTPS request for web pages
+    HTTPS request to SvelteKit
 
     Mitigation Strategy
     Encrypt sensitive information when transmitted on insecure mediums to prevent interception.
@@ -3951,12 +2637,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 212: Communication Channel Manipulation
+    <b class="High">[High]</b> — 139: Communication Channel Manipulation
   </summary>
 
     
     Targeted Element / Asset
-    HTTPS request for web pages
+    HTTPS request to SvelteKit
 
     Mitigation Strategy
     Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.
@@ -3969,124 +2655,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 213: Client-Server Protocol Manipulation
+    <b class="Very High">[Very High]</b> — 140: Data Leak
   </summary>
 
     
     Targeted Element / Asset
-    HTTPS request for web pages
-
-    Mitigation Strategy
-    Use strong authentication protocols.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
-    
-</details>
-<br/>
-
-
-### Element: API request with session cookie
-
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 214: Interception
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
-
-    Mitigation Strategy
-    Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/117.html, http://cwe.mitre.org/data/definitions/319.html, https://cwe.mitre.org/data/definitions/299.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 215: Content Spoofing
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
-
-    Mitigation Strategy
-    Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/148.html, http://cwe.mitre.org/data/definitions/345.html, https://cwe.mitre.org/data/definitions/299.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 216: Sniffing Attacks
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
-
-    Mitigation Strategy
-    Encrypt sensitive information when transmitted on insecure mediums to prevent interception.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/311.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="High">[High]</b> — 217: Communication Channel Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
-
-    Mitigation Strategy
-    Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/216.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Medium">[Medium]</b> — 218: Client-Server Protocol Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
-
-    Mitigation Strategy
-    Use strong authentication protocols.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 219: Data Leak
-  </summary>
-
-    
-    Targeted Element / Asset
-    API request with session cookie
+    HTTPS request to SvelteKit
 
     Mitigation Strategy
     All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
@@ -4099,12 +2673,106 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 220: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 141: Unprotected Sensitive Data
   </summary>
 
     
     Targeted Element / Asset
-    API request with session cookie
+    HTTPS request to SvelteKit
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+
+### Element: HTTPS request to Django API
+
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 142: Interception
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
+
+    Mitigation Strategy
+    Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/117.html, http://cwe.mitre.org/data/definitions/319.html, https://cwe.mitre.org/data/definitions/299.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 143: Content Spoofing
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
+
+    Mitigation Strategy
+    Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/148.html, http://cwe.mitre.org/data/definitions/345.html, https://cwe.mitre.org/data/definitions/299.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 144: Sniffing Attacks
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
+
+    Mitigation Strategy
+    Encrypt sensitive information when transmitted on insecure mediums to prevent interception.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/311.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 145: Communication Channel Manipulation
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
+
+    Mitigation Strategy
+    Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/216.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 146: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
 
     Mitigation Strategy
     All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
@@ -4117,12 +2785,30 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 221: Credentials Aging
+    <b class="High">[High]</b> — 147: Unprotected Sensitive Data
   </summary>
 
     
     Targeted Element / Asset
-    API request with session cookie
+    HTTPS request to Django API
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 148: Credentials Aging
+  </summary>
+
+    
+    Targeted Element / Asset
+    HTTPS request to Django API
 
     Mitigation Strategy
     All passwords and other credentials should have a relatively short expiration date with a possibility to be revoked immediately under special circumstances.
@@ -4134,17 +2820,17 @@ Name|Description|Classification
 <br/>
 
 
-### Element: CMS login and content editing
+### Element: HTTPS request to Wagtail Admin
 
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 222: Interception
+    <b class="Medium">[Medium]</b> — 149: Interception
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.
@@ -4157,12 +2843,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 223: Content Spoofing
+    <b class="Medium">[Medium]</b> — 150: Content Spoofing
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.
@@ -4175,12 +2861,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 224: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 151: Sniffing Attacks
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     Encrypt sensitive information when transmitted on insecure mediums to prevent interception.
@@ -4193,12 +2879,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 225: Communication Channel Manipulation
+    <b class="High">[High]</b> — 152: Communication Channel Manipulation
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.
@@ -4211,30 +2897,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 226: Client-Server Protocol Manipulation
+    <b class="Very High">[Very High]</b> — 153: Data Leak
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
-
-    Mitigation Strategy
-    Use strong authentication protocols.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 227: Data Leak
-  </summary>
-
-    
-    Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
@@ -4247,12 +2915,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 228: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 154: Unprotected Sensitive Data
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
@@ -4265,12 +2933,12 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 229: Credentials Aging
+    <b class="High">[High]</b> — 155: Credentials Aging
   </summary>
 
     
     Targeted Element / Asset
-    CMS login and content editing
+    HTTPS request to Wagtail Admin
 
     Mitigation Strategy
     All passwords and other credentials should have a relatively short expiration date with a possibility to be revoked immediately under special circumstances.
@@ -4287,7 +2955,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 230: Interception
+    <b class="Medium">[Medium]</b> — 156: Interception
   </summary>
 
     
@@ -4305,7 +2973,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 231: Content Spoofing
+    <b class="Medium">[Medium]</b> — 157: Content Spoofing
   </summary>
 
     
@@ -4323,7 +2991,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 232: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 158: Sniffing Attacks
   </summary>
 
     
@@ -4341,7 +3009,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 233: Communication Channel Manipulation
+    <b class="High">[High]</b> — 159: Communication Channel Manipulation
   </summary>
 
     
@@ -4359,7 +3027,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 234: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 160: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -4377,7 +3045,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 235: Data Leak
+    <b class="Very High">[Very High]</b> — 161: Data Leak
   </summary>
 
     
@@ -4395,7 +3063,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 236: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 162: Unprotected Sensitive Data
   </summary>
 
     
@@ -4417,7 +3085,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 237: Interception
+    <b class="Medium">[Medium]</b> — 163: Interception
   </summary>
 
     
@@ -4435,7 +3103,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 238: Content Spoofing
+    <b class="Medium">[Medium]</b> — 164: Content Spoofing
   </summary>
 
     
@@ -4453,7 +3121,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 239: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 165: Sniffing Attacks
   </summary>
 
     
@@ -4471,7 +3139,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 240: Communication Channel Manipulation
+    <b class="High">[High]</b> — 166: Communication Channel Manipulation
   </summary>
 
     
@@ -4489,25 +3157,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 241: Client-Server Protocol Manipulation
-  </summary>
-
-    
-    Targeted Element / Asset
-    Application data queries
-
-    Mitigation Strategy
-    Use strong authentication protocols.
-
-    References & Standards
-    https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
-    
-</details>
-<br/>
-
-<details>
-  <summary>
-    <b class="Very High">[Very High]</b> — 242: Data Leak
+    <b class="Very High">[Very High]</b> — 167: Data Leak
   </summary>
 
     
@@ -4525,7 +3175,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 243: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 168: Unprotected Sensitive Data
   </summary>
 
     
@@ -4547,7 +3197,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 244: Interception
+    <b class="Medium">[Medium]</b> — 169: Interception
   </summary>
 
     
@@ -4565,7 +3215,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 245: Content Spoofing
+    <b class="Medium">[Medium]</b> — 170: Content Spoofing
   </summary>
 
     
@@ -4583,7 +3233,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 246: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 171: Sniffing Attacks
   </summary>
 
     
@@ -4601,7 +3251,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 247: Communication Channel Manipulation
+    <b class="High">[High]</b> — 172: Communication Channel Manipulation
   </summary>
 
     
@@ -4619,7 +3269,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 248: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 173: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -4637,7 +3287,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 249: Data Leak
+    <b class="Very High">[Very High]</b> — 174: Data Leak
   </summary>
 
     
@@ -4655,7 +3305,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 250: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 175: Unprotected Sensitive Data
   </summary>
 
     
@@ -4677,7 +3327,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 251: Interception
+    <b class="Medium">[Medium]</b> — 176: Interception
   </summary>
 
     
@@ -4695,7 +3345,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 252: Content Spoofing
+    <b class="Medium">[Medium]</b> — 177: Content Spoofing
   </summary>
 
     
@@ -4713,7 +3363,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 253: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 178: Sniffing Attacks
   </summary>
 
     
@@ -4731,7 +3381,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 254: Communication Channel Manipulation
+    <b class="High">[High]</b> — 179: Communication Channel Manipulation
   </summary>
 
     
@@ -4749,7 +3399,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 255: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 180: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -4761,6 +3411,42 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 181: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Internal API request
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 182: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Internal API request
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
     
 </details>
 <br/>
@@ -4771,7 +3457,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 256: Interception
+    <b class="Medium">[Medium]</b> — 183: Interception
   </summary>
 
     
@@ -4789,7 +3475,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 257: Content Spoofing
+    <b class="Medium">[Medium]</b> — 184: Content Spoofing
   </summary>
 
     
@@ -4807,7 +3493,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 258: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 185: Sniffing Attacks
   </summary>
 
     
@@ -4825,7 +3511,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 259: Communication Channel Manipulation
+    <b class="High">[High]</b> — 186: Communication Channel Manipulation
   </summary>
 
     
@@ -4843,7 +3529,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 260: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 187: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -4855,6 +3541,42 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 188: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Background job dispatch (Procrastinate)
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 189: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Background job dispatch (Procrastinate)
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
     
 </details>
 <br/>
@@ -4865,7 +3587,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 261: Interception
+    <b class="Medium">[Medium]</b> — 190: Interception
   </summary>
 
     
@@ -4883,7 +3605,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 262: Content Spoofing
+    <b class="Medium">[Medium]</b> — 191: Content Spoofing
   </summary>
 
     
@@ -4901,7 +3623,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 263: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 192: Sniffing Attacks
   </summary>
 
     
@@ -4919,7 +3641,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 264: Communication Channel Manipulation
+    <b class="High">[High]</b> — 193: Communication Channel Manipulation
   </summary>
 
     
@@ -4937,7 +3659,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 265: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 194: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -4949,6 +3671,42 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 195: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Background job queries
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 196: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Background job queries
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
     
 </details>
 <br/>
@@ -4959,7 +3717,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 266: Interception
+    <b class="Medium">[Medium]</b> — 197: Interception
   </summary>
 
     
@@ -4977,7 +3735,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 267: Content Spoofing
+    <b class="Medium">[Medium]</b> — 198: Content Spoofing
   </summary>
 
     
@@ -4995,7 +3753,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 268: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 199: Sniffing Attacks
   </summary>
 
     
@@ -5013,7 +3771,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 269: Communication Channel Manipulation
+    <b class="High">[High]</b> — 200: Communication Channel Manipulation
   </summary>
 
     
@@ -5031,7 +3789,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 270: Client-Server Protocol Manipulation
+    <b class="Very High">[Very High]</b> — 201: Data Leak
   </summary>
 
     
@@ -5039,10 +3797,140 @@ Name|Description|Classification
     Media uploads and asset storage
 
     Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+
+### Element: File processing output
+
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 202: Interception
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    Leverage encryption to encode the transmission of data thus making it accessible only to authorized parties.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/117.html, http://cwe.mitre.org/data/definitions/319.html, https://cwe.mitre.org/data/definitions/299.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 203: Content Spoofing
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    Validation of user input for type, length, data-range, format, etc. Encoding any user input that will be output by the web application.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/148.html, http://cwe.mitre.org/data/definitions/345.html, https://cwe.mitre.org/data/definitions/299.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 204: Sniffing Attacks
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    Encrypt sensitive information when transmitted on insecure mediums to prevent interception.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/157.html, http://cwe.mitre.org/data/definitions/311.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 205: Communication Channel Manipulation
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    Encrypt all sensitive communications using properly-configured cryptography.Design the communication system such that it associates proper authentication/authorization with each channel/message.
+
+    References & Standards
+    https://capec.mitre.org/data/definitions/216.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Medium">[Medium]</b> — 206: Client-Server Protocol Manipulation
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
     Use strong authentication protocols.
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 207: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 208: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    File processing output
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
     
 </details>
 <br/>
@@ -5053,7 +3941,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 271: Interception
+    <b class="Medium">[Medium]</b> — 209: Interception
   </summary>
 
     
@@ -5071,7 +3959,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 272: Content Spoofing
+    <b class="Medium">[Medium]</b> — 210: Content Spoofing
   </summary>
 
     
@@ -5089,7 +3977,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 273: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 211: Sniffing Attacks
   </summary>
 
     
@@ -5107,7 +3995,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 274: Communication Channel Manipulation
+    <b class="High">[High]</b> — 212: Communication Channel Manipulation
   </summary>
 
     
@@ -5125,7 +4013,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 275: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 213: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -5143,7 +4031,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 276: Data Leak
+    <b class="Very High">[Very High]</b> — 214: Data Leak
   </summary>
 
     
@@ -5161,7 +4049,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 277: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 215: Unprotected Sensitive Data
   </summary>
 
     
@@ -5183,7 +4071,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 278: Interception
+    <b class="Medium">[Medium]</b> — 216: Interception
   </summary>
 
     
@@ -5201,7 +4089,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 279: Content Spoofing
+    <b class="Medium">[Medium]</b> — 217: Content Spoofing
   </summary>
 
     
@@ -5219,7 +4107,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 280: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 218: Sniffing Attacks
   </summary>
 
     
@@ -5237,7 +4125,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 281: Communication Channel Manipulation
+    <b class="High">[High]</b> — 219: Communication Channel Manipulation
   </summary>
 
     
@@ -5255,7 +4143,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 282: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 220: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -5267,6 +4155,60 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 221: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Administrative access
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 222: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Administrative access
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 223: Credentials Aging
+  </summary>
+
+    
+    Targeted Element / Asset
+    Administrative access
+
+    Mitigation Strategy
+    All passwords and other credentials should have a relatively short expiration date with a possibility to be revoked immediately under special circumstances.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/262.html, https://cwe.mitre.org/data/definitions/263.html, https://cwe.mitre.org/data/definitions/798.html
     
 </details>
 <br/>
@@ -5277,7 +4219,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 283: Interception
+    <b class="Medium">[Medium]</b> — 224: Interception
   </summary>
 
     
@@ -5295,7 +4237,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 284: Content Spoofing
+    <b class="Medium">[Medium]</b> — 225: Content Spoofing
   </summary>
 
     
@@ -5313,7 +4255,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 285: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 226: Sniffing Attacks
   </summary>
 
     
@@ -5331,7 +4273,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 286: Communication Channel Manipulation
+    <b class="High">[High]</b> — 227: Communication Channel Manipulation
   </summary>
 
     
@@ -5349,7 +4291,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 287: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 228: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -5367,7 +4309,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Very High">[Very High]</b> — 288: Data Leak
+    <b class="Very High">[Very High]</b> — 229: Data Leak
   </summary>
 
     
@@ -5385,7 +4327,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 289: Unprotected Sensitive Data
+    <b class="High">[High]</b> — 230: Unprotected Sensitive Data
   </summary>
 
     
@@ -5403,7 +4345,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 290: Credentials Aging
+    <b class="High">[High]</b> — 231: Credentials Aging
   </summary>
 
     
@@ -5425,7 +4367,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 291: Interception
+    <b class="Medium">[Medium]</b> — 232: Interception
   </summary>
 
     
@@ -5443,7 +4385,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 292: Content Spoofing
+    <b class="Medium">[Medium]</b> — 233: Content Spoofing
   </summary>
 
     
@@ -5461,7 +4403,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 293: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 234: Sniffing Attacks
   </summary>
 
     
@@ -5479,7 +4421,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 294: Communication Channel Manipulation
+    <b class="High">[High]</b> — 235: Communication Channel Manipulation
   </summary>
 
     
@@ -5497,7 +4439,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 295: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 236: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -5509,6 +4451,42 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 237: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Source code push
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 238: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Source code push
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
     
 </details>
 <br/>
@@ -5519,7 +4497,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 296: Interception
+    <b class="Medium">[Medium]</b> — 239: Interception
   </summary>
 
     
@@ -5537,7 +4515,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 297: Content Spoofing
+    <b class="Medium">[Medium]</b> — 240: Content Spoofing
   </summary>
 
     
@@ -5555,7 +4533,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 298: Sniffing Attacks
+    <b class="Medium">[Medium]</b> — 241: Sniffing Attacks
   </summary>
 
     
@@ -5573,7 +4551,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="High">[High]</b> — 299: Communication Channel Manipulation
+    <b class="High">[High]</b> — 242: Communication Channel Manipulation
   </summary>
 
     
@@ -5591,7 +4569,7 @@ Name|Description|Classification
 
 <details>
   <summary>
-    <b class="Medium">[Medium]</b> — 300: Client-Server Protocol Manipulation
+    <b class="Medium">[Medium]</b> — 243: Client-Server Protocol Manipulation
   </summary>
 
     
@@ -5603,6 +4581,60 @@ Name|Description|Classification
 
     References & Standards
     https://capec.mitre.org/data/definitions/220.html, http://cwe.mitre.org/data/definitions/757.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="Very High">[Very High]</b> — 244: Data Leak
+  </summary>
+
+    
+    Targeted Element / Asset
+    Deployment artifacts
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 245: Unprotected Sensitive Data
+  </summary>
+
+    
+    Targeted Element / Asset
+    Deployment artifacts
+
+    Mitigation Strategy
+    All data should be encrypted in transit. All PII and restricted data must be encrypted at rest. If a service is storing credentials used to authenticate users or incoming connections, it must only store hashes of them created using cryptographic functions, so it is only possible to compare them against user input, without fully decoding them. If a client is storing credentials in either files or other data store, access to them must be as restrictive as possible, including using proper file permissions, database users with restricted access or separate storage.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/311.html, https://cwe.mitre.org/data/definitions/312.html, https://cwe.mitre.org/data/definitions/916.html, https://cwe.mitre.org/data/definitions/653.html
+    
+</details>
+<br/>
+
+<details>
+  <summary>
+    <b class="High">[High]</b> — 246: Credentials Aging
+  </summary>
+
+    
+    Targeted Element / Asset
+    Deployment artifacts
+
+    Mitigation Strategy
+    All passwords and other credentials should have a relatively short expiration date with a possibility to be revoked immediately under special circumstances.
+
+    References & Standards
+    https://cwe.mitre.org/data/definitions/262.html, https://cwe.mitre.org/data/definitions/263.html, https://cwe.mitre.org/data/definitions/798.html
     
 </details>
 <br/>

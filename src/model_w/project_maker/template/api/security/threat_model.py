@@ -57,7 +57,6 @@ tm.assumptions = [
     "All dependencies are regularly updated and monitored for vulnerabilities",
     "Database backups are encrypted and stored securely",
     "Access logs are collected and monitored for suspicious activity",
-    "Multi-factor authentication enabled for administrative access",
 ]
 
 
@@ -83,19 +82,20 @@ internal_services.levels = [2, 3]
 internal_services.minTLSVersion = TLSVersion.NONE
 internal_services.maxClassification = Classification.SENSITIVE
 
+
 external_services = Boundary("External SaaS Services")
 external_services.levels = [1, 2, 3]
 external_services.maxClassification = Classification.SENSITIVE
 external_services.minTLSVersion = TLSVersion.TLSv12
 
 administration = Boundary("Administrative Systems")
-administration.levels = [4]
+administration.levels = [3]
 administration.maxClassification = Classification.SECRET
 administration.minTLSVersion = TLSVersion.TLSv12
 
 supply_chain = Boundary("Software Supply Chain")
-supply_chain.levels = [4]
-supply_chain.maxClassification = Classification.SECRET
+supply_chain.levels = [3]
+supply_chain.maxClassification = Classification.SENSITIVE
 supply_chain.minTLSVersion = TLSVersion.TLSv12
 
 dev_environment = Boundary("Development Environment")
@@ -126,21 +126,14 @@ Editor.maxClassification = Classification.SENSITIVE
 Developer = Actor("Developer")
 Developer.levels = [2]
 Developer.inBoundary = dev_environment
-Developer.maxClassification = Classification.SECRET
+Developer.maxClassification = Classification.SENSITIVE
 
 PlatformAdmin = Actor("Platform Administrator")
-PlatformAdmin.levels = [2]
+PlatformAdmin.levels = [3]
 PlatformAdmin.inBoundary = administration
-PlatformAdmin.maxClassification = Classification.TOP_SECRET
+PlatformAdmin.maxClassification = Classification.SECRET
 
 # Processes
-Browser = Process("User Browser")
-Browser.inBoundary = internet
-Browser.levels = [1]
-Browser.OS = "Various"
-Browser.allowsClientSideScripting = True  # Necessary for SvelteKit/JS execution
-Browser.codeType = "Unmanaged"
-
 Frontend = Process("SvelteKit Frontend")
 Frontend.inBoundary = application
 Frontend.levels = [2]
@@ -152,6 +145,13 @@ Frontend.maxClassification = Classification.SENSITIVE
 Frontend.minTLSVersion = TLSVersion.TLSv12
 Frontend.tracksExecutionFlow = True
 Frontend.usesEnvironmentVariables = True  # Model W uses env for config
+# Security Controls
+Frontend.controls.implementsCSRFToken = False
+Frontend.controls.checksInputBounds = True
+Frontend.controls.encryptsSessionData = True  # Django session encryption
+Frontend.controls.usesStrongSessionIdentifiers = True  # Django session security
+Frontend.controls.usesSecureFunctions = True
+Frontend.controls.validatesInput = True
 
 Backend = Process("Django API")
 Backend.inBoundary = application
@@ -164,6 +164,16 @@ Backend.maxClassification = Classification.SENSITIVE
 Backend.minTLSVersion = TLSVersion.TLSv12
 Backend.tracksExecutionFlow = True
 Backend.usesEnvironmentVariables = True
+# Security Controls
+Backend.controls.implementsAuthenticationScheme = True  # Django auth
+Backend.controls.implementsCSRFToken = True  # Django CSRF protection
+Backend.controls.implementsServerSideValidation = True  # Django forms/DRF serializers
+Backend.controls.validatesInput = True  # Input validation
+Backend.controls.sanitizesInput = True  # Django template auto-escaping
+Backend.controls.encryptsSessionData = True  # Django session encryption
+Backend.controls.usesStrongSessionIdentifiers = True  # Django session security
+Backend.controls.checksInputBounds = True  # Django form field validation
+Backend.controls.usesSecureFunctions = True
 
 CMS = Process("Wagtail Admin")
 CMS.inBoundary = application
@@ -172,6 +182,11 @@ CMS.codeType = "Managed"
 CMS.implementsAPI = False
 CMS.allowsClientSideScripting = True  # Wagtail admin uses significant JS
 CMS.maxClassification = Classification.SENSITIVE
+# Security Controls
+CMS.controls.implementsAuthenticationScheme = True  # Django admin auth required
+CMS.controls.implementsPOLP = True  # Wagtail permission system
+CMS.controls.hasAccessControl = True  # Admin interface access control
+CMS.controls.usesMFA = False
 
 Worker = Process("Background Worker (Procrastinate)")
 Worker.inBoundary = application
@@ -194,6 +209,10 @@ Postgres.hasWriteAccess = True  # Processes connecting to it can modify data
 Postgres.isSQL = True  # Explicitly mark as SQL database
 Postgres.onRDS = True  # Even if not AWS, it's a "Managed Service"
 Postgres.type = DatastoreType.SQL  # Explicitly set type
+# Security Controls
+Postgres.controls.isEncryptedAtRest = True  # DigitalOcean managed DB encryption
+Postgres.controls.implementsAuthenticationScheme = True  # Database user authentication
+Postgres.controls.hasAccessControl = True  # Database permissions/RBAC
 
 Redis = Datastore("Redis Cache / Channels")
 Redis.inBoundary = internal_services
@@ -220,6 +239,11 @@ Spaces.onRDS = True  # Treated as a managed cloud service
 Spaces.type = DatastoreType.AWS_S3  # Spaces uses the S3-compatible API
 
 # External Entities
+Browser = ExternalEntity("User Browser")
+Browser.inBoundary = internet
+Browser.levels = [1]
+Browser.OS = "Various"
+
 Sentry = ExternalEntity("Sentry Monitoring")
 Sentry.inBoundary = external_services
 Sentry.description = "SaaS Error tracking and performance monitoring"
@@ -305,30 +329,98 @@ error_logs = Data(
     isStored=True,
 )
 
+file_uploads = Data(
+    "Uploaded Files",
+    description="User-uploaded images, documents, and media files",
+    classification=Classification.RESTRICTED,
+    isPII=False,  # Files themselves may contain PII but are opaque to system
+    isCredentials=False,
+    isStored=True,
+    isSourceEncryptedAtRest=True,  # Encrypted in transit to storage
+)
+
+background_job_data = Data(
+    "Background Job Parameters",
+    description="Data passed to background workers for processing",
+    classification=Classification.SENSITIVE,
+    isPII=True,  # May contain user data
+    isCredentials=False,
+    isStored=True,
+    isSourceEncryptedAtRest=True,
+)
+
+api_request_data = Data(
+    "API Request/Response",
+    description="Non-sensitive API payloads and responses",
+    classification=Classification.PUBLIC,
+    isPII=False,
+    isCredentials=False,
+    isStored=False,  # Typically not stored long-term
+)
+
+config_secrets = Data(
+    "Configuration Secrets",
+    description="Environment variables, API keys, and service credentials",
+    classification=Classification.SECRET,
+    isPII=False,
+    isCredentials=True,
+    credentialsLife=Lifetime.HARDCODED,
+    isStored=True,
+    isSourceEncryptedAtRest=True,  # Should be encrypted in secret manager
+)
+
+
 # Dataflows
 user_to_browser = Dataflow(User, Browser, "User interaction")
 user_to_browser.note = "Physical/UI interaction via input devices"
 
-browser_to_frontend = Dataflow(Browser, Frontend, "HTTPS request for web pages")
+# Browser -> Frontend (HTTPS via DigitalOcean edge)
+browser_to_frontend = Dataflow(Browser, Frontend, "HTTPS request to SvelteKit")
+browser_to_frontend.data = [api_request_data, user_session]
 browser_to_frontend.protocol = "HTTPS"
 browser_to_frontend.dstPort = 443
-browser_to_frontend.tlsVersion = TLSVersion.TLSv13
+browser_to_frontend.tlsVersion = TLSVersion.TLSv12
 browser_to_frontend.implementsCommunicationProtocol = True
+browser_to_frontend.note = "TLS termination at DigitalOcean edge"
+# Security Controls
+browser_to_frontend.controls.isEncrypted = True  # HTTPS encryption
+browser_to_frontend.controls.authenticatesDestination = (
+    True  # TLS certificate validation
+)
+browser_to_frontend.controls.checksDestinationRevocation = True  # OCSP/CRL checking
 
-browser_to_backend = Dataflow(Browser, Backend, "API request with session cookie")
-browser_to_backend.data = [user_session, user_credentials]
+# Browser -> Backend (HTTPS via DigitalOcean edge)
+browser_to_backend = Dataflow(Browser, Backend, "HTTPS request to Django API")
+browser_to_backend.data = [
+    api_request_data,
+    user_session,
+    user_credentials,
+    file_uploads,
+]
 browser_to_backend.protocol = "HTTPS"
 browser_to_backend.dstPort = 443
-browser_to_backend.tlsVersion = TLSVersion.TLSv13
+browser_to_backend.tlsVersion = TLSVersion.TLSv12
 browser_to_backend.implementsCommunicationProtocol = True
+browser_to_backend.note = "TLS termination at DigitalOcean edge"
+# Security Controls
+browser_to_backend.controls.isEncrypted = True  # HTTPS encryption
+browser_to_backend.controls.authenticatesDestination = (
+    True  # TLS certificate validation
+)
+browser_to_backend.controls.validatesInput = True  # Backend validates all input
 
-editor_login = Dataflow(Editor, CMS, "CMS login and content editing")
-editor_login.data = [user_credentials]
-editor_login.protocol = "HTTPS"
-editor_login.dstPort = 443
-editor_login.tlsVersion = TLSVersion.TLSv12
-editor_login.severity = 2  # Elevated risk due to administrative nature
-editor_login.implementsCommunicationProtocol = True
+# Browser -> CMS (HTTPS via DigitalOcean edge)
+browser_to_cms = Dataflow(Browser, CMS, "HTTPS request to Wagtail Admin")
+browser_to_cms.data = [user_credentials, file_uploads, app_content]
+browser_to_cms.protocol = "HTTPS"
+browser_to_cms.dstPort = 443
+browser_to_cms.tlsVersion = TLSVersion.TLSv12
+browser_to_cms.severity = 2  # Elevated risk due to administrative nature
+browser_to_cms.implementsCommunicationProtocol = True
+browser_to_cms.note = "Admin interface via DigitalOcean edge"
+# Security Controls
+browser_to_cms.controls.isEncrypted = True  # HTTPS encryption
+browser_to_cms.controls.authenticatesDestination = True  # TLS certificate validation
 
 cms_db = Dataflow(CMS, Postgres, "CMS content read/write")
 cms_db.data = [app_content]
@@ -344,6 +436,12 @@ backend_db.dstPort = 25061
 backend_db.tlsVersion = TLSVersion.TLSv12
 backend_db.severity = 3  # High severity: contains PII
 backend_db.note = "Managed DB connection via TLS (DO requirement)"
+# Security Controls
+backend_db.controls.isEncrypted = True  # TLS encryption
+backend_db.controls.authenticatesSource = True  # Database user authentication
+backend_db.controls.authorizesSource = True  # Database permissions
+backend_db.controls.usesParameterizedInput = True  # SQL parameterization
+backend_db.controls.usesSecureFunctions = True  # Django ORM protections
 
 backend_cache = Dataflow(Backend, Redis, "Caching / channels / session storage")
 backend_cache.data = [user_session]
@@ -353,25 +451,42 @@ backend_cache.tlsVersion = TLSVersion.TLSv12
 backend_cache.note = "Internal state management with TLS"
 
 frontend_api = Dataflow(Frontend, Backend, "Internal API request")
+frontend_api.data = [api_request_data, user_session]
 frontend_api.protocol = "HTTP"
 frontend_api.dstPort = 8000
 frontend_api.tlsVersion = TLSVersion.NONE
 frontend_api.note = "Internal platform isolated network communication"
 
 task_dispatch = Dataflow(Backend, Postgres, "Background job dispatch (Procrastinate)")
+task_dispatch.data = [background_job_data]
 task_dispatch.protocol = "PostgreSQL"
 task_dispatch.dstPort = 25061
 task_dispatch.note = "Asynchronous task queueing via DB table"
 
 worker_db = Dataflow(Worker, Postgres, "Background job queries")
+worker_db.data = [background_job_data, pii_data]
 worker_db.protocol = "PostgreSQL"
 worker_db.dstPort = 25061
 worker_db.tlsVersion = TLSVersion.TLSv12
 
 backend_storage = Dataflow(Backend, Spaces, "Media uploads and asset storage")
+backend_storage.data = [file_uploads]
 backend_storage.protocol = "HTTPS"
 backend_storage.dstPort = 443
 backend_storage.tlsVersion = TLSVersion.TLSv12
+# Security Controls
+backend_storage.controls.isEncrypted = True  # HTTPS encryption
+backend_storage.controls.authenticatesSource = True  # S3 access key authentication
+backend_storage.controls.authorizesSource = True  # IAM/bucket policies
+backend_storage.controls.validatesContentType = True  # File type validation
+
+worker_storage = Dataflow(Worker, Spaces, "File processing output")
+worker_storage.data = [file_uploads]
+worker_storage.protocol = "HTTPS"
+worker_storage.dstPort = 443
+worker_storage.tlsVersion = TLSVersion.TLSv12
+worker_storage.note = "Background workers writing processed files to storage"
+
 
 backend_errors = Dataflow(Backend, Sentry, "Application errors and traces")
 backend_errors.data = [error_logs]
@@ -380,6 +495,7 @@ backend_errors.dstPort = 443
 backend_errors.tlsVersion = TLSVersion.TLSv12
 
 admin_to_kerfu = Dataflow(PlatformAdmin, Kerfu, "Administrative access")
+admin_to_kerfu.data = [config_secrets]
 admin_to_kerfu.protocol = "HTTPS"
 admin_to_kerfu.dstPort = 443
 admin_to_kerfu.tlsVersion = TLSVersion.TLSv12
@@ -388,17 +504,19 @@ admin_to_kerfu.severity = 3
 kerfu_deploy = Dataflow(Kerfu, Backend, "Deployments and environment configuration")
 kerfu_deploy.protocol = "SSH"
 kerfu_deploy.dstPort = 22
-kerfu_deploy.data = [db_connection_params]
+kerfu_deploy.data = [db_connection_params, config_secrets]
 kerfu_deploy.note = "Includes injection of secrets via environment variables"
 kerfu_deploy.severity = 3
 
 developer_commit = Dataflow(Developer, GitHub, "Source code push")
+developer_commit.data = [api_request_data]  # Source code changes
 developer_commit.protocol = "Git/HTTPS"
 developer_commit.dstPort = 443
 developer_commit.tlsVersion = TLSVersion.TLSv12
 developer_commit.note = "Code review process happens here"
 
 ci_deploy = Dataflow(CI, Kerfu, "Deployment artifacts")
+ci_deploy.data = [config_secrets]  # Deployment tokens/secrets
 ci_deploy.protocol = "HTTPS"
 ci_deploy.dstPort = 443
 ci_deploy.tlsVersion = TLSVersion.TLSv12
