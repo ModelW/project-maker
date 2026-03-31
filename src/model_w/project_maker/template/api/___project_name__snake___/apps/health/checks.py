@@ -6,10 +6,9 @@ from health_check.cache.backends import CacheBackend
 from health_check.contrib.psutil.backends import MemoryUsage
 from health_check.db.backends import (
     DatabaseBackend,
+    HealthCheck as BaseHealthCheckBackend,
     ServiceUnavailable,
-    BaseHealthCheckBackend,
 )
-
 from .base import DjangoHealthCheckWrapper, HealthCheck, Outcome, Status
 from .models import Event
 
