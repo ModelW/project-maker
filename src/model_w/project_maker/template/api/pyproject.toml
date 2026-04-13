@@ -14,6 +14,7 @@ python = "~3.14"
 modelw-preset-django = {extras = [
     "psycopg",
     "health",
+    "ninja",
     "procrastinate",
     # :: IF api__channels
     "channels",
@@ -21,7 +22,7 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-], version = ">=2026.1.0,<2026.2.0"}
+], version = ">=2026.4.0,<2026.5.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
 markdown = "*"
@@ -101,6 +102,19 @@ select = [
     "ERA",  # Don't comment code
     "RUF",  # Ruff stuff
     "TID251",  # Banned imports (See below)
+]
+
+exclude = [
+    ".venv",
+    "migrations",
+    "*/migrations/*", 
+]
+
+[tool.ruff.format]
+exclude = [
+    ".venv",
+    "migrations",
+    "*/migrations/*", 
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
