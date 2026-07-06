@@ -111,13 +111,18 @@ function constructUserbarUrl(pageId: number, previewModel: string | null): URL {
 export async function fetchUserbar(
     fetch: typeof globalThis.fetch,
     pageId: number,
-    previewModel: string | null
+    previewModel: string | null,
+    host?: string
 ): Promise<WagtailUserbarType> {
     const userbarUrl = constructUserbarUrl(pageId, previewModel);
     let userbar: WagtailUserbarType = { html: "" };
 
     try {
-        const response = await fetch(userbarUrl);
+        const opts: RequestInit = {};
+        if (host) {
+            opts.headers = { "X-Forwarded-Host": host };
+        }
+        const response = await fetch(userbarUrl, opts);
 
         if (response.ok) {
             userbar = await response.json();

@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
     /** The CMS page data (or preview data if `in_preview_panel` query param). */
     const pageData: PageType = await fetchCmsData(fetch, params.cmsPath, inPreviewPanel);
 
-    const userbar = await fetchUserbar(fetch, pageData.id, inPreviewPanel);
+    const userbar = await fetchUserbar(fetch, pageData.id, inPreviewPanel, url.host);
 
     return {
         pageData,
