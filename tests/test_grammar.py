@@ -155,6 +155,57 @@ license = "Proprietary"
     assert parse_text(StringIO(code)).execute(context) == output
 
 
+def test_ifnot_parse():
+    code = """# :: IFNOT foo
+bar
+# :: ENDIF
+"""
+    assert parse_text(StringIO(code)) == Block(
+        lines=[
+            IfBlock(
+                condition=Ref(path=["foo"]),
+                content=Block(lines=[Line(content=[Text(text="bar\n")])]),
+                negated=True,
+            )
+        ]
+    )
+
+
+def test_ifnot_execute():
+    code = """# :: IFNOT foo
+bar
+# :: ENDIF
+"""
+    context = Context(dict(foo=False))
+    assert parse_text(StringIO(code)).execute(context) == "bar\n"
+
+    context = Context(dict(foo=True))
+    assert parse_text(StringIO(code)).execute(context) == ""
+
+
+def test_ifnot_alt_syntax():
+    code = """// :: IFNOT foo
+bar
+// :: ENDIF
+"""
+    context = Context(dict(foo=False))
+    assert parse_text(StringIO(code)).execute(context) == "bar\n"
+
+
+def test_ifnot_nested():
+    code = """# :: IFNOT a
+# :: IF b
+c
+# :: ENDIF
+# :: ENDIF
+"""
+    context = Context(dict(a=False, b=True))
+    assert parse_text(StringIO(code)).execute(context) == "c\n"
+
+    context = Context(dict(a=True, b=True))
+    assert parse_text(StringIO(code)).execute(context) == ""
+
+
 def test_render():
     assert render("___foo___", dict(foo=42)) == "42"
 

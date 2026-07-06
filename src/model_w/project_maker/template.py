@@ -94,9 +94,33 @@ class IfBlock(NamedTuple):
 
     condition: Ref
     content: "Block"
+    negated: bool = False
 
     def execute(self, context: Context) -> str:
-        if context.resolve(self.condition):
+        """
+        Evaluates the condition and conditionally executes the inner content.
+
+        The evaluation relies on an exclusive-OR behavior using `!=`
+        which fancily maps standard and negated conditions without branching.
+
+        **Truth Table:**
+        
+        | Resolved Condition | self.negated | Condition != negated | Action            |
+        |--------------------|--------------|----------------------|-------------------|
+        | True               | False        | True                 | Execute Content   |
+        | False              | False        | False                | Return Empty ("") |
+        | True               | True         | False                | Return Empty ("") |
+        | False              | True         | True                 | Execute Content   |
+
+        Args:
+            context (Context): The runtime context containing variables and state.
+
+        Returns:
+            str: The output of the executed content block, or an empty string 
+                 if the condition evaluates to false.
+        """
+
+        if bool(context.resolve(self.condition)) != self.negated:
             return self.content.execute(context)
 
         return ""
@@ -177,7 +201,7 @@ def parse_block(bl: BlockLine, text: TextIO) -> IfBlock:
         Rest of the text
     """
 
-    if bl.cmd != "IF":
+    if bl.cmd not in ("IF", "IFNOT"):
         raise ParseError(f"Unexpected block line: {bl.cmd}")
 
     lines = []
@@ -186,7 +210,11 @@ def parse_block(bl: BlockLine, text: TextIO) -> IfBlock:
         try:
             lines.append(decompose_line(line, text))
         except EndBlock:
-            return IfBlock(Ref(SEP.split(bl.args)), Block(lines))
+            return IfBlock(
+                Ref(SEP.split(bl.args)),
+                Block(lines),
+                negated=bl.cmd == "IFNOT",
+            )
 
 
 def detect_block_line(line: str) -> Optional[BlockLine]:
@@ -203,9 +231,9 @@ def detect_block_line(line: str) -> Optional[BlockLine]:
     if m := CONTROL_BLOCK_START.match(line):
         bl = BlockLine(*WS.split(line[m.end() :].strip(), 1))
 
-        if bl.cmd == "IF":
+        if bl.cmd in ("IF", "IFNOT"):
             if not bl.args:
-                raise ParseError("IF cannot be without condition")
+                raise ParseError(f"{bl.cmd} cannot be without condition")
         elif bl.cmd == "ENDIF":
             if bl.args:
                 raise ParseError("Unexpected arguments after ENDIF")
@@ -249,7 +277,7 @@ def parse_text(text: TextIO) -> Block:
     The core idea of this code template DSL is that we consider each line as
     either a "code" line, in which we'll inject the context but otherwise that
     will be rendered as-is, either as a control line that will open or close
-    a control block (so far and probably forever just IF/ENDIF).
+    a control block (so far just IF/IFNOT/ENDIF).
 
     A control block in itself is treated as a line, it's just that its
     execute() function will either return nothing either return its content
