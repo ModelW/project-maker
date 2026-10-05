@@ -15,9 +15,17 @@ procrastinate_run:
 
 dev_stack:
 	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up postgres redis --force-recreate --abort-on-container-exit --remove-orphans
+# :: IF api__testing
+modelw_dev_stack:
+	docker compose -p modelw_projectmaker -f ./bdd/_infrastructure/docker-compose-e2e.yaml up postgres redis --force-recreate --abort-on-container-exit --remove-orphans
+# :: ENDIF
 
 destroy_stack:
 	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml down postgres redis
+# :: IF api__testing
+modelw_destroy_stack:
+	docker compose -p modelw_projectmaker -f ./bdd/_infrastructure/docker-compose-e2e.yaml down postgres redis
+# :: ENDIF
 
 performance_test:
 	./bdd/performance/test_performance.sh
@@ -31,10 +39,8 @@ update-snapshots:
 tm_dfd:
 	cd security && $(PYTHON_BIN) threat_model.py --dfd | dot -Tpng -o dfd.png
 
-
 tm_seq:
 	cd security && $(PYTHON_BIN) threat_model.py --seq | plantuml -tpng -pipe > seq.png
-
 
 tm_report: tm_dfd tm_seq
 	cd security && $(PYTHON_BIN) threat_model.py --report report_template.md > report.md
