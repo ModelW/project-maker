@@ -11,8 +11,8 @@ from ._base import BaseComponent
 def make_path_specs() -> pathspec.PathSpec:
     """
     We take the project's .gitignore file and tweak it to ignore anything that
-    isn't part of the front-end. We also drop the packages-lock.json because
-    we want something fresh when the user gets to it.
+    isn't part of the front-end. We also drop the lockfile because we want
+    something fresh when the user gets to it.
     """
 
     lines = [
@@ -23,7 +23,7 @@ def make_path_specs() -> pathspec.PathSpec:
     with open(Path(__file__).parent.parent / "template" / ".gitignore") as f:
         lines.extend(f)
 
-    lines.append("package-lock.json")
+    lines.append("pnpm-lock.yaml")
     lines.append("!/front/src/lib/")
     lines.append("DemoBlock.svelte")
     lines.append("DemoSubBlock.svelte")

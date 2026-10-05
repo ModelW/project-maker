@@ -38,7 +38,7 @@ Note: If you need to debug the site under test, run `PWDEBUG=1 pytest`, and you
 can use Playwright's debugger.
 
 To quicken the process while creating tests, you can skip the front's
-`npm run build` stage with `SKIPBUILD=1 pytest`
+`pnpm run build` stage with `SKIPBUILD=1 pytest`
 
 Some reasonable defaults have been set in [pyproject.toml](../pyproject.toml),
 however, any options can be set in the terminal when running pytest. See the
@@ -67,10 +67,10 @@ Feature: ...
 Scenario: ...
 ```
 
-### Skip the npm run build stage
+### Skip the pnpm run build stage
 
 To quicken the process while creating tests, when you know the front hasn't
-changed,you can skip the front's `npm run build` stage with `SKIPBUILD=1 pytest`
+changed,you can skip the front's `pnpm run build` stage with `SKIPBUILD=1 pytest`
 
 ### Target your front development server
 

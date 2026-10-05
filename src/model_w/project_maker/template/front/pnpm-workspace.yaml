@@ -1,0 +1,4 @@
+allowBuilds:
+  '@parcel/watcher': false
+minimumReleaseAgeExclude:
+  - '@model-w/preset-sveltekit@2026.10.1'

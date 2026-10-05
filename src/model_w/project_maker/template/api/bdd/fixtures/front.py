@@ -13,7 +13,7 @@ import httpx
 import pytest
 from django.conf import settings
 from playwright.sync_api import ConsoleMessage, Page, Request
-from pytest_django.fixtures import SettingsWrapper
+from pytest_django.fixtures import Settings
 from pytest_django.live_server_helper import LiveServer
 
 from . import utils
@@ -23,7 +23,7 @@ logger = getLogger(__name__)
 
 @pytest.fixture(autouse=True)
 def overwrite_storage_settings(
-    settings: SettingsWrapper, live_server: LiveServer, tmp_path: Path
+    settings: Settings, live_server: LiveServer, tmp_path: Path
 ):
     """
     Overwrite any storage settings at runtime just for testing.
@@ -61,19 +61,25 @@ def overwrite_storage_settings(
         },
     }
 
-    # Don't use the cache for tests
-    settings.CACHES["default"][
-        "BACKEND"
-    ] = "django.core.cache.backends.dummy.DummyCache"
+    # Don't use the cache for tests. Assign a new dict (rather than mutating in
+    # place) so Django's `setting_changed` signal fires and the already-open
+    # cache connection (e.g. Redis) is reset.
+    settings.CACHES = {
+        alias: {
+            **config,
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+        for alias, config in settings.CACHES.items()
+    }
 
     return settings
 
 
 @pytest.fixture(autouse=True)
 def overwrite_settings(
-    overwrite_storage_settings: SettingsWrapper,
+    overwrite_storage_settings: Settings,
     front_server: str,
-) -> SettingsWrapper:
+) -> Settings:
     """
     Overwrite any settings at runtime just for testing.
 
@@ -153,7 +159,7 @@ def vite_path(front_dir: Path | None) -> Path:
     """
     Location of the vite binary.
 
-    Unlike Nuxt, we can't specify a port to run on with `npm run preview`,
+    Unlike Nuxt, we can't specify a port to run on with `pnpm run preview`,
     so instead we run the vite binary directly with the port we want.
     """
     path = None
@@ -182,16 +188,16 @@ def front_build(front_dir: Path, vite_path: Path, front_env: dict) -> bool:
     did_build = False
 
     if os.environ.get("SKIPBUILD", "0") != "1":
-        logger.info("Running npm run build")
+        logger.info("Running pnpm run build")
         subprocess.run(
-            ["npm", "run", "build"],
+            ["pnpm", "run", "build"],
             cwd=front_dir,
             check=True,
             env={**os.environ, **front_env},
         )
         did_build = True
     else:
-        logger.info("Not running npm run build")
+        logger.info("Not running pnpm run build")
 
     return did_build
 

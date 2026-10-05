@@ -1,5 +1,5 @@
 import { sveltekit } from "@sveltejs/kit/vite";
-import { sentrySvelteKit } from "@sentry/sveltekit";
+import { sentrySvelteKit } from "@sentry/sveltekit/vite";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
@@ -8,15 +8,13 @@ export default defineConfig(({ mode }) => {
     return {
         plugins: [
             sentrySvelteKit({
-                sourceMapsUploadOptions: {
-                    org: env.PUBLIC_SENTRY_ORG,
-                    project: env.PUBLIC_SENTRY_PROJECT,
-                    url: env.PUBLIC_SENTRY_URL,
-                    authToken: process.env.SENTRY_AUTH_TOKEN,
-                    sourcemaps: {
-                        assets: ["./build/*/**/*"],
-                        filesToDeleteAfterUpload: ["./build/**/*.map"],
-                    },
+                org: env.PUBLIC_SENTRY_ORG,
+                project: env.PUBLIC_SENTRY_PROJECT,
+                sentryUrl: env.PUBLIC_SENTRY_URL,
+                authToken: process.env.SENTRY_AUTH_TOKEN,
+                sourcemaps: {
+                    assets: ["./build/*/**/*"],
+                    filesToDeleteAfterUpload: ["./build/**/*.map"],
                 },
             }),
             sveltekit(),

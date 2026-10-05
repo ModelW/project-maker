@@ -15,29 +15,28 @@
     },
     "dependencies": {
         "@fullerstack/nax-ipware": "^0.10.0",
-        "@model-w/preset-sveltekit": "~2026.7.0",
-        "@sentry/sveltekit": "*"
+        "@model-w/preset-sveltekit": "~2026.10.0",
+        "@sentry/sveltekit": "11.3.x"
     },
     "devDependencies": {
-        "@sveltejs/adapter-node": "*",
-        "@sveltejs/kit": "*",
-        "@sveltejs/vite-plugin-svelte": "*",
-        "@types/eslint": "*",
-        "@types/node": "*",
-        "@typescript-eslint/eslint-plugin": "*",
-        "@typescript-eslint/parser": "*",
-        "eslint": "*",
-        "eslint-config-prettier": "*",
-        "eslint-plugin-svelte": "*",
-        "prettier": "*",
-        "prettier-plugin-svelte": "*",
-        "sass": "*",
-        "svelte": "*",
-        "svelte-check": "*",
-        "tslib": "*",
-        "typescript": "*",
-        "vite": "*",
-        "vitest": "*"
-    },
-    "overrides": { "cookie": "^0.7.0" }
+        "@sveltejs/adapter-node": "5.5.x",
+        "@sveltejs/kit": "2.70.x",
+        "@sveltejs/vite-plugin-svelte": "7.3.x",
+        "@types/eslint": "9.6.x",
+        "@types/node": "24.x",
+        "@typescript-eslint/eslint-plugin": "8.71.x",
+        "@typescript-eslint/parser": "8.71.x",
+        "eslint": "10.12.x",
+        "eslint-config-prettier": "10.1.x",
+        "eslint-plugin-svelte": "3.23.x",
+        "prettier": "3.9.x",
+        "prettier-plugin-svelte": "4.1.x",
+        "sass": "1.105.x",
+        "svelte": "5.57.x",
+        "svelte-check": "4.7.x",
+        "tslib": "2.8.x",
+        "typescript": "5.9.x",
+        "vite": "8.3.x",
+        "vitest": "4.1.x"
+    }
 }

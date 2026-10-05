@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Sequence
 
+from asgiref.sync import async_to_sync
+from health_check.exceptions import ServiceWarning
+
 
 class Status(Enum):
     """
@@ -130,10 +133,21 @@ class DjangoHealthCheckWrapper(HealthCheck, ABC):
         as possible.
         """
 
-        self.check.run_check()
+        result = async_to_sync(self.check.get_result)()
+
+        if result.error is None:
+            status = Status.OK
+            message = self.check.pretty_status()
+        elif isinstance(result.error, ServiceWarning):
+            status = Status.WARNING
+            message = result.error.message
+        else:
+            status = Status.ERROR
+            message = result.error.message
+
         return Outcome(
             instance=self,
-            status=Status(Status.OK if self.check.status else Status.ERROR),
-            message=self.check.pretty_status(),
-            extra={"time_taken": self.check.time_taken},
+            status=status,
+            message=message,
+            extra={"time_taken": result.time_taken},
         )
