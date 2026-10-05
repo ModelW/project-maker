@@ -87,6 +87,7 @@ class FrontComponent(BaseComponent):
             path.name
             in [
                 "cms.ts",
+                "runScripts.ts",
             ]
             or path.parent.name
             in [
@@ -95,9 +96,6 @@ class FrontComponent(BaseComponent):
             or path.parent.parent.name
             in [
                 "cms",
-            ]
-            or path.parent.parent.name
-            in [
                 "(cms)",
             ]
         ):

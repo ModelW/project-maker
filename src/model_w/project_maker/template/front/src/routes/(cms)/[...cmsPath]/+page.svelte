@@ -3,9 +3,19 @@
      * This page is a catch-all for all CMS pages.
      * It selects the appropriate component to render based on the template field.
      */
+    import { browser } from "$app/env";
+    import { runScripts } from "$lib/utils/runScripts";
     import type { PageData } from "./$types";
 
-    export let data: PageData;
+    let { data }: { data: PageData } = $props();
+
+    let hasHydrated: boolean = $state(false);
+
+    $effect(() => {
+        if (browser) {
+            hasHydrated = true;
+        }
+    });
 </script>
 
 <svelte:head>
@@ -13,6 +23,8 @@
     <meta name="description" content={data.cmsData.meta.search_description} />
 </svelte:head>
 
-{@html data.userbar.html}
+{#if hasHydrated}
+    <div use:runScripts>{@html data.userbar.html}</div>
+{/if}
 
-<svelte:component this={data.component} cmsData={data.cmsData} />
+<data.component cmsData={data.cmsData} />
