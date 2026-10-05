@@ -29,6 +29,10 @@ modelw_destroy_stack:
 
 performance_test:
 	./bdd/performance/test_performance.sh
+# :: IF api__testing
+modelw_docker_test:
+	docker compose -p modelw_projectmaker -f ./bdd/_infrastructure/docker-compose-e2e.yaml up --build --force-recreate --abort-on-container-exit --remove-orphans ; python -m webbrowser -t "./bdd/report/results/report.html"
+# :: ENDIF
 
 docker_test:
 	docker compose -p ___project_name__snake___ -f ./bdd/_infrastructure/docker-compose-e2e.yaml up --build --force-recreate --abort-on-container-exit --remove-orphans ; python -m webbrowser -t "./bdd/report/results/report.html"
