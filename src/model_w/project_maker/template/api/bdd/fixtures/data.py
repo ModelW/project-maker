@@ -5,7 +5,7 @@ For example, users, pages, models, etc.
 """
 
 import pytest
-from pytest_django.fixtures import SettingsWrapper
+from pytest_django.fixtures import Settings
 
 from bdd.utils import data_utils
 
@@ -30,7 +30,7 @@ def image():
 
 
 @pytest.fixture(autouse=True)
-def site(front_server: str, overwrite_settings: SettingsWrapper):
+def site(front_server: str, overwrite_settings: Settings):
     """Fixture to make sure the site is set up."""
     return data_utils.get_and_set_up_site(front_server)
 

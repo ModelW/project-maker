@@ -1,14 +1,21 @@
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import Any
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
-from health_check.cache.backends import CacheBackend
-from health_check.contrib.psutil.backends import MemoryUsage
-from health_check.db.backends import (
-    DatabaseBackend,
-    HealthCheck as BaseHealthCheckBackend,
-    ServiceUnavailable,
+from health_check import (
+    Cache as CacheCheck,
 )
+from health_check import (
+    Database as DatabaseCheck,
+)
+from health_check import (
+    HealthCheck as BaseHealthCheck,
+)
+from health_check.contrib.psutil import Memory
+from health_check.exceptions import ServiceUnavailable
+
 from .base import DjangoHealthCheckWrapper, HealthCheck, Outcome, Status
 from .models import Event
 
@@ -71,16 +78,16 @@ def disp_stats(stats: Mapping[str, int]) -> str:
 
 class Database(DjangoHealthCheckWrapper):
     """
-    Checks that the default database can be reached, read and write
+    Checks that the default database can be reached and queried
     """
 
-    base_class = DatabaseBackend
+    base_class = DatabaseCheck
 
     def get_resolving_actions(self, outcome: Outcome) -> str:
         return """# __CODE__ &mdash; Database cannot be reached
 
-This checks verifies if the database is reachable by inserting and deleting a
-row in a test table.
+This checks verifies if the database is reachable by executing a simple
+query.
 
 ## Possible causes
 
@@ -108,7 +115,7 @@ class RamUsage(DjangoHealthCheckWrapper):
     Checks that we don't use too much RAM
     """
 
-    base_class = MemoryUsage
+    base_class = Memory
 
     def get_name(self) -> str:
         return "RAM Usage"
@@ -144,7 +151,7 @@ class Cache(DjangoHealthCheckWrapper):
     validate the queue as well (somehow).
     """
 
-    base_class = CacheBackend
+    base_class = CacheCheck
 
     def get_name(self) -> str:
         return "Cache"
@@ -174,7 +181,8 @@ entry in the cache.
 # :: ENDIF
 
 
-class ProcrastinateBuiltInHealthCheck(BaseHealthCheckBackend):
+@dataclass
+class ProcrastinateBuiltInHealthCheck(BaseHealthCheck):
     """
     Health check for Procrastinate task processor.
 
@@ -182,35 +190,38 @@ class ProcrastinateBuiltInHealthCheck(BaseHealthCheckBackend):
     working.
     """
 
-    def __init__(self):
+    app: Any = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self):
         """
         Get the Procrastinate app from the settings.
         If not set, it will be set to the default app.
         """
-        super().__init__()
-        self.app = getattr(settings, "PROCRASTINATE_APP", None)
+
+        if self.app is None:
+            self.app = getattr(settings, "PROCRASTINATE_APP", None)
 
         if self.app is None:
             from procrastinate.contrib.django import app
 
             self.app = app
 
-    def check_status(self):
+    def run(self):
         """
         Use the built-in healthchecks to check if the Procrastinate app is
         working.
         """
-        from procrastinate.contrib.django.healthchecks import healthchecks
         from procrastinate import exceptions
+        from procrastinate.contrib.django.healthchecks import healthchecks
 
         try:
             async_to_sync(healthchecks)(app=self.app)
-        except exceptions.ConnectorException:
-            self.add_error(
-                ServiceUnavailable("Error connecting to Procrastinate database")
-            )
-        except Exception as exc:
-            self.add_error(ServiceUnavailable("Error checking Procrastinate"), exc)
+        except exceptions.ConnectorException as e:
+            message = "Error connecting to Procrastinate database"
+            raise ServiceUnavailable(message) from e
+        except Exception as e:
+            message = "Error checking Procrastinate"
+            raise ServiceUnavailable(message) from e
 
 
 class ProcrastinateHealthCheck(DjangoHealthCheckWrapper):

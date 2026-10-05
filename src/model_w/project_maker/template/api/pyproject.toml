@@ -22,7 +22,7 @@ modelw-preset-django = {extras = [
     # :: IF api__wagtail
     "wagtail",
     # :: ENDIF
-], version = ">=2026.7.0,<2026.8.0"}
+], version = ">=2026.10.0,<2026.11.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
 markdown = "*"
@@ -35,10 +35,10 @@ ipython = "*"
 django-extensions = "*"
 django-debug-toolbar = "*"
 ruff = "*"
-pytm = "^1.3.1"
+pytm = "^1.4.0"
 
 [tool.poetry.group.test.dependencies]
-node-edge = {version = "^0.1.0b6", allow-prereleases = true}
+node-edge = "*"
 psutil = "*"
 pytest = "*"
 pytest-bdd = "^7.0.0"

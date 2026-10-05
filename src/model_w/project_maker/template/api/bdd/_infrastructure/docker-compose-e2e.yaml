@@ -1,71 +1,48 @@
 ---
-# Run the e2e tests in Docker in a way that minimises risks of domain name issues etc.
-# We run the tests using a router on localhost instead of an isolated network and containerised names.
-# The benefit is that many services like SSO/cookies/tracking etc. are more lenient with localhost.
-# It also makes local development easier, when using DB/redis, as no need to mess with adding hosts 
-# to /etc/hosts.
-# (Some containers we don't keep on localhost so we want to scale then in performance testing.)
+# Run the e2e tests in Docker. All services share a dedicated compose network so they
+# can reach each other by service name (e.g. postgres, redis, s3, api, front).
+# The tests go through the router service, which mimics the production router and gives
+# the front/API a single origin so cookies/SSO behave realistically.
 
 services:
 
 # :: IF api~~wagtail
   s3:
-    image: minio/minio:latest
+    image: chrislusf/seaweedfs:4.47
+    command: mini -dir=/data -s3.port=9099
     env_file:
-      - "../../../api/.env.test"    
-    ports:
-      - "9000:9000"
-      - "9099:9099"
-    command: server --address ":9099" --console-address ":9000" /data
+      - "../../../api/.env.test"
     healthcheck:
-      test: curl -f http://s3:9000 || exit 1
+      test:
+        ["CMD", "curl", "-f", "http://localhost:9333/cluster/status"]
       interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 1s
-
-  createbuckets:
-    image: minio/mc:latest
-    env_file:
-      - "../../../api/.env.test"  
-    depends_on:
-      s3:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc config host add myminio http://s3:9099 $$AWS_ACCESS_KEY_ID $$AWS_SECRET_ACCESS_KEY; 
-      /usr/bin/mc mb myminio/$$AWS_STORAGE_BUCKET_NAME;
-      /usr/bin/mc anonymous set download myminio/$$AWS_STORAGE_BUCKET_NAME;
-      sleep infinity
-      "
-    healthcheck:
-      test: /usr/bin/mc ls myminio/$$AWS_STORAGE_BUCKET_NAME || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 1s
+      retries: 30
+      start_period: 5s
 # :: ENDIF
 
   postgres:
     image: postgres:15-alpine
     env_file:
       - "../../../api/.env.test"
-    network_mode: "host"
+    ports:
+      - "5432:5432"
     healthcheck:
       test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 30
       start_period: 5s
 
   redis:
     image: redis:7-alpine
-    network_mode: "host"
+    ports:
+      - "6379:6379"
     healthcheck:
       test: redis-cli ping
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 30
       start_period: 5s
 
   api:
@@ -80,13 +57,13 @@ services:
       redis:
         condition: service_healthy
 # :: IF api~~wagtail
-      createbuckets:
+      s3:
         condition: service_healthy
 # :: ENDIF        
     environment:
       - SKIPBUILD=1
-      - FRONTURL=http://localhost:80
-      - DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000
+      - FRONTURL=http://router:80
+      - DJANGO_LIVE_TEST_SERVER_ADDRESS=0.0.0.0:8000
     env_file:
       - "../../../api/.env.test"
     volumes:
@@ -121,6 +98,5 @@ services:
         condition: service_healthy
       api:   
         condition: service_healthy      
-    network_mode: "host"
     volumes:
       - ./mock-digital-ocean-router.conf:/etc/nginx/nginx.conf
