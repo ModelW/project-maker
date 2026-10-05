@@ -57,7 +57,10 @@ def overwrite_storage_settings(
             "BACKEND": default_file_storage,
         },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            # Non-manifest storage: the live test server serves static files via the
+            # staticfiles finders, which can't resolve hashed names (only present in
+            # STATIC_ROOT). Without this, assets like the Wagtail userbar 404.
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"
         },
     }
 
