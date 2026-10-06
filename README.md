@@ -6,7 +6,7 @@ This project maker is the simplest way to start a
 The goal is to be extremely simple:
 
 ```bash
-curl -s https://pypi.run/modelw-project-maker/model_w.project_maker | python3.13
+uvx --from modelw-project-maker --python 3.14 project_maker
 ```
 
 This will ask you a few questions and create the project's directory for you.
@@ -15,13 +15,13 @@ This will ask you a few questions and create the project's directory for you.
 
 In order to execute the script, you need:
 
--   Python 3.13 (you can use pyenv to load it in your current shell)
+-   Python 3.14 (you can use pyenv to load it in your current shell)
 -   Poetry (follow the instructions on
     [their website](https://python-poetry.org/docs/#installation))
 -   Git (you know where to get it)
 -   Git Flow (`apt install git-flow` or `brew install git-flow` depending on
     your OS)
--   Node and NPM (get it your favorite way)
+-   Node and PNPM (get it your favorite way)
 -   PostgreSQL and Redis (if you enable the API side)
 
 ## What to do next
@@ -41,7 +41,7 @@ cd ..
 
 # If you enabled the frontend
 cd front
-npm install
+pnpm install
 ```
 
 If you enabled the API, you then need to create the database:
