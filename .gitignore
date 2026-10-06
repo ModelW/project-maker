@@ -233,3 +233,13 @@ sw.*
 
 # dotenv environment variables file
 .env
+
+# ---
+# Model-W project maker Related
+# ---
+
+# envs templates
+front/.env-template
+front/.env.test
+api/.env-template
+api/.env.test
