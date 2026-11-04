@@ -7,8 +7,9 @@ from wagtail.images.tests.utils import Image, get_test_image_file
 from ___project_name__snake___.apps.cms.images import serializers
 from bdd.fixtures.front import *  # noqa: F403
 
-# Uses the global pytestmark variable to add the image_serializers marker to all tests in this file.
-# This means these tests can be specifically targetted with `pytest -m image_serializers`.
+# Uses the global pytestmark variable to add the image_serializers marker to all
+# tests in this file. This means these tests can be specifically targetted with
+# `pytest -m image_serializers`.
 pytestmark = [
     pytest.mark.django_db(transaction=True, serialized_rollback=True),
     pytest.mark.image_serializers,
@@ -117,10 +118,12 @@ def test_image_serializer_valid_default(large_image: AbstractImage):
 
 def test_image_serializer_valid_default_with_small_image(small_image: AbstractImage):
     """
-    Test ImageSerializer with no arguments but with an image smaller than all filters.
-    By default, the renditions are still created for each filter, but all at the smaller size.
-    This could potentially be improved by bailing out before creating essentially duplicate renditions,
-    but as it's an edge case, and the front still only uses the first rendition, this is not implemented yet.
+    Test ImageSerializer with no arguments but with an image smaller than all
+    filters. By default, the renditions are still created for each filter, but
+    all at the smaller size. This could potentially be improved by bailing out
+    before creating essentially duplicate renditions, but as it's an edge case,
+    and the front still only uses the first rendition, this is not implemented
+    yet.
 
     Expected response is:
     {
@@ -186,7 +189,7 @@ def test_image_serializer_valid_with_custom_filters(large_image: AbstractImage):
     """
     Test ImageSerializer with custom filters (strings).
 
-    Expected response is:
+    Expected response is (where `{img}` is `{baseurl}/images/test_2ultByX`):
     {
         "id": 1,
         "title": "Test Image",
@@ -197,13 +200,13 @@ def test_image_serializer_valid_with_custom_filters(large_image: AbstractImage):
         "sources": [
             {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-320x350-c100.format-webp.webp 320w",
+                    "{img}.fill-320x350-c100.format-webp.webp 320w",
                 ],
                 "image_type": "webp",
             },
             {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-320x350-c100.format-jpeg.jpg 320w",
+                    "{img}.fill-320x350-c100.format-jpeg.jpg 320w",
                 ],
                 "image_type": "jpeg",
             },
@@ -245,7 +248,7 @@ def test_image_serializer_valid_with_custom_filters_and_media_queries(
     """
     Test ImageSerializer with custom filters and media queries (tuples).
 
-    Expected response is:
+    Expected response is (where `{img}` is `{baseurl}/images/test_2ultByX`):
     {
         "id": 1,
         "title": "Test Image",
@@ -256,8 +259,8 @@ def test_image_serializer_valid_with_custom_filters_and_media_queries(
         "sources": [
             {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-320x150-c100.format-webp.webp 320w",
-                    "{baseurl}/images/test_2ultByX.fill-640x150-c100.format-webp.webp 640w",
+                    "{img}.fill-320x150-c100.format-webp.webp 320w",
+                    "{img}.fill-640x150-c100.format-webp.webp 640w",
                 ],
                 "image_type": "webp",
                 "media": "(max-width: 767px)",
@@ -265,8 +268,8 @@ def test_image_serializer_valid_with_custom_filters_and_media_queries(
             },
             {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-768x350-c100.format-webp.webp 320w",
-                    "{baseurl}/images/test_2ultByX.fill-1536x350-c100.format-webp.webp 640w",
+                    "{img}.fill-768x350-c100.format-webp.webp 320w",
+                    "{img}.fill-1536x350-c100.format-webp.webp 640w",
                 ],
                 "image_type": "webp",
                 "media": "(min-width: 768px)",
@@ -274,17 +277,17 @@ def test_image_serializer_valid_with_custom_filters_and_media_queries(
             },
             {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-320x150-c100.format-jpeg.jpg 320w",
-                    "{baseurl}/images/test_2ultByX.fill-640x150-c100.format-jpeg.jpg 640w",
+                    "{img}.fill-320x150-c100.format-jpeg.jpg 320w",
+                    "{img}.fill-640x150-c100.format-jpeg.jpg 640w",
                 ],
                 "image_type": "jpeg",
                 "media": "(max-width: 767px)",
                 "sizes": "100vw",
             },
-                        {
+            {
                 "srcset": [
-                    "{baseurl}/images/test_2ultByX.fill-768x350-c100.format-jpeg.jpg 320w",
-                    "{baseurl}/images/test_2ultByX.fill-1536x350-c100.format-jpeg.jpg 640w",
+                    "{img}.fill-768x350-c100.format-jpeg.jpg 320w",
+                    "{img}.fill-1536x350-c100.format-jpeg.jpg 640w",
                 ],
                 "image_type": "webp",
                 "media": "(min-width: 768px)",
@@ -326,12 +329,12 @@ def test_image_serializer_valid_with_custom_filters_and_media_queries(
     for source_index, source in enumerate(data["sources"]):
         image_format = image_serializer.formats[source_index // len(filters)]
         assert source["image_type"] == image_format
+        source_widths = expected_source_widths[
+            source_index % len(expected_source_widths)
+        ]
         for srcset_index, src in enumerate(source["srcset"]):
             url, width = src.split(" ")
-            assert (
-                width
-                == f"{expected_source_widths[source_index % len(expected_source_widths)][srcset_index]}w"
-            )
+            assert width == f"{source_widths[srcset_index]}w"
             if image_format == "jpeg":
                 assert url.endswith(".jpg")
             else:

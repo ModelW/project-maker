@@ -4,7 +4,9 @@ This file is for utility functions that fixtures may need.
 
 import re
 import signal
+import time
 
+import httpx
 import psutil
 
 
@@ -60,3 +62,32 @@ def get_svelte_1_server_url(text: str) -> str | None:
     """
     if match := re.search(r"Local:\W+(https?://[^/]+/)", text):
         return match.group(1).rstrip()
+
+
+def wait_for_url(url: str, timeout: float = 60) -> None:
+    """
+    Wait until something answers at the given URL, whatever the status code.
+
+    In Docker, the router only starts once the API container is healthy, but
+    the API container is also the one running the tests. So the first tests
+    must wait for the router to be reachable.
+
+    Parameters
+    ----------
+    url
+        URL to poll
+    timeout
+        Maximum time to wait, in seconds
+    """
+    deadline = time.monotonic() + timeout
+
+    while True:
+        try:
+            httpx.get(url, timeout=2)
+        except httpx.TransportError:
+            if time.monotonic() > deadline:
+                msg = f"Nothing answered at {url} after {timeout}s"
+                raise TimeoutError(msg) from None
+            time.sleep(0.5)
+        else:
+            return

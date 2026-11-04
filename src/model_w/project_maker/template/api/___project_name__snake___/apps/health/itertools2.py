@@ -1,9 +1,12 @@
-from typing import Iterable, Tuple, TypeVar
+"""Iteration helpers used by the health app."""
 
-T = TypeVar("T")
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 
-def n_uple(seq: Iterable[T], n: int = 2) -> Tuple[T, ...]:
+def n_uple[T](seq: Iterable[T], n: int = 2) -> Iterator[tuple[T, ...]]:
     """
     Iterates over the provided iterator and returns n-uples of size n.
     """

@@ -107,17 +107,50 @@ api/pmanage migrate
 If you have chosen a CMS, there will be a SvelteKit/Wagtail integration, using
 Wagtail's v2 API.
 
-A [...cmsPath] directory will be created in the `front` directory, which is a
-catch-all for all the CMS paths.
+The `front/src/routes/(site)/(cms)/[...cmsPath=cmsPath]` route is a catch-all
+for all the CMS paths. Inside `$lib/components/cms/` you'll find the Svelte
+components for the CMS:
 
-Inside, `$lib/components/` there is a `cms` directory, which contains the Svelte
-components for the CMS such as blocks and pages.
+-   `pages/` &mdash; One component per Wagtail page type, with the same name.
+    It is automatically imported and rendered when landing on a page of that
+    type.
+-   `blocks/` &mdash; One component per StreamField block, with the same name.
+    The `StreamField` component renders them, nothing to register.
+-   `snippets/` &mdash; One component per previewable snippet, rendered by the
+    snippet preview.
 
-To make a CMS page work, create a component in the `cms` directory with the same
-name as the Wagtail page type, and it will automatically be imported and
-rendered when landing on a page of that type.
+The wizard can also add a demo snippet, to show how snippet previews work.
+
+Have a look at the front's README for the rest (layout, menus, session and
+route rules).
 
 ## Contributing
+
+### Tests
+
+The test suite generates a project for every combination of options and checks
+it:
+
+```bash
+make test       # Generates every combination and checks them statically
+make test_slow  # Installs, lints, type-checks and builds some of them
+```
+
+The slow tests need network access, `pnpm` and `poetry`.
+
+### Formatting
+
+```bash
+make format  # Formats the project maker and the template
+make lint    # Checks what the CI checks
+```
+
+The template itself only needs to be formattable (template directives would
+make most linters unhappy). Generated projects, on the other hand, must pass
+all their linters: the project maker runs Ruff with auto-fix and Prettier on
+them, and the tests check that nothing remains.
+
+### Releasing
 
 If you're developing this package and you want to make a release, you can simply
 run:

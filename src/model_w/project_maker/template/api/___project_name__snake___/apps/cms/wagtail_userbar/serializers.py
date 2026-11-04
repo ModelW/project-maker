@@ -14,6 +14,8 @@ class WagtailUserbarRequestSerializer(serializers.Serializer):
     """
 
     class Position(django_models.TextChoices):
+        """Corner of the screen where the userbar is displayed."""
+
         TOP_LEFT = "top-left", _("Top left")
         TOP_RIGHT = "top-right", _("Top right")
         BOTTOM_LEFT = "bottom-left", _("Bottom left")

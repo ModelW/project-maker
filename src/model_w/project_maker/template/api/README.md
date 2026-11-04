@@ -101,7 +101,7 @@ sequenceDiagram
 SvelteKit, on receiving the page data, will match the page type to the correct
 SvelteKit component as follows:
 
-`<AppName>.<ModelName>` -> `$lib/components/<AppName>/pages<ModelName>.svelte`
+`<AppName>.<ModelName>` -> `$lib/components/<AppName>/pages/<ModelName>.svelte`
 
 Therefore, be sure to name your SvelteKit components accordingly.
 
@@ -110,8 +110,21 @@ Therefore, be sure to name your SvelteKit components accordingly.
 Similarly, SvelteKit will match the block type to the correct SvelteKit
 component as follows:
 
-`<BlockName>` -> `$lib/components/<AppName>/blocks/<BlockName>.svelte`
+`<BlockName>` -> `$lib/components/cms/blocks/<BlockName>.svelte`
 
-Therefore, be sure to name your SvelteKit components accordingly.
+There is nothing to register: the block registry (`getBlockComponents()` in
+`$lib/utils/cms.ts`) finds the components by their file name, and the
+`StreamField` component renders the blocks, at any depth:
+
+```svelte
+<StreamField blocks={cmsData.body} />
+```
+
+##### Front Snippet Components
+
+Snippets inheriting from `utils.ApiSnippet` (and `PreviewableMixin`) are
+previewed by the front's `/__snippet_preview__` route, which renders:
+
+`<AppName>.<ModelName>` -> `$lib/components/<AppName>/snippets/<ModelName>.svelte`
 
 # :: ENDIF

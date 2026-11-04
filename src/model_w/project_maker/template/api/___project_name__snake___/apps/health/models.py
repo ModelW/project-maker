@@ -1,3 +1,5 @@
+"""Models storing the health events log and the status history."""
+
 import datetime
 from itertools import groupby
 from typing import TYPE_CHECKING, Optional
@@ -113,6 +115,8 @@ class Event(models.Model):
     objects = EventQuerySet.as_manager()
 
     class Meta:
+        """Newest events first, indexed to quickly look up events by type."""
+
         ordering = ["-date_created"]
         indexes = [models.Index(fields=["event_type", "date_created"])]
 

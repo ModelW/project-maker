@@ -1,3 +1,7 @@
+"""WebSocket consumers of the realtime app."""
+
+from typing import override
+
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 
@@ -7,6 +11,7 @@ class PassiveAggressiveConsumer(AsyncJsonWebsocketConsumer):
     demo of how you can do websockets, but it does not provide any feature.
     """
 
+    @override
     async def connect(self):
         await self.accept()
         await self.close(3000)

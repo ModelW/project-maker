@@ -32,7 +32,7 @@ def small_image() -> cms_models.CustomImage:
     """Create or get a test image."""
     from wagtail.images.tests.utils import get_image_model, get_test_image_file
 
-    file_name = "___test_image___.png"
+    file_name = "test-image.png"
 
     file = get_test_image_file(
         filename=file_name,
@@ -125,14 +125,14 @@ def create_world():
     # :: IF api__wagtail
     from django.conf import settings
 
-    site = get_and_set_up_site(settings.BASE_URL)
+    # :: IFNOT api__testing
+    get_and_set_up_site(settings.BASE_URL)
     # :: ENDIF
-
     # :: IF api__testing
+    site = get_and_set_up_site(settings.BASE_URL)
     get_or_create_demo_page(site)
-
-
-# :: ENDIF
+    # :: ENDIF
+    # :: ENDIF
 
 
 def remove_world():

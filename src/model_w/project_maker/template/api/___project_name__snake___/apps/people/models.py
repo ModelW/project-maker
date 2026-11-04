@@ -1,3 +1,5 @@
+"""Models of the people app, including the custom user model."""
+
 from uuid import uuid4
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
@@ -15,6 +17,8 @@ class UuidPkModel(PostgresModel):
     """
 
     class Meta:
+        """Abstract so that no table is created for the mixin itself."""
+
         abstract = True
 
     id = models.UUIDField(
@@ -45,9 +49,35 @@ class UserManager(BaseUserManager):
         return user
 
     def create_user(self, email, password=None, **extra):
+        """
+        Creates a regular (non-staff, non-superuser) user.
+
+        Parameters
+        ----------
+        email
+            Email of the user, which is also their login
+        password
+            Clear-text password, which will be hashed
+        extra
+            Other fields of the user model
+        """
+
         return self._create_user(email, False, password, **extra)
 
     def create_superuser(self, email, password=None, **extra):
+        """
+        Creates a superuser, who is also a staff member.
+
+        Parameters
+        ----------
+        email
+            Email of the user, which is also their login
+        password
+            Clear-text password, which will be hashed
+        extra
+            Other fields of the user model
+        """
+
         return self._create_user(email, True, password, **extra)
 
 
@@ -91,9 +121,13 @@ class User(UuidPkModel, AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     def __str__(self):
+        """Displays the user by their full name."""
+
         return self.get_full_name()
 
     class Meta:
+        """Human-readable names of the model."""
+
         verbose_name = _("user")
         verbose_name_plural = _("users")
 

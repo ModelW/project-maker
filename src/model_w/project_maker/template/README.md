@@ -34,6 +34,23 @@ This project is composed of the following components:
     customer-facing pages. It covers the rest of URLs.
 # :: ENDIF
 
+### One origin for everything
+
+The API and the front-end are served from the same domain, which avoids CORS
+altogether and lets them share cookies (sessions, CSRF):
+
+-   Everything under `/back/` goes to the API
+-   Everything else goes to the front-end
+
+In production, that's the job of the load balancer, which routes according to
+the URL. In development, it's the proxy embedded in Vite (see
+`front/vite.config.ts`). In the E2E tests, a router container mimics the load
+balancer (`api/bdd/_infrastructure/mock-digital-ocean-router.conf`).
+
+`BASE_URL` (API side) is the public URL of the site, so the one of that single
+origin. The only time the API is reached directly is when the front-end's
+server talks to it, through `API_URL` (front side).
+
 ### Writing more of it
 
 If you feel like the Model W documentation is not enough:

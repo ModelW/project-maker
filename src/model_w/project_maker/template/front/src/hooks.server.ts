@@ -1,16 +1,22 @@
 import { sequence } from "@sveltejs/kit/hooks";
-import type { HandleFetch, HandleServerError } from "@sveltejs/kit";
+// :: IF api__enable
+import type { HandleFetch } from "@sveltejs/kit";
+// :: ENDIF
+import type { HandleServerError } from "@sveltejs/kit";
 import * as Sentry from "@sentry/sveltekit";
-import { env } from "$env/dynamic/private";
-import { env as publicEnv } from "$env/dynamic/public";
+// :: IF api__enable
+import { API_URL } from "$app/env/private";
+// :: ENDIF
+import { SENTRY_DSN, SENTRY_ENVIRONMENT } from "$app/env/public";
 import { accessLog } from "$lib/utils/access_log";
 
 Sentry.init({
-    dsn: publicEnv.PUBLIC_SENTRY_DSN,
-    environment: publicEnv.PUBLIC_SENTRY_ENVIRONMENT,
+    dsn: SENTRY_DSN,
+    environment: SENTRY_ENVIRONMENT,
     tracesSampleRate: 1,
 });
 
+// :: IF api__enable
 /**
  * The things you might want to change in a request
  */
@@ -74,21 +80,27 @@ async function patchRequest(request: Request, patch: RequestPatch): Promise<Requ
  * request in-situ to hit the actual API server.
  *
  * This hook only runs on the server-side and works like that because the API internal
- * URL is only known through private environment variables, which are not disclosed to
+ * URL is only known through a private environment variable (API_URL), which are not disclosed to
  * client-side. However since the API client's code is accessible both from the client
  * and server side, it cannot import environment variables. The solution to this is that
  * convention of using http://api as an origin if you're trying to reach out the API and
  * you are on the server side.
+ *
+ * Same-origin requests to `/back/` get the same treatment: in production the router
+ * sends them to the API, so on the server side we do the same. This allows code
+ * running on both sides to simply use relative `/back/...` URLs.
  *
  * Other requests are left untouched.
  */
 export const handleFetch: HandleFetch = async function handleFetch({ event, request, fetch }) {
     const internalApiOrigin = "http://api";
     const url = new URL(request.url, internalApiOrigin);
-    const apiUrl = new URL(env.API_URL);
-    const isApiQuery = url.origin === internalApiOrigin;
+    const isApiQuery =
+        url.origin === internalApiOrigin ||
+        (url.origin === event.url.origin && url.pathname.startsWith("/back/"));
 
     if (isApiQuery) {
+        const apiUrl = new URL(API_URL);
         const extraHeaders = new Headers();
         const cookie = event.request.headers.get("cookie");
         if (cookie) {
@@ -104,9 +116,10 @@ export const handleFetch: HandleFetch = async function handleFetch({ event, requ
 
     return fetch(request);
 };
+// :: ENDIF
 
 /** Log error in server console as well as sending to Sentry. */
-const errorHandler: HandleServerError = async ({ error, event }) => {
+const errorHandler: HandleServerError = ({ error, event }) => {
     console.error("Server side error:", error, event);
 };
 

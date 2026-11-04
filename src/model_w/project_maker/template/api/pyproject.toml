@@ -29,29 +29,24 @@ markdown = "*"
 networkx = "*"
 
 [tool.poetry.group.dev.dependencies]
-black = "*"
-isort = "*"
 ipython = "*"
 django-extensions = "*"
 django-debug-toolbar = "*"
 ruff = "*"
 pytm = "^1.4.0"
+openapi-generator-cli = {extras = ["jdk4py"], version = "^7.27.0"}
 
 [tool.poetry.group.test.dependencies]
 node-edge = "*"
 psutil = "*"
 pytest = "*"
-pytest-bdd = "^7.0.0"
+pytest-bdd = "^9.0.1"
 pytest-django = "*"
 pytest-html = "*"
 pytest-playwright = "*"
 pyyaml = "*"
 pixelmatch = "*"
 pillow = "*"
-
-[tool.isort]
-profile = "black"
-known_first_party = "___project_name__snake___"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "___project_name__snake___.django.settings"
@@ -62,14 +57,39 @@ log_file = "bdd/report/results/test.log"
 addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--full-page-screenshot", "--video", "on", "--tracing", "retain-on-failure", "--cucumberjson=bdd/report/results/report.json", "--html=bdd/report/results/pytest.html"]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint.per-file-ignores]
-"**/bdd/**" = ["ARG001", "S101"]
-"test_*.py" = ["ARG001", "S101"]
+# pytest and pytest-bdd (through pluggy and inspect.signature) evaluate the
+# annotations of tests, fixtures, steps and hooks at runtime, so the imports they
+# use must stay outside of TYPE_CHECKING blocks (TC001-TC003).
+"**/bdd/**" = ["ARG001", "S101", "TC001", "TC002", "TC003"]
+"test_*.py" = ["ARG001", "S101", "TC001", "TC002", "TC003"]
+"conftest.py" = ["TC001", "TC002", "TC003"]
+# Django Ninja evaluates the annotations of the endpoints at runtime
+"**/api.py" = ["TC001", "TC002", "TC003"]
+# drf-spectacular evaluates the annotations of serializer methods at runtime
+"**/serializers.py" = ["TC001", "TC002", "TC003"]
+# Mutable class attributes (Meta options, panels, API fields...) are the way to
+# declare Django and Wagtail models
+"**/models.py" = ["RUF012"]
+"**/snippets.py" = ["RUF012"]
+# Standalone script mounted in the Locust container, not part of a package
+"**/bdd/performance/locustfile.py" = ["INP001"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic (thus Django Ninja schemas) evaluates class annotations at runtime
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "ninja.Schema",
+    "ninja.ModelSchema",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["___project_name__snake___"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "pep257"
+convention = "numpy"
 
 [tool.ruff.lint]
 select = [

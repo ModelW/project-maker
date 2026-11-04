@@ -2,6 +2,11 @@
 @use "variables";
 @use "functions";
 
+// All media queries use the range syntax (`width < X`) rather than
+// `max-width: X - 1px`. The latter leaves a gap between X - 1px and X that
+// fractional viewport widths (zoom, high-DPI screens) can fall into, in which
+// case neither the "up" nor the "down" rules apply.
+
 /// Mixin to media query all screens above and **including** given breakpoint.
 /// @param {string} $breakpoint A breakpoint key inside $breakpoints map
 /// @content
@@ -12,7 +17,7 @@
 @mixin breakpoints-up($breakpoint) {
     $breakpoint-value: functions.validate-breakpoint($breakpoint);
 
-    @media (min-width: $breakpoint-value) {
+    @media (width >= $breakpoint-value) {
         @content;
     }
 }
@@ -26,7 +31,7 @@
 @mixin breakpoints-down($breakpoint) {
     $breakpoint-value: functions.validate-breakpoint($breakpoint);
 
-    @media (max-width: ($breakpoint-value - 1)) {
+    @media (width < $breakpoint-value) {
         @content;
     }
 }
@@ -42,11 +47,11 @@
     $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
 
     @if not $next-breakpoint {
-        @media (min-width: $breakpoint-value) {
+        @media (width >= $breakpoint-value) {
             @content;
         }
     } @else {
-        @media (min-width: $breakpoint-value) and (max-width: ($next-breakpoint - 1)) {
+        @media ($breakpoint-value <= width < $next-breakpoint) {
             @content;
         }
     }
@@ -67,7 +72,7 @@
         @error "Invalid breakpoint range: '#{$breakpoint1}' must be smaller than '#{$breakpoint2}'.";
     }
 
-    @media (min-width: $breakpoint1-value) and (max-width: ($breakpoint2-value - 1)) {
+    @media ($breakpoint1-value <= width < $breakpoint2-value) {
         @content;
     }
 }
@@ -83,11 +88,11 @@
     $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
 
     @if not $next-breakpoint {
-        @media (max-width: ($breakpoint-value - 1)) {
+        @media (width < $breakpoint-value) {
             @content;
         }
     } @else {
-        @media (max-width: ($breakpoint-value - 1)) or (min-width: $next-breakpoint) {
+        @media (width < $breakpoint-value) or (width >= $next-breakpoint) {
             @content;
         }
     }
@@ -97,15 +102,14 @@
 /// @param {string} $max-width The maximum width of the element
 @mixin max-width($max-width: map.get(variables.$breakpoints, "xl")) {
     max-width: $max-width;
-    margin-left: auto;
-    margin-right: auto;
+    margin-inline: auto;
 }
 
 /// Mixin to truncate text and add ellipsis
 /// @param {Number} $lines - Number of lines to display before truncating
 /// @param {Boolean} $break-word - Determines if words should break mid-word when truncating
 @mixin truncate-text($lines: 1, $break-word: true) {
-    overflow-y: auto;
+    overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: $lines;
@@ -126,4 +130,5 @@
     // Styling
     list-style-type: none;
     padding-left: 0;
+    margin: 0;
 }

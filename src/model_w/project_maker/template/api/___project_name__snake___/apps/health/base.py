@@ -1,10 +1,20 @@
+"""
+Base classes and data structures for health checks.
+
+Health checks implement the `HealthCheck` interface and return an `Outcome`
+whose `Status` tells how healthy the checked component is.
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from asgiref.sync import async_to_sync
 from health_check.exceptions import ServiceWarning
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class Status(Enum):
@@ -125,6 +135,8 @@ class DjangoHealthCheckWrapper(HealthCheck, ABC):
     base_class = None
 
     def __init__(self):
+        """Instantiates the wrapped Django Health Check class."""
+
         self.check = self.base_class()
 
     def get_status(self) -> Outcome:

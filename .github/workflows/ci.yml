@@ -1,0 +1,133 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches:
+            - develop
+
+env:
+    GIT_AUTHOR_NAME: CI
+    GIT_AUTHOR_EMAIL: ci@example.com
+    GIT_COMMITTER_NAME: CI
+    GIT_COMMITTER_EMAIL: ci@example.com
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install poetry
+              run: pipx install poetry
+
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.14"
+                  cache: "poetry"
+
+            - name: Install dependencies
+              run: poetry install
+
+            - name: Check format
+              run: poetry run ruff format --check .
+
+            - name: Run Ruff
+              run: poetry run ruff check --output-format=github .
+
+    # The raw template only has to be formattable: the generated projects are
+    # the ones that must pass every linter, which the test jobs check.
+    template-format:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install poetry
+              run: pipx install poetry
+
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.14"
+                  cache: "poetry"
+
+            - name: Install dependencies
+              run: poetry install
+
+            - name: Check API format
+              run: poetry run ruff format --check src/model_w/project_maker/template/api
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 12
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: "24"
+                  cache: "pnpm"
+                  cache-dependency-path: src/model_w/project_maker/template/front/pnpm-lock.yaml
+
+            - name: Check front format
+              working-directory: src/model_w/project_maker/template/front
+              run: |
+                  pnpm install --frozen-lockfile
+                  pnpm prettier --check .
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install poetry
+              run: pipx install poetry
+
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.14"
+                  cache: "poetry"
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: "24"
+
+            - name: Install dependencies
+              run: poetry install
+
+            - name: Run tests
+              run: poetry run pytest
+
+    # Installs, lints, type-checks, tests and builds some generated projects
+    test-slow:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install poetry
+              run: pipx install poetry
+
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.14"
+                  cache: "poetry"
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 12
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: "24"
+
+            - name: Install dependencies
+              run: poetry install
+
+            - name: Run slow tests
+              run: poetry run pytest -m slow

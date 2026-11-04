@@ -1,3 +1,5 @@
+"""WebSocket URL routes, served by Channels."""
+
 from ___project_name__snake___.apps.realtime.consumers import PassiveAggressiveConsumer
 from django.urls import re_path
 

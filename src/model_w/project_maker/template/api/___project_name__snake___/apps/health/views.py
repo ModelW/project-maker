@@ -1,6 +1,7 @@
-from typing import Any, MutableMapping
+"""Views displaying the global health status, as HTML or JSON."""
 
-from django.http import HttpRequest, HttpResponse
+from typing import TYPE_CHECKING, Any
+
 from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -8,6 +9,11 @@ from rest_framework.response import Response
 
 from .models import StatusHistory
 from .resolver import build_resolver
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
+    from django.http import HttpRequest, HttpResponse
 
 
 def global_status(request: HttpRequest) -> HttpResponse:

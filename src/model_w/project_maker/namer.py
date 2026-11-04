@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Sequence
+from collections.abc import Sequence
 
 from unidecode import unidecode
 

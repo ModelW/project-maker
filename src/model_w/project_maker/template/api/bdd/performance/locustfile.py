@@ -26,7 +26,10 @@ class FrontendUser(HttpUser):
 
     # :: ENDIF
 
+    # :: IF api__wagtail
     @task()
     def non_cms_page(self):
         """Load the non-CMS page."""
         self.client.get("/non-cms")
+
+    # :: ENDIF

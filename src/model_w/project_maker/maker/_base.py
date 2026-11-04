@@ -1,9 +1,41 @@
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from subprocess import PIPE, Popen
-from typing import Mapping, Sequence
 
 from ..errors import ProjectMakerError
 from ..template import render, render_line
+
+#: Files which can exist locally in the template (because it's developed and
+#: tested in place) but must never end up in a generated project. This is
+#: deliberately independent from the template's .gitignore files, which are
+#: meant for the generated projects.
+LOCAL_FILES = [
+    # Python
+    "__pycache__/",
+    "*.py[cod]",
+    ".venv/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    ".mypy_cache/",
+    # Node
+    "node_modules/",
+    ".svelte-kit/",
+    "/front/build/",
+    ".nuxt/",
+    ".eslintcache",
+    # Environment (the committed ones are .env-template and .env.test)
+    ".env",
+    ".env.*",
+    "!.env.test",
+    # Test results
+    "/api/bdd/report/results/",
+    "/api/bdd/performance/results/",
+    # Misc
+    "*.log",
+    ".DS_Store",
+    ".idea/",
+    ".vscode/",
+]
 
 
 class BaseComponent:
@@ -18,8 +50,38 @@ class BaseComponent:
     def context(self, path: Path, context: Mapping) -> Mapping:
         return context
 
+    def target_sub_path(self, path: Path, context: Mapping) -> Path:
+        """
+        Gives a chance to the component to move an accepted file somewhere
+        else in the target. This allows, for example, to install an
+        alternative implementation of a file depending on the options.
+
+        Parameters
+        ----------
+        path
+            Path of the file relative to the template root (not rendered yet)
+        context
+            Context of the file
+        """
+
+        return path
+
     def post_process(self, root: Path, path: Path, context: Mapping) -> None:
         pass
+
+    def finalize(self, root: Path, context: Mapping) -> None:
+        """
+        Called once all files have been rendered, before the Git repository
+        gets initialized. This is the place for whole-project operations like
+        running formatters/linters with auto-fix or generating lockfiles.
+
+        Parameters
+        ----------
+        root
+            Root of the generated project
+        context
+            Global context of the generation
+        """
 
     def start(self) -> None:
         """Hook to start resources needed for the component"""
@@ -45,12 +107,13 @@ class Exec:
     def __init__(self, cwd: str | Path):
         self.cwd = Path(cwd)
 
-    def exec(self, cmd: Sequence[str]):
-        p = Popen(cmd, cwd=self.cwd, stdout=PIPE, stderr=PIPE)
+    def exec(self, cmd: Sequence[str], env: Mapping[str, str] | None = None):
+        p = Popen(cmd, cwd=self.cwd, stdout=PIPE, stderr=PIPE, env=env)
+        out, err = p.communicate()
 
-        if p.wait() != 0:
+        if p.returncode != 0:
             raise ProjectMakerError(
-                f"Failed to execute {cmd}: {p.stderr.read().decode()}"
+                f"Failed to execute {cmd}: {err.decode()}{out.decode()}"
             )
 
 
@@ -112,6 +175,8 @@ class Maker:
                         )
                         continue
 
+            for component in self.components:
+                component.finalize(target, context)
         finally:
             for component in self.components:
                 component.stop()
@@ -150,6 +215,7 @@ class Maker:
         """
 
         file_context = component.context(sub_path, context)
+        sub_path = component.target_sub_path(sub_path, file_context)
         target_sub_path = Path(render_line(f"{sub_path}", file_context))
         target_path = target / target_sub_path
 

@@ -1,11 +1,11 @@
 <script lang="ts">
     /**
-     * This page displays preview data for all CMS block previews.
+     * This page displays preview data for CMS snippet previews.
      * It selects the appropriate component to render based on the meta.type.
      */
     import type { PageData } from "./$types";
 
-    export let data: PageData;
+    let { data }: { data: PageData } = $props();
 </script>
 
-<svelte:component this={data.component} cmsData={data.cmsData} />
+<data.component cmsData={data.cmsData} />

@@ -1,3 +1,7 @@
+"""
+Django settings, mostly derived from the environment by the Model W preset.
+"""
+
 from importlib import metadata
 
 from model_w.env_manager import EnvManager

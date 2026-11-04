@@ -1,8 +1,7 @@
 """A collection of custom serializers for the CMS app."""
 
 from rest_framework.fields import ReadOnlyField
-from wagtail import blocks as wagtail_blocks
-from wagtail.rich_text import expand_db_html
+from wagtail.rich_text import RichText, expand_db_html
 
 
 class RichTextSerializer(ReadOnlyField):
@@ -13,7 +12,9 @@ class RichTextSerializer(ReadOnlyField):
     their Primary Keys.
     """
 
-    def to_representation(self, instance: "wagtail_blocks.RichText"):
+    # Annotations are evaluated at runtime by Wagtail's API schema generator,
+    # so they must point to real objects
+    def to_representation(self, instance: RichText | str) -> str:
         """Expand to full HTML so images can be rendered as is."""
         representation = super().to_representation(instance)
         return expand_db_html(representation)

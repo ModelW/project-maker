@@ -1,16 +1,20 @@
-<slot />
+<script lang="ts">
+    /**
+     * Root layout: global styles and the contexts every component can rely
+     * on. The visible layout (header, footer...) lives in `(site)/` so that
+     * previews rendered in the CMS don't get it.
+     */
+    import "$lib/styles/main.scss";
+    import { metaRouter } from "$lib/meta-router/config";
+    import { provideMenus } from "$lib/navigation/context";
+    import { provideSession } from "$lib/session/context";
+    import type { Snippet } from "svelte";
+    import type { LayoutData } from "./$types";
 
-<footer>
-    <hr />
-    <a href="/">Home page</a>
-    # :: IF api__testing
-    <a href="/demo/">Demo page</a>
-    # :: ENDIF
-    <a href="/non-cms">Non-CMS</a>
-</footer>
+    let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-<style lang="scss">
-    :global(h1) {
-        color: red;
-    }
-</style>
+    provideMenus(() => data.menus);
+    provideSession(() => data.me, metaRouter.deps);
+</script>
+
+{@render children()}

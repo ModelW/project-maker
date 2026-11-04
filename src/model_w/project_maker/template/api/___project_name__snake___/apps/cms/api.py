@@ -9,11 +9,14 @@ import logging
 
 from django.apps import apps
 from django.db import models
-from django.http import Http404
+from django.http import Http404, QueryDict
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from wagtail.admin.forms.models import WagtailAdminModelForm
+from wagtail.admin.panels import get_edit_handler
 from wagtail.admin.views.generic.preview import Block
 from wagtail.api.v2.router import WagtailAPIRouter
 from wagtail.api.v2.views import PagesAPIViewSet
@@ -31,7 +34,12 @@ class ApiStreamFieldBlockPreview(utils.ApiStreamFieldBlockPreview):
 
 
 class PreviewPagesAPIViewSet(PagesAPIViewSet):
-    permission_classes = [IsAuthenticated]
+    """
+    Serves the page currently being previewed in the Wagtail admin, whose
+    unsaved data is stored in the session.
+    """
+
+    permission_classes = (IsAuthenticated,)
 
     def listing_view(self, request: Request) -> Response:
         """
@@ -59,11 +67,12 @@ class PreviewPagesAPIViewSet(PagesAPIViewSet):
 class PreviewSnippetsViewSet(BaseAPIViewSet):
     """
     A specific view set for previewing snippets.
-    Similar to the PreviewPagesAPIViewSet, but as snippets are not subclasses of Page,
-    we use a different view set to retrieve the model, rather than hacking the page one.
+    Similar to the PreviewPagesAPIViewSet, but as snippets are not subclasses of
+    Page, we use a different view set to retrieve the model, rather than hacking
+    the page one.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
     model = utils.ApiSnippet
 
     def get_object(self) -> utils.ApiSnippet:
@@ -71,11 +80,61 @@ class PreviewSnippetsViewSet(BaseAPIViewSet):
         logger.debug("Getting object being previewed...")
         model, data = utils.PreviewDataStore.get_preview_data(self.request)
 
+        if not model or not data:
+            return self.get_object_from_wagtail_preview_session()
+
         snippet_model = apps.get_model(model)
         instance = snippet_model.from_json(data)
         instance.pk = 0
 
         logger.debug("Got object: %s", instance)
+        return instance
+
+    def get_object_from_wagtail_preview_session(self) -> utils.ApiSnippet:
+        """
+        Rebuild the snippet from Wagtail's own preview form-data session key.
+
+        The front normally reads ``PreviewDataStore`` keys written by
+        ``ApiSnippet.serve_preview``. Admin AJAX requests can race with that
+        write because sessions are saved on every request, so fall back to the
+        durable ``wagtail-preview-<app>-<model>-<id>`` key that Wagtail writes
+        before opening the preview iframe.
+        """
+        snippet_model = apps.get_model(self.get_snippet_type())
+        preview_id = self.request.query_params.get("id", "")
+
+        if not preview_id:
+            msg = "No snippet preview id was provided."
+            raise Http404(msg)
+
+        preview_key = (
+            f"wagtail-preview-{snippet_model._meta.app_label}-"
+            f"{snippet_model._meta.model_name}-{preview_id}"
+        )
+        post_data, _ = self.request.session.get(preview_key, ("", None))
+
+        if not isinstance(post_data, str) or not post_data:
+            msg = "No snippet preview form data found in the current session."
+            raise Http404(msg)
+
+        instance = get_object_or_404(snippet_model, pk=preview_id)
+        form_class = get_edit_handler(snippet_model).get_form_class()
+        form = form_class(
+            QueryDict(post_data),
+            instance=instance,
+            for_user=self.request.user,
+        )
+
+        if isinstance(form, WagtailAdminModelForm):
+            form.defer_required_fields()
+
+        if not form.is_valid():
+            msg = "Snippet preview form data is invalid."
+            raise Http404(msg)
+
+        instance = form.save(commit=False)
+        instance.pk = 0
+        logger.debug("Got object from Wagtail preview session: %s", instance)
         return instance
 
     def get_queryset(self) -> models.QuerySet:
@@ -103,19 +162,19 @@ class PreviewSnippetsViewSet(BaseAPIViewSet):
 class PreviewBlocksViewSet(BaseAPIViewSet):
     """
     ViewSet for previewing blocks.
-    Similar to the PreviewPagesAPIViewSet, but as blocks are not DB models themselves,
-    we treat them slightly differently.  Also, as the preview value is hard-coded, we
-    need not use the session for storage/retrieval.
+    Similar to the PreviewPagesAPIViewSet, but as blocks are not DB models
+    themselves, we treat them slightly differently.  Also, as the preview value
+    is hard-coded, we need not use the session for storage/retrieval.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
     model = Block
 
     def listing_view(self, request: Request) -> Response:
         """
-        To keep the logic consistent with the page & snippet preview, we receive the app
-        dot model and block ID as query params, and passed to the detail view to retrieve
-        the block preview data.
+        To keep the logic consistent with the page & snippet preview, we receive
+        the app dot model and block ID as query params, and passed to the detail
+        view to retrieve the block preview data.
         """
         pk = self.request.query_params.get("id")
         app_dot_model = self.request.query_params.get("in_preview_panel")
@@ -154,14 +213,20 @@ class PreviewBlocksViewSet(BaseAPIViewSet):
 
 
 class CustomPagesAPIViewSet(PagesAPIViewSet):
-    permission_classes = [AllowAny]
+    """
+    Public pages API, which also tells the front about redirects when a page
+    cannot be found.
+    """
+
+    permission_classes = (AllowAny,)
 
     def find_view(self, request: Request):
         """
-        When getting pages via the `html_path` query param, if not found, a 404 is returned,
-        without checking if a redirect exists.  Furthermore, it's hard to break out of the
-        WagtailAPIRouter with standard redirect & Location header, as it tries to get a template.
-        Therefore, we add a custom redirect header to the response, and let the client handle it.
+        When getting pages via the `html_path` query param, if not found, a 404
+        is returned, without checking if a redirect exists.  Furthermore, it's
+        hard to break out of the WagtailAPIRouter with standard redirect &
+        Location header, as it tries to get a template. Therefore, we add a
+        custom redirect header to the response, and let the client handle it.
         """
         try:
             return super().find_view(request)

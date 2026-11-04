@@ -1,3 +1,5 @@
+"""Root URL configuration of the project."""
+
 from importlib import metadata
 
 from django.conf import settings
@@ -15,6 +17,7 @@ from ___project_name__snake___.apps.cms.api import (
     cms_api_router,
     ApiStreamFieldBlockPreview,
 )
+
 # :: ENDIF
 from ___project_name__snake___.apps.people.api import router as people_router
 
@@ -24,6 +27,8 @@ admin.site.site_header = _("___project_name__natural_double_quoted___")
 api = NinjaAPI(
     title="___project_name__natural___ API",
     version=metadata.version("~~~project_name__snake~~~"),
+    # Stable namespace, used to reverse URLs (e.g. "api:openapi-json")
+    urls_namespace="api",
     docs_url=(settings.DEBUG and "/docs") or "",
     openapi_url=(settings.DEBUG and "/openapi.json") or "",
 )

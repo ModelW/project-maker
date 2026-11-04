@@ -14,6 +14,11 @@ const config = {
         csrf: {
             trustedOrigins: ["*"],
         },
+        experimental: {
+            // Environment variables declared and validated in src/env.ts,
+            // which becomes the default in SvelteKit 3
+            explicitEnvironmentVariables: true,
+        },
     },
 };
 

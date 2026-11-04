@@ -85,14 +85,14 @@ server is running on port 8000, you can do the following:
 -   Run the following command:
 
 ```bash
-SKIPBUILD=1 FRONTURL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest
+SKIPBUILD=1 BDD_FRONT_URL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest
 ```
 
 Furthermore, it's likely you have a specific test in mind you want to debug, so
 a more realistic command might be:
 
 ```bash
-PWDEBUG=1 SKIPBUILD=1 FRONTURL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest -m current
+PWDEBUG=1 SKIPBUILD=1 BDD_FRONT_URL=http://localhost:3000 DJANGO_LIVE_TEST_SERVER_ADDRESS=localhost:8000 pytest -m current
 ```
 
 Where, you're viewing the front in your browser, and just the test marked with
@@ -199,6 +199,7 @@ has less impact, than creating the test data manually.
     # test_maths.py
 
     import math
+
 
     def test_pow():
         assert math.pow(2, 2) == 4.0

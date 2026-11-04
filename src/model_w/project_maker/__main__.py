@@ -4,6 +4,7 @@ import shutil
 import string
 import subprocess
 from argparse import ArgumentParser
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from os import getenv
 from pathlib import Path
@@ -13,10 +14,8 @@ from signal import SIGTERM, signal
 from sys import stderr
 from threading import Thread
 from time import sleep
-from typing import NamedTuple, Optional, Sequence
+from typing import NamedTuple
 
-from black import Mode, TargetVersion
-from isort import Config
 from rich import print as rich_print
 from rich.prompt import Confirm, Prompt
 
@@ -39,7 +38,7 @@ def check_binaries():
     fail down the stream and that'll be sad.
     """
 
-    binaries = {"npm", "node", "git", "git-flow"}
+    binaries = {"npm", "node", "git", "git-flow", "poetry"}
     missing = set()
 
     for binary in binaries:
@@ -99,14 +98,17 @@ def keys_text(choices, labels):
     return out_str
 
 
-def parse_args(argv: Optional[Sequence[str]] = None) -> Args:
+def parse_args(argv: Sequence[str] | None = None) -> Args:
     dev_dir = Path(getenv("MODEL_W_DEV_DIR", Path.home() / "dev"))
 
     parser = ArgumentParser()
     parser.add_argument(
         "-d",
         "--dev-dir",
-        help=f"Development directory that contains all projects (default: {dev_dir}, you can also set it with MODEL_W_DEV_DIR)",
+        help=(
+            f"Development directory that contains all projects (default: "
+            f"{dev_dir}, you can also set it with MODEL_W_DEV_DIR)"
+        ),
         default=dev_dir,
     )
 
@@ -126,6 +128,106 @@ def generate_random_key(length: int = 50):
     return "".join(
         SystemRandom().choice(string.ascii_letters + string.digits)
         for _ in range(length)
+    )
+
+
+def build_context(
+    *,
+    project_name: Mapping,
+    front: bool,
+    api: bool,
+    wagtail: bool = False,
+    channels: bool = False,
+    demo_snippet: bool = False,
+    cms_prefix: str | None = None,
+    dev_id: str,
+    secret_key: str | None = None,
+) -> dict:
+    """
+    Builds the template context from the user's choices.
+
+    This is the single place where derived flags (``wsgi``, ``redis``,
+    ``procrastinate``) are computed, so that the interactive wizard and the
+    automated tests generate projects from exactly the same context.
+
+    Parameters
+    ----------
+    project_name
+        Declinations of the project name, as returned by
+        ``generate_declinations()`` plus the ``initial`` key
+    front
+        Whether to generate the front-end
+    api
+        Whether to generate the back-end
+    wagtail
+        Whether the back-end ships Wagtail (ignored without back-end)
+    channels
+        Whether the back-end ships Channels (ignored without back-end)
+    demo_snippet
+        Whether to ship the demo snippet (ignored without Wagtail)
+    cms_prefix
+        URL prefix of the CMS admin (required with Wagtail)
+    dev_id
+        "Name <email>" of the developer
+    secret_key
+        Django secret key, randomly generated if not provided
+    """
+
+    if secret_key is None:
+        key = generate_random_key()
+        secret_key = shlex.quote(f"{key[:25]}wesh{key[25:]}")
+
+    wagtail = api and wagtail
+    channels = api and channels
+
+    context = dict(
+        secret_key=secret_key,
+        front=dict(enable=front),
+        api=dict(enable=api),
+        project_name=dict(project_name),
+        project_title=project_name["natural"],
+        dev_id=dev_id,
+    )
+
+    if api:
+        context["api"].update(
+            wagtail=wagtail,
+            channels=channels,
+            wsgi=not channels,
+            redis=wagtail or channels,
+            # Make procrastinate mandatory, as health check will need it.
+            # When health check is it's own library, this can be removed, and
+            # we can bring it in with the health check app.
+            procrastinate=True,
+            demo_snippet=wagtail and demo_snippet,
+        )
+
+        if wagtail:
+            context["cms_prefix"] = cms_prefix or "wubba-lubba-dub-dub"
+
+    return context
+
+
+def build_maker(*, lock: bool = True, ts_client: bool | None = None) -> Maker:
+    """
+    Builds the Maker with all the components.
+
+    Parameters
+    ----------
+    lock
+        Whether to run ``poetry lock`` on the generated API. Tests disable it
+        to avoid hitting the network for every generated project.
+    ts_client
+        Whether to regenerate the front's TypeScript client from the API's
+        schema (installs the API). Defaults to ``lock``.
+    """
+
+    return Maker(
+        [
+            ApiComponent(lock=lock, ts_client=ts_client),
+            FrontComponent(),
+            CommonComponent(),
+        ]
     )
 
 
@@ -198,7 +300,7 @@ def make(maker: Maker, create_path: Path, context):
             exit(1)
 
 
-def main(argv: Optional[Sequence[str]] = None):
+def main(argv: Sequence[str] | None = None):
     check_binaries()
     args = parse_args(argv)
 
@@ -209,59 +311,54 @@ def main(argv: Optional[Sequence[str]] = None):
         f"it with the [bold]MODEL_W_DEV_DIR[/bold] environment variable.\n"
     )
 
-    key = generate_random_key()
-
-    context = dict(
-        secret_key=shlex.quote(f"{key[:25]}wesh{key[25:]}"),
-        front={},
-        api={},
-        project_name={},
-        dev_id=get_developer_identity(),
-    )
-
+    project_name: dict = {}
     accept_name = False
 
     while not accept_name:
-        context["project_name"]["initial"] = Prompt.ask(
-            "What is your project's (readable) name?"
-        )
-        context["project_name"].update(
-            generate_declinations(context["project_name"]["initial"])
-        )
+        project_name["initial"] = Prompt.ask("What is your project's (readable) name?")
+        project_name.update(generate_declinations(project_name["initial"]))
 
         rich_print("[green]Got that, let's confirm:")
 
         for key in ["natural", "snake", "camel_up"]:
             rich_print(
-                f'  [bold]->[/bold] [bold cyan]{key}[/bold cyan]: {context["project_name"][key]}'
+                f"  [bold]->[/bold] [bold cyan]{key}[/bold cyan]: {project_name[key]}"
             )
 
         accept_name = Confirm.ask("Fine for you?", default=True)
         print()
 
-    context["project_title"] = context["project_name"]["natural"]
+    front = Confirm.ask("Will you have a front-end?", default=True)
+    api = Confirm.ask("Will you have a back-end?", default=True)
+    wagtail = False
+    channels = False
+    demo_snippet = False
+    cms_prefix = None
 
-    context["front"]["enable"] = Confirm.ask("Will you have a front-end?", default=True)
-    context["api"]["enable"] = Confirm.ask("Will you have a back-end?", default=True)
+    if api:
+        wagtail = Confirm.ask("Would you like a Wagtail CMS?")
+        channels = Confirm.ask("Are you fancy enough to use WebSockets?")
 
-    if context["api"]["enable"]:
-        context["api"]["wagtail"] = Confirm.ask("Would you like a Wagtail CMS?")
-        context["api"]["channels"] = Confirm.ask(
-            "Are you fancy enough to use WebSockets?"
-        )
-        context["api"]["wsgi"] = not context["api"]["channels"]
-        context["api"]["redis"] = (
-            context["api"]["wagtail"] or context["api"]["channels"]
-        )
-        # Make procrastinate mandatory, as health check will need it.
-        # When health check is it's own library, this can be removed, and we can bring
-        # it in with the health check app.
-        context["api"]["procrastinate"] = True
+        if wagtail:
+            cms_prefix = Prompt.ask(
+                "What is the URL prefix for the CMS admin?",
+                default="wubba-lubba-dub-dub",
+            )
+            demo_snippet = Confirm.ask(
+                "Add a demo snippet (shows how snippet previews work)?",
+                default=False,
+            )
 
-        if context["api"]["wagtail"]:
-            context["cms_prefix"] = Prompt.ask(
-                "What is the URL prefix for the CMS admin?", default="wubba-lubba-dub-dub"
-        )
+    context = build_context(
+        project_name=project_name,
+        front=front,
+        api=api,
+        wagtail=wagtail,
+        channels=channels,
+        demo_snippet=demo_snippet,
+        cms_prefix=cms_prefix,
+        dev_id=get_developer_identity(),
+    )
 
     components = keys_text(
         dict(front=context["front"]["enable"], api=context["api"]["enable"]),
@@ -277,6 +374,7 @@ def main(argv: Optional[Sequence[str]] = None):
         labels=dict(
             wagtail="Wagtail",
             channels="Channels",
+            demo_snippet="a demo snippet",
         ),
     )
 
@@ -301,23 +399,7 @@ def main(argv: Optional[Sequence[str]] = None):
         rich_print("\nIncapable of taking a decision. Like always. I see.")
         exit(1)
 
-    maker = Maker(
-        [
-            ApiComponent(
-                black_mode=Mode(target_versions={TargetVersion.PY310}),
-                isort_config=Config(
-                    profile="black",
-                    quiet=True,
-                    known_first_party=[
-                        context["project_name"]["snake"],
-                    ],
-                    src_paths=[create_path / "api" / "src"],
-                ),
-            ),
-            FrontComponent(),
-            CommonComponent(),
-        ]
-    )
+    maker = build_maker()
 
     print()
 

@@ -1,3 +1,4 @@
+@use "sass:list";
 @use "sass:map";
 @use "variables";
 
@@ -23,7 +24,7 @@
 /// @param {Number} $px-vh - The pixel value to convert to vh.
 /// @param {Number} $base-vh - The base vh value to use for the conversion.
 /// @param {Boolean} $only-less - If true, the function will return the minimum value between the calculated vh value and the supplied $px-vh value.
-@function vh($px-vh, $base-vh: 1280px, $only-less: false) {
+@function vh($px-vh, $base-vh: 800px, $only-less: false) {
     @if $only-less {
         @return min(calc(($px-vh * 100vh) / $base-vh), $px-vh);
     } @else {
@@ -37,13 +38,13 @@
 /// @param {any} $key - The key whose next value is needed.
 /// @returns {any} The value corresponding to the next key in the map, or null if the provided key is the last key.
 @function next-value($map, $key) {
-    $keys: map-keys($map);
-    $index: index($keys, $key);
+    $keys: map.keys($map);
+    $index: list.index($keys, $key);
 
-    @if $index == length($keys) {
+    @if $index == list.length($keys) {
         @return null;
     } @else {
-        $next-key: nth($keys, $index + 1);
+        $next-key: list.nth($keys, $index + 1);
         @return map.get($map, $next-key);
     }
 }
@@ -56,7 +57,7 @@
     $breakpoint-value: map.get(variables.$breakpoints, $breakpoint);
 
     @if not $breakpoint-value {
-        @error "Invalid breakpoint key '#{$breakpoint}'. Please use one of: #{map-keys(variables.$breakpoints)}.";
+        @error "Invalid breakpoint key '#{$breakpoint}'. Please use one of: #{map.keys(variables.$breakpoints)}.";
     }
 
     @return $breakpoint-value;

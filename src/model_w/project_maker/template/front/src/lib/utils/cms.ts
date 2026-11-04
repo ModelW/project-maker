@@ -9,41 +9,111 @@ import { captureException, captureMessage } from "@sentry/sveltekit";
 
 const API_CMS_BASE_URL = "http://api/back/api/cms/";
 
+/** A StreamField block, as serialized by the API */
+export interface StreamFieldBlock<T = unknown> {
+    /** Name of the block, matching a component in `$lib/components/cms/blocks/` */
+    type: string;
+
+    /** Content of the block, given to the component as `cmsData` */
+    value: T;
+
+    /** Unique ID of the block within the StreamField */
+    id?: string;
+}
+
+/** Block components by block type, as returned by `getBlockComponents()` */
+export type BlockComponents = Record<string, Component<any>>;
+
 /**
- * To have a block know how to render itself just from its own type (matching to a Svelte Component in blocks/),
- * and have SSR work, the server imports all block components and makes them available at $page.blockComponents.
- * Then they can be rendered as follows:
+ * Checks if a value looks like a StreamField block
+ *
+ * @param value Any value from the API
+ */
+function isBlock(value: unknown): value is StreamFieldBlock {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        "type" in value &&
+        "value" in value &&
+        typeof value.type === "string"
+    );
+}
+
+/**
+ * Lists the types of all the StreamField blocks found in some API data, at
+ * any depth (so blocks nested in blocks are found as well).
+ *
+ * @param data Data from the API (a page, a block, a snippet...)
+ * @returns The block types, without duplicates
+ */
+export function collectBlockTypes(data: unknown): string[] {
+    const types = new Set<string>();
+
+    function walk(value: unknown): void {
+        if (Array.isArray(value)) {
+            value.forEach(walk);
+        } else if (typeof value === "object" && value !== null) {
+            if (isBlock(value)) {
+                types.add(value.type);
+            }
+
+            Object.values(value).forEach(walk);
+        }
+    }
+
+    walk(data);
+
+    return [...types];
+}
+
+/**
+ * This is the registry that maps StreamField blocks to their components: a
+ * block of type `Foo` is rendered by `$lib/components/cms/blocks/Foo.svelte`.
+ * There is nothing to register by hand, adding the file is enough.
+ *
+ * The universal load functions of the CMS routes call it with the block
+ * types found in the data, so that SSR has all the components it needs, and
+ * expose the result as `blockComponents` in the page data. Then the
+ * `StreamField` component renders the blocks:
+ *
  * ```svelte
- *  {#each cmsData.blocks as block}
- *      <svelte:component this={$page.data.blockComponents[block.type]} cmsData={block.value} />
- *  {/each}
+ * <StreamField blocks={cmsData.body} />
  * ```
  *
- * Performance:  Initial SSR page load is super fast.  Then hydration takes a while.  Once hydrated all
- *               blocks are available for all components and all is fast.
+ * Each block is a separate code-split chunk, only the blocks listed in
+ * `neededTypes` are actually loaded.
  *
- * The shape of the returned object is:
- * { 'DemoBlock': <DemoBlock /> }
+ * @param neededTypes Block types to load (all of them if not specified)
+ * @returns The components, by block type (e.g. `{ DemoBlock: DemoBlock }`)
  */
-export async function getBlockComponents() {
-    const blockComponents: Record<string, Component> = {};
+export async function getBlockComponents(neededTypes?: string[]): Promise<BlockComponents> {
+    const blockComponents: BlockComponents = {};
 
     /**
-     * Import all svelte components in the blocks folder with import.meta.glob wildcard.
-     *
      * The shape of the blockImports object is:
-     * { '/src/lib/components/cms/blocks/DemoBlock.svelte': () => import('./DemoBlock.svelte').default }
+     * { '/src/lib/components/cms/blocks/DemoBlock.svelte': () => import('./DemoBlock.svelte') }
      */
     const blockImports = import.meta.glob("$lib/components/cms/blocks/*.svelte", {
         import: "default",
-    }) as Record<string, () => Promise<Component>>;
+    }) as Record<string, () => Promise<Component<any>>>;
 
-    // Import the block components and store in blockComponents object
-    for (const blockImport in blockImports) {
-        const filePathSplit = blockImport.split("/");
-        const block_type = filePathSplit[filePathSplit.length - 1].replace(".svelte", "");
-        blockComponents[block_type] = await blockImports[blockImport]();
+    const typeToPath: Record<string, string> = {};
+
+    for (const filePath in blockImports) {
+        const blockType = filePath.split("/").pop()!.replace(".svelte", "");
+        typeToPath[blockType] = filePath;
     }
+
+    const typesToLoad =
+        neededTypes !== undefined
+            ? neededTypes.filter((t) => t in typeToPath)
+            : Object.keys(typeToPath);
+
+    await Promise.all(
+        typesToLoad.map(async (blockType) => {
+            blockComponents[blockType] = await blockImports[typeToPath[blockType]]();
+        })
+    );
 
     return blockComponents;
 }
@@ -91,6 +161,28 @@ export async function fetchBlockData(
     previewModal: string
 ): Promise<any> {
     const cmsUrl = `${API_CMS_BASE_URL}preview-block/?id=${blockId}&in_preview_panel=${previewModal}`;
+    return await fetchWithErrorHandling(fetch(cmsUrl));
+}
+
+/**
+ * Fetch snippet data for a snippet preview.
+ * @param {Function} fetch - The fetch function provided by SvelteKit.
+ * @param {string} snippetType - The app dot model of the snippet (eg. cms.DemoSnippet)
+ * @param {string | null} snippetId - The ID of the snippet, if it exists already
+ * @returns {Promise<any>} - The fetched preview data.
+ */
+export async function fetchSnippetData(
+    fetch: typeof globalThis.fetch,
+    snippetType: string,
+    snippetId: string | null
+): Promise<any> {
+    const params = new URLSearchParams({ type: snippetType });
+
+    if (snippetId) {
+        params.set("id", snippetId);
+    }
+
+    const cmsUrl = `${API_CMS_BASE_URL}preview-snippet/?${params}`;
     return await fetchWithErrorHandling(fetch(cmsUrl));
 }
 

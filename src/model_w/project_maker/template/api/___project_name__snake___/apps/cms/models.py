@@ -1,8 +1,14 @@
+"""Models of the CMS app: pages, documents and (re-exported) images."""
+
 from django.utils.translation import gettext_lazy as _
 from wagtail.documents.models import AbstractDocument
 
 # :: IF api__testing
 from .demo import *  # noqa: F403
+
+# :: ENDIF
+# :: IF api__demo_snippet
+from .snippets import DemoSnippet  # noqa: F401
 
 # :: ENDIF
 from .utils import ApiPage
@@ -20,6 +26,8 @@ class CustomDocument(AbstractDocument):
     admin_form_fields = ("title", "file", "collection", "tags")
 
     class Meta(AbstractDocument.Meta):
+        """Adds the permission to choose documents."""
+
         permissions = [
             ("choose_document", _("Can choose document")),
         ]

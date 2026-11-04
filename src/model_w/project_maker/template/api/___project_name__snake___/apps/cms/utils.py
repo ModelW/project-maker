@@ -1,6 +1,7 @@
 """Utility functions for the CMS app."""
 
 from logging import getLogger
+from typing import TYPE_CHECKING
 
 import httpx
 from django.apps import apps
@@ -8,9 +9,11 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect
 from modelcluster.models import ClusterableModel
-from rest_framework.request import Request
 from wagtail.admin.views.generic.preview import StreamFieldBlockPreview
 from wagtail.models import Page
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
 
 logger = getLogger(__name__)
 
@@ -124,6 +127,8 @@ class ApiPage(Page):
         return redirect(str(redirect_url))
 
     class Meta:
+        """Abstract so that only concrete pages get a table."""
+
         abstract = True
 
 
@@ -136,6 +141,8 @@ class ApiSnippet(ClusterableModel):
     """
 
     class Meta:
+        """Abstract so that only concrete snippets get a table."""
+
         abstract = True
 
     def serve_preview(self, request: Request, mode_name=None):
@@ -158,9 +165,14 @@ class ApiSnippet(ClusterableModel):
         )
 
         base_url = httpx.URL(settings.BASE_URL)
+        params = {"in_preview_panel": app_dot_model}
+
+        if self.pk is not None:
+            params["id"] = str(self.pk)
+
         redirect_url = base_url.copy_with(
-            path="/___snippet_preview___",
-            params={"in_preview_panel": app_dot_model},
+            path="/__snippet_preview__",
+            params=params,
         )
 
         return redirect(str(redirect_url))
@@ -196,8 +208,8 @@ class ApiStreamFieldBlockPreview(StreamFieldBlockPreview):
         """
         Get the preview data for the block.
 
-        As the block preview value is hardcoded, we don't need to store it in the session.
-        Instead, we just need to tell the front-end what block to query for.
+        As the block preview value is hardcoded, we don't need to store it in the
+        session. Instead, we just need to tell the front-end what block to query for.
         """
         context = self.get_context_data(**kwargs)
 

@@ -16,8 +16,10 @@ def report() -> Reporter:
 
     To use this fixture, simply add it as an argument in a step definition and then
     you can call the following methods:
-    - attach(data: str, mime_type: str = "text/plain"): Attach a log to the current step.
-    - attach_screenshot(page: Page, full_page: boolean = False): Attach a screenshot to the current step.
+    - attach(data: str, mime_type: str = "text/plain"): Attach a log to the
+      current step.
+    - attach_screenshot(page: Page, full_page: boolean = False): Attach a
+      screenshot to the current step.
 
     Example:
     ```
