@@ -588,7 +588,34 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
         ]
 
     dotenv.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
+
+    try:
+        run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
+    except AssertionError as e:
+        diagnostic = subprocess.run(
+            resolve(
+                [
+                    "poetry",
+                    "run",
+                    "python",
+                    "-c",
+                    "import os\n"
+                    "from model_w.env_manager._dotenv import find_dotenv\n"
+                    "url = os.environ.get('DATABASE_URL')\n"
+                    "print('inherited DATABASE_URL:', url and url.split('@')[-1])\n"
+                    "print('.env found:', find_dotenv())",
+                ]
+            ),
+            cwd=api,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        written = [line.split("@")[-1] for line in lines if "DATABASE_URL" in line]
+        pytest.fail(
+            f"{e}\n\nDiagnostic:\n{diagnostic.stdout}{diagnostic.stderr}"
+            f"Written: {written}"
+        )
 
 
 @pytest.mark.slow

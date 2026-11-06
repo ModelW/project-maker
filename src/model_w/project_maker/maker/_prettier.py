@@ -1,4 +1,5 @@
 import re
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -31,13 +32,17 @@ class PrettierComponent(BaseComponent):
     """
 
     def __init__(self):
+        # Resolved explicitly: on Windows, npm is a .cmd shim which Popen
+        # doesn't find from its bare name
         self.ne = NodeEngine(
             {
                 "dependencies": {
                     "prettier": "3.9.x",
                     "prettier-plugin-svelte": "4.1.x",
                 }
-            }
+            },
+            npm_bin=shutil.which("npm"),
+            node_bin=shutil.which("node"),
         )
         self.prettier = None
         self.plugins: list[str] = []

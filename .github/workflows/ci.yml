@@ -143,18 +143,33 @@ jobs:
                   distribution: temurin
                   java-version: "21"
 
-            # The generated API's database and cache, like on a developer's
-            # machine (no Docker)
+            # The generated API's database and cache, natively on macOS and
+            # Windows like on a developer's machine. On Linux, the action
+            # doesn't support the latest Ubuntu yet, so it's a container.
             - name: Set up PostgreSQL
+              if: runner.os != 'Linux'
               id: postgres
               uses: ikalnytskyi/action-setup-postgres@v8
               with:
                   postgres-version: "17"
 
+            - name: Set up PostgreSQL (Linux)
+              if: runner.os == 'Linux'
+              run: >-
+                  docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres
+                  --health-cmd pg_isready --health-interval 2s postgres:17 &&
+                  until [ "$(docker inspect -f '{{.State.Health.Status}}' $(docker ps -lq))" = healthy ]; do sleep 1; done
+
             - name: Set up Redis
+              if: runner.os != 'Windows'
               uses: shogo82148/actions-setup-redis@v1
               with:
                   redis-version: "7"
+
+            # No Redis for Windows: Memurai is the Redis-compatible server
+            - name: Set up Redis (Windows)
+              if: runner.os == 'Windows'
+              run: choco install memurai-developer -y --no-progress
 
             - name: Install dependencies
               run: poetry install
@@ -162,4 +177,4 @@ jobs:
             - name: Run slow tests
               run: poetry run pytest -m slow
               env:
-                  PM_TEST_DATABASE_URL: ${{ steps.postgres.outputs.connection-uri }}
+                  PM_TEST_DATABASE_URL: ${{ steps.postgres.outputs.connection-uri || 'postgresql://postgres:postgres@localhost:5432/postgres' }}
