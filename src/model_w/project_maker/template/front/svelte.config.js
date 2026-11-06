@@ -14,6 +14,19 @@ const config = {
         csrf: {
             trustedOrigins: ["*"],
         },
+        experimental: {
+            // Environment variables declared and validated in src/env.ts,
+            // which becomes the default in SvelteKit 3
+            explicitEnvironmentVariables: true,
+            // Server-side tracing and the src/instrumentation.server.ts entry
+            // point, both needed by Sentry's tracing and profiling
+            tracing: {
+                server: true,
+            },
+            instrumentation: {
+                server: true,
+            },
+        },
     },
 };
 

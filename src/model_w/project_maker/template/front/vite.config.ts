@@ -3,15 +3,17 @@ import { sentrySvelteKit } from "@sentry/sveltekit/vite";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, process.cwd());
+    // Empty prefix: read all variables, not only the VITE_ ones
+    const env = loadEnv(mode, process.cwd(), "");
 
     return {
         plugins: [
             sentrySvelteKit({
-                org: env.PUBLIC_SENTRY_ORG,
-                project: env.PUBLIC_SENTRY_PROJECT,
-                sentryUrl: env.PUBLIC_SENTRY_URL,
-                authToken: process.env.SENTRY_AUTH_TOKEN,
+                // Only needed at build time, to upload the source maps
+                org: env.SENTRY_ORG,
+                project: env.SENTRY_PROJECT,
+                sentryUrl: env.SENTRY_URL,
+                authToken: env.SENTRY_AUTH_TOKEN,
                 sourcemaps: {
                     assets: ["./build/*/**/*"],
                     filesToDeleteAfterUpload: ["./build/**/*.map"],
@@ -22,11 +24,13 @@ export default defineConfig(({ mode }) => {
         test: {
             include: ["src/**/*.{test,spec}.{js,ts}"],
         },
+        // :: IF api__enable
         server: {
             proxy: {
-                "/back": { target: env.VITE_API_URL },
+                "/back": { target: env.API_URL },
             },
         },
+        // :: ENDIF
         build: {
             target: "es2017",
         },

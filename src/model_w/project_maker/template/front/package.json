@@ -4,21 +4,26 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "prepare": "svelte-kit sync || echo ''",
         "dev": "vite dev --port 3000 --host",
         "build": "svelte-kit sync && vite build",
         "preview": "vite preview --port 3000  --host",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "vitest",
-        "lint": "prettier --check . && eslint .",
+        "lint": "svelte-kit sync && prettier --check . && eslint .",
         "format": "prettier --write ."
     },
     "dependencies": {
         "@fullerstack/nax-ipware": "^0.10.0",
         "@model-w/preset-sveltekit": "~2026.10.0",
-        "@sentry/sveltekit": "11.3.x"
+        "@sentry/profiling-node": "11.3.x",
+        "@sentry/sveltekit": "11.3.x",
+        "valibot": "1.5.x"
     },
     "devDependencies": {
+        "@eslint/js": "10.0.x",
+        "@harshmandan/svaul": "2.0.x",
         "@sveltejs/adapter-node": "5.5.x",
         "@sveltejs/kit": "2.70.x",
         "@sveltejs/vite-plugin-svelte": "7.3.x",
@@ -28,7 +33,9 @@
         "@typescript-eslint/parser": "8.71.x",
         "eslint": "10.12.x",
         "eslint-config-prettier": "10.1.x",
+        "eslint-formatter-gha": "2.0.x",
         "eslint-plugin-svelte": "3.23.x",
+        "globals": "17.14.x",
         "prettier": "3.9.x",
         "prettier-plugin-svelte": "4.1.x",
         "sass": "1.105.x",
@@ -36,6 +43,7 @@
         "svelte-check": "4.7.x",
         "tslib": "2.8.x",
         "typescript": "5.9.x",
+        "typescript-eslint": "8.71.x",
         "vite": "8.3.x",
         "vitest": "4.1.x"
     }

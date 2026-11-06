@@ -18,14 +18,3 @@ $breakpoints: (
     "lg": 1024px,
     "xl": 1280px,
 );
-
-/// Set the breakpoints as CSS variables at the root level
-/// This is useful to get the breakpoints in JS as we can
-/// query CSS variables, as opposed to just the SCSS variable.
-/// @example js - Get the breakpoints
-///     const breakpoints = getComputedStyle(document.documentElement).getPropertyValue('--breakpoints').split(', ');
-:root {
-    @each $key, $value in $breakpoints {
-        --#{$key}-breakpoint: #{$value};
-    }
-}

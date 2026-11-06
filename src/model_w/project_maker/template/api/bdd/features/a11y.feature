@@ -10,4 +10,9 @@ Feature: Accessibility regression checks
             | iPhone X       |
         Examples:
             | page name |
+            # :: IF api__wagtail
             | non-cms   |
+            # :: ENDIF
+            # :: IFNOT api__wagtail
+            | home      |
+            # :: ENDIF

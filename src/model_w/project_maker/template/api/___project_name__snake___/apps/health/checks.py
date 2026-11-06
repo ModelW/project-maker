@@ -1,6 +1,9 @@
-from collections.abc import Mapping, Sequence
+"""
+Concrete health checks for the infrastructure the project relies on.
+"""
+
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, override
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -16,8 +19,12 @@ from health_check import (
 from health_check.contrib.psutil import Memory
 from health_check.exceptions import ServiceUnavailable
 
-from .base import DjangoHealthCheckWrapper, HealthCheck, Outcome, Status
-from .models import Event
+from .base import DjangoHealthCheckWrapper
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from .base import Outcome
 
 
 def disp_window(window: Mapping[str, int]) -> str:
@@ -83,6 +90,7 @@ class Database(DjangoHealthCheckWrapper):
 
     base_class = DatabaseCheck
 
+    @override
     def get_resolving_actions(self, outcome: Outcome) -> str:
         return """# __CODE__ &mdash; Database cannot be reached
 
@@ -103,9 +111,11 @@ query.
 - Check the database server status
 """
 
+    @override
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["database"]
 
+    @override
     def get_name(self) -> str:
         return "Database"
 
@@ -117,9 +127,11 @@ class RamUsage(DjangoHealthCheckWrapper):
 
     base_class = Memory
 
+    @override
     def get_name(self) -> str:
         return "RAM Usage"
 
+    @override
     def get_resolving_actions(self, outcome: Outcome) -> str:
         return """# __CODE__ &mdash; RAM usage is too high
 
@@ -138,6 +150,7 @@ The memory usage in the container running the application is too high.
   can increase the RAM allocated to the container)
 """
 
+    @override
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["api"]
 
@@ -153,9 +166,11 @@ class Cache(DjangoHealthCheckWrapper):
 
     base_class = CacheCheck
 
+    @override
     def get_name(self) -> str:
         return "Cache"
 
+    @override
     def get_resolving_actions(self, outcome: Outcome) -> str:
         return """# __CODE__ &mdash; Redis cache cannot be reached
 
@@ -174,6 +189,7 @@ entry in the cache.
 - Check the cache server status
 """
 
+    @override
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["redis"]
 
@@ -231,34 +247,43 @@ class ProcrastinateHealthCheck(DjangoHealthCheckWrapper):
 
     base_class = ProcrastinateBuiltInHealthCheck
 
+    @override
     def get_name(self) -> str:
         return "Procrastinate Built-In Health Check"
 
+    @override
     def get_resolving_actions(self, outcome: Outcome) -> str:
         return """# __CODE__ &mdash; Procrastinate cannot be reached
 
 This test verifies several components of the Procrastinate system:
 
-    1. Database connection - Ensures the system can connect to the database
-    2. Migration status - Checks that all required migrations for the procrastinate app have been applied
-    3. Default Django Procrastinate App - Verifies the default app can connect properly
-    4. Worker App - Confirms the worker app can establish a connection
+1. Database connection - Ensures the system can connect to the database
+2. Migration status - Checks that all required migrations for the
+   procrastinate app have been applied
+3. Default Django Procrastinate App - Verifies the default app can connect
+   properly
+4. Worker App - Confirms the worker app can establish a connection
 
 ## Possible causes
 
-    - Database connectivity issues (network problems, credentials, database server down)
-    - Missing migrations for the procrastinate application
-    - Configuration issues with either the default Django Procrastinate App or the Worker App
+- Database connectivity issues (network problems, credentials, database
+  server down)
+- Missing migrations for the procrastinate application
+- Configuration issues with either the default Django Procrastinate App or
+  the Worker App
 
 ## Possible solutions
 
-    - Check database server status and network connectivity
-    - Run python manage.py migrate procrastinate to apply any missing migrations
-    - Verify database credentials and connection settings
-    - Check database permissions for the application user
-    - Review logs for specific error messages that might indicate configuration problems
-    - Ensure the database has enough resources (connections, memory, etc.) to handle requests
+- Check database server status and network connectivity
+- Run python manage.py migrate procrastinate to apply any missing migrations
+- Verify database credentials and connection settings
+- Check database permissions for the application user
+- Review logs for specific error messages that might indicate configuration
+  problems
+- Ensure the database has enough resources (connections, memory, etc.) to
+  handle requests
 """
 
+    @override
     def suggest_reboot(self, outcome: Outcome) -> Sequence[str]:
         return ["procrastinate_worker"]

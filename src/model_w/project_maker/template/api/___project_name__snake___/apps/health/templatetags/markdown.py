@@ -1,3 +1,5 @@
+"""Template filter rendering Markdown into HTML."""
+
 from django import template
 from django.utils.safestring import SafeString
 

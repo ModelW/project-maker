@@ -1,4 +1,7 @@
 allowBuilds:
   '@parcel/watcher': false
+  # Native profiler of @sentry/profiling-node (prebuilt binaries, compiled
+  # only when none matches the platform)
+  '@sentry/node-cpu-profiler': true
 minimumReleaseAgeExclude:
   - '@model-w/preset-sveltekit@2026.10.1'

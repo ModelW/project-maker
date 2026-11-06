@@ -1,3 +1,5 @@
+"""URLs of the health status pages."""
+
 from django.urls import path, re_path
 
 from .views import global_status, global_status_json

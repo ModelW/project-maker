@@ -1,7 +1,9 @@
 <script lang="ts">
-    export let cmsData: any;
+    import type { PageType } from "./types";
+
+    let { cmsData }: { cmsData: PageType } = $props();
 </script>
 
-<main data-testid="home page">
+<article class="container" data-testid="home page">
     <h1>{cmsData.title}</h1>
-</main>
+</article>

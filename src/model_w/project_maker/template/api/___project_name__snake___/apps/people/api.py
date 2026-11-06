@@ -15,15 +15,17 @@ logger = logging.getLogger(__name__)
 router = Router(auth=django_auth, tags=["me"])
 
 
-@router.get("/", auth=None, response=schemas.AuthUserOut | schemas.AnonUserOut)
+# Explicit operation ids: they become the method names of the generated
+# TypeScript client (`api.me.whoami()`, etc.)
+@router.get("/", auth=None, response=schemas.Me, operation_id="whoami")
 def me(request: HttpRequest):
     """Return the authenticated user's data or indicate unauthenticated status."""
     if request.user.is_authenticated:
         return schemas.AuthUserOut.from_orm(request.user)
-    return schemas.AnonUserOut(is_authenticated=False)
+    return schemas.AnonUserOut()
 
 
-@router.post("/", auth=None, response=schemas.AuthUserOut | schemas.AnonUserOut)
+@router.post("/", auth=None, response=schemas.Me, operation_id="login")
 def login_user(request: HttpRequest, data: AuthUserIn):
     """Log in the user, or return unauthenticated status."""
     if request.user.is_authenticated:
@@ -31,14 +33,14 @@ def login_user(request: HttpRequest, data: AuthUserIn):
 
     user = authenticate(request, **data.dict())
     if user is None:
-        return AnonUserOut(is_authenticated=False)
+        return AnonUserOut()
 
     login(request, user)
     return schemas.AuthUserOut.from_orm(user)
 
 
-@router.post("/logout", auth=None, response=schemas.AuthUserOut | schemas.AnonUserOut)
+@router.post("/logout", auth=None, response=schemas.Me, operation_id="logout")
 def logout_user(request: HttpRequest):
     """Log out the current user and return unauthenticated status."""
     logout(request)
-    return schemas.AnonUserOut(is_authenticated=False)
+    return schemas.AnonUserOut()

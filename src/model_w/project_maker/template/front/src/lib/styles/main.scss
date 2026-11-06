@@ -1,8 +1,7 @@
-// abstracts
-@forward "abstracts/variables";
-@forward "abstracts/functions";
-@forward "abstracts/mixins";
+// Global stylesheet, imported once by the root layout. Only the base styles
+// output CSS: abstracts are Sass helpers to be `@use`d by components.
 
 // base
 @forward "base/reset";
 @forward "base/base";
+@forward "base/typography";

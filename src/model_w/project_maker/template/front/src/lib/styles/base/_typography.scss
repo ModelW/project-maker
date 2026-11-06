@@ -1,0 +1,65 @@
+/// Font stacks come from https://modernfontstacks.com/ — they only use fonts
+/// already installed on the visitor's OS, so there is no download, no layout
+/// shift and no flash of unstyled text. Swap them for web fonts if the design
+/// calls for it, but keep using the variables.
+:root {
+    /// Transitional
+    --font-body: Charter, "Bitstream Charter", "Sitka Text", Cambria, serif;
+
+    /// Neo-Grotesque
+    --font-heading:
+        Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
+
+    /// Monospace Code
+    --font-code:
+        ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+        "DejaVu Sans Mono", monospace;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 1rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    line-height: 1.2;
+    text-wrap: balance;
+
+    /// Long words (URLs, names) must not overflow narrow screens
+    overflow-wrap: break-word;
+}
+
+h1 {
+    font-size: 2.5rem;
+}
+
+h2 {
+    font-size: 2rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+h5,
+h6 {
+    font-size: 1rem;
+}
+
+code,
+kbd,
+pre,
+samp {
+    font-family: var(--font-code);
+}

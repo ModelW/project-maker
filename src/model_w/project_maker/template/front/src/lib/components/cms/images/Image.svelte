@@ -40,11 +40,11 @@
      * The image is a picture tag with a source tag for each image rendition and a media query for each width.
      */
 
-    export let image: any;
+    let { image }: { image: any } = $props();
 </script>
 
 <picture>
-    {#each image.sources as source}
+    {#each image.sources as source, i (i)}
         <source
             srcset={source.srcset.join(", ")}
             type="image/{source.image_type}"

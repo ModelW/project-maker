@@ -1,19 +1,14 @@
 <script lang="ts">
+    import StreamField from "$lib/components/cms/StreamField.svelte";
     import Image from "$lib/components/cms/images/Image.svelte";
 
-    export let cmsData: any;
+    let { cmsData }: { cmsData: any } = $props();
 </script>
 
 <h5>Demo Sub Block</h5>
 <p>{cmsData.tagline}</p>
-<p>{@html cmsData.description}</p>
-{#each cmsData.heading_blocks as block}
-    <hr />
-    {#if block.type === "Heading"}
-        <h6>{block.value}</h6>
-        <hr />
-    {/if}
-{/each}
+<div>{@html cmsData.description}</div>
+<StreamField blocks={cmsData.heading_blocks} />
 
 {#if cmsData.image}
     <h6>Image with custom filters and media queries</h6>
@@ -23,6 +18,8 @@
 {/if}
 
 <style lang="scss">
+    @use "$lib/styles/abstracts/mixins" as mixins;
+
     .image-container {
         // Variables
         --image-width: 100%;
@@ -37,12 +34,12 @@
         border-radius: 30px;
         box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
 
-        @media screen and (min-width: 768px) {
+        @include mixins.breakpoints-up(md) {
             --image-width: 50%;
             --image-height: 250px;
         }
 
-        @media screen and (min-width: 1024px) {
+        @include mixins.breakpoints-up(lg) {
             --image-width: 25%;
             --image-height: 350px;
         }

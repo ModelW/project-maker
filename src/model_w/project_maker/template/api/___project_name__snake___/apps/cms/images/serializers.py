@@ -21,16 +21,20 @@ class ImageSerializer(ReadOnlyField):
     To be used in a <picture> tag with a set of renditions in the front
     for example, front/src/lib/components/cms/images/Image.svelte.
 
-    Note: By default, the renditions use a standard width resizing rule, where the aspect ratio is respected.
-          However, an array of filters can be passed to better suit your needs.
+    Note: By default, the renditions use a standard width resizing rule, where
+          the aspect ratio is respected. However, an array of filters can be
+          passed to better suit your needs.
 
-          See https://docs.wagtail.org/en/stable/topics/images.html#available-resizing-methods
+          See
+          https://docs.wagtail.org/en/stable/topics/images.html#available-resizing-methods
           for the available resizing rules.
 
     Keyword Args:
-        filters (None|list[str]|list[tuple[str, str, str]]): Optional rendition filters to use.
+        filters (None|list[str]|list[tuple[str, str, str]]): Optional rendition
+            filters to use.
 
-    Example of default behaviour with no filters (image will scale to screen width & DPR):
+    Example of default behaviour with no filters (image will scale to screen
+    width & DPR):
         ```python
         # with default behaviour
         APIField(
@@ -38,7 +42,8 @@ class ImageSerializer(ReadOnlyField):
             serializer=serializers.ImageSerializer(),
         )
         ```
-    Example using a list of resizing rules (image will scale according to the resize rule, to screen width & DPR):
+    Example using a list of resizing rules (image will scale according to the
+    resize rule, to screen width & DPR):
         ```python
         # with custom rendition filters
         APIField(
@@ -56,24 +61,38 @@ class ImageSerializer(ReadOnlyField):
             ),
         ),
         ```
-        Example using a list of resizing rules, media queries and sizes (image will scale according to the resize rule, to media query & DPR if specified):
+        Example using a list of resizing rules, media queries and sizes (image
+        will scale according to the resize rule, to media query & DPR if
+        specified):
         ```python
         # with custom rendition filters and media queries (including DPR hint)
         APIField(
             "image",
             serializer=serializers.ImageSerializer(
                 filters=[
-                    (["fill-768x150-c100", "fill-768x150-c100"], "(max-width: 767px)", "100vw"),
-                    (["fill-512x250-c100", "fill-1024x250-c100"], "(max-width: 1023px)", "50vw"),
-                    (["fill-360x350-c100", "fill-640x350-c100"], "(min-width: 1024px)", "25vw"),
+                    (
+                        ["fill-768x150-c100", "fill-768x150-c100"],
+                        "(max-width: 767px)",
+                        "100vw",
+                    ),
+                    (
+                        ["fill-512x250-c100", "fill-1024x250-c100"],
+                        "(max-width: 1023px)",
+                        "50vw",
+                    ),
+                    (
+                        ["fill-360x350-c100", "fill-640x350-c100"],
+                        "(min-width: 1024px)",
+                        "25vw",
+                    ),
                 ],
             ),
         ),
         ```
     """
 
-    widths = ["375", "640", "768", "1024", "1280"]
-    formats = ["webp", "jpeg"]
+    widths = ("375", "640", "768", "1024", "1280")
+    formats = ("webp", "jpeg")
 
     def __init__(self, *args: any, **kwargs: any) -> None:
         """Accept renditions as a kwarg and then continue as normal."""
@@ -245,12 +264,15 @@ class ImageSerializer(ReadOnlyField):
     ) -> list[dict[str, any]]:
         """
         Return the sources for the image.
-        If `self.filters` don't have media queries, there will be 1 source per image format.
-        If `self.filters` include media queries, there will be 1 source per media query and image format.
-        If the file is a gif, the renditions will be returned as a list of gifs to preserve animation.
+        If `self.filters` don't have media queries, there will be 1 source per
+        image format.
+        If `self.filters` include media queries, there will be 1 source per
+        media query and image format.
+        If the file is a gif, the renditions will be returned as a list of gifs
+        to preserve animation.
         """
         if instance.file.name.endswith(".gif"):
-            self.formats = ["gif"]
+            self.formats = ("gif",)
 
         filters = self.__get_filters()
         renditions = instance.get_renditions(*filters)  # Grab all in 1 query

@@ -31,7 +31,8 @@ def overwrite_storage_settings(
     CI/CD testing.
     """
 
-    # We use FileSystemStorage (temp directory) for local testing, and a Dockerised S3, for CI/CD testing
+    # We use FileSystemStorage (temp directory) for local testing, and a
+    # Dockerised S3, for CI/CD testing
     local_file_storage = "django.core.files.storage.FileSystemStorage"
     boto3_file_storage = "storages.backends.s3boto3.S3Boto3Storage"
     default_file_storage = os.environ.get(
@@ -145,14 +146,34 @@ def network_requests(page: Page) -> list[Request]:
     return requests
 
 
+# :: IFNOT front__enable
+# Defined before the front-end fixtures on purpose: in the raw template, where
+# both exist, the front-end version below overrides this one.
+@pytest.fixture(scope="session")
+def front_server(live_server: LiveServer) -> str:
+    """
+    There is no front-end in this project. The site is reached through the
+    router if `BDD_FRONT_URL` points to it (as in Docker), otherwise through
+    the API's live server directly.
+    """
+    if server_address := os.environ.get("BDD_FRONT_URL"):
+        utils.wait_for_url(server_address)
+        return server_address
+
+    return live_server.url
+
+
+# :: ENDIF
+# :: IF front__enable
 @pytest.fixture(scope="session")
 def front_dir() -> Path | None:
     """
     Location of the front-end source code.
-    Note: If the environment variable FRONTURL is set, this fixture will return None.
+    Note: If the environment variable BDD_FRONT_URL is set (to use an already
+          running front), this fixture will return None.
     """
     directory = None
-    if not os.environ.get("FRONTURL"):
+    if not os.environ.get("BDD_FRONT_URL"):
         directory = settings.BASE_DIR / ".." / "front"
     return directory
 
@@ -166,17 +187,21 @@ def vite_path(front_dir: Path | None) -> Path:
     so instead we run the vite binary directly with the port we want.
     """
     path = None
-    if not os.environ.get("FRONTURL"):
+    if not os.environ.get("BDD_FRONT_URL"):
         path = front_dir / "node_modules/.bin/vite"
     return path
 
 
 @pytest.fixture(scope="session")
 def front_env(live_server: LiveServer):
-    """Environment variables to be injected into the front."""
+    """
+    Environment variables to be injected into the front (merged over the current
+    environment). The Sentry ones are required by the front, but may be empty.
+    """
     return {
-        "PUBLIC_API_URL": live_server.url,
-        "VITE_API_URL": live_server.url,
+        "API_URL": live_server.url,
+        "SENTRY_DSN": "",
+        "SENTRY_ENVIRONMENT": "test",
     }
 
 
@@ -193,7 +218,9 @@ def front_build(front_dir: Path, vite_path: Path, front_env: dict) -> bool:
     if os.environ.get("SKIPBUILD", "0") != "1":
         logger.info("Running pnpm run build")
         subprocess.run(
-            ["pnpm", "run", "build"],
+            # pnpm is looked up in the PATH on purpose, as its install location
+            # depends on each developer's (or CI's) setup.
+            ["pnpm", "run", "build"],  # noqa: S607
             cwd=front_dir,
             check=True,
             env={**os.environ, **front_env},
@@ -203,6 +230,80 @@ def front_build(front_dir: Path, vite_path: Path, front_env: dict) -> bool:
         logger.info("Not running pnpm run build")
 
     return did_build
+
+
+def _set_non_blocking(process: subprocess.Popen) -> None:
+    """
+    Make the stdout and stderr of the process non-blocking, so that we can
+    read them without hanging.
+
+    Parameters
+    ----------
+    process
+        The process whose output streams must be made non-blocking
+    """
+    for stream in [process.stdout, process.stderr]:
+        fd = stream.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+
+def _wait_for_server_address(
+    process: subprocess.Popen,
+    output: dict[str, str],
+    total_timeout: float,
+) -> str:
+    """
+    Read the output of the front-end server until it prints its URL.
+
+    Parameters
+    ----------
+    process
+        The running front-end server
+    output
+        Accumulates what the server printed so far, in its "stdout" and
+        "stderr" keys
+    total_timeout
+        Maximum time (in seconds) to wait for the server to start
+    """
+    server_address = None
+    start_time = time.time()
+
+    while not server_address:
+        remaining_time = total_timeout - (time.time() - start_time)
+
+        if remaining_time <= 0:
+            msg = (
+                f"Server did not start within the given timeout. "
+                f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
+            )
+            raise TimeoutError(msg)
+
+        ready, _, _ = select.select(
+            [process.stdout, process.stderr],
+            [],
+            [],
+            remaining_time,
+        )
+
+        for stream in ready:
+            try:
+                line = stream.readline()
+                if stream is process.stdout:
+                    output["stdout"] += line
+                else:
+                    output["stderr"] += line
+            except OSError:
+                continue
+
+            if stream is process.stdout and line:
+                if match := utils.get_svelte_1_server_url(line):
+                    server_address = match
+                    break
+            elif not line:
+                break
+
+    return server_address
 
 
 @pytest.fixture(scope="session")
@@ -217,14 +318,16 @@ def front_server(
     The returned value is the base URL of that running front-end.
 
     Note: To test on a URL without starting the server, you can set the
-          environment variable FRONTURL.
+          environment variable BDD_FRONT_URL.
     """
-    if server_address := os.environ.get("FRONTURL"):
-        logger.info(f"Using FRONTURL env var: {server_address} as front server.")
+    if server_address := os.environ.get("BDD_FRONT_URL"):
+        logger.info("Using BDD_FRONT_URL env var: %s as front server.", server_address)
+        utils.wait_for_url(server_address)
         yield server_address
 
     else:
-        with subprocess.Popen(
+        # The command is built from the front directory, not from user input
+        with subprocess.Popen(  # noqa: S603
             [vite_path, "preview", "--port", "0"],
             cwd=front_dir,
             stdout=subprocess.PIPE,
@@ -234,50 +337,16 @@ def front_server(
             env={**os.environ, **front_env},
         ) as p:
             logger.info("Starting the front-end server...")
-            for stream in [p.stdout, p.stderr]:
-                fd = stream.fileno()
-                fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-                fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+            _set_non_blocking(p)
 
-            server_address = None
-            total_timeout = 10
-            start_time = time.time()
             output = {"stdout": "", "stderr": ""}
 
             try:
-                while not server_address:
-                    remaining_time = total_timeout - (time.time() - start_time)
-
-                    if remaining_time <= 0:
-                        raise TimeoutError(
-                            f"Server did not start within the given timeout. "
-                            f"Stdout: {output['stdout']} Stderr: {output['stderr']}",
-                        )
-
-                    ready, _, _ = select.select(
-                        [p.stdout, p.stderr],
-                        [],
-                        [],
-                        remaining_time,
-                    )
-
-                    for stream in ready:
-                        try:
-                            line = stream.readline()
-                            if stream is p.stdout:
-                                output["stdout"] += line
-                            else:
-                                output["stderr"] += line
-                        except OSError:
-                            continue
-
-                        if stream is p.stdout and line:
-                            if match := utils.get_svelte_1_server_url(line):
-                                server_address = match
-                                break
-                        elif not line:
-                            break
-
+                server_address = _wait_for_server_address(
+                    p,
+                    output,
+                    total_timeout=10,
+                )
                 server_address = utils.strip_ansi(server_address)
 
                 # We force localhost rather than IP, so the cookies work
@@ -287,10 +356,11 @@ def front_server(
                 yield server_address
 
             except Exception as e:
-                raise ChildProcessError(
+                msg = (
                     f"Failed to start the server: {e!s} "
-                    f"Stdout: {output['stdout']} Stderr: {output['stderr']}",
+                    f"Stdout: {output['stdout']} Stderr: {output['stderr']}"
                 )
+                raise ChildProcessError(msg) from e
             finally:
                 # Capture and log any remaining output
                 remaining_output = "".join(p.stdout.readlines())
@@ -305,3 +375,6 @@ def front_server(
                     )
 
                 p.terminate()
+
+
+# :: ENDIF

@@ -1,12 +1,30 @@
+"""
+Wiring of the health checks into a dependency graph.
+
+The `Resolver` runs the checks in dependency order and figures out the root
+cause of a failure, while `build_resolver()` declares which checks exist.
+"""
+
 import traceback
 from dataclasses import dataclass, field
-from collections.abc import Mapping, MutableMapping, Sequence
+from typing import TYPE_CHECKING
 
 import networkx as nx
 from sentry_sdk import capture_exception
 
-from .checks import *
+from .base import Outcome, Status
+from .checks import Database, ProcrastinateHealthCheck, RamUsage
+
+# :: IF api__redis
+from .checks import Cache
+
+# :: ENDIF
 from .models import StatusHistory
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, MutableMapping, Sequence
+
+    from .base import HealthCheck
 
 
 @dataclass(frozen=True)
@@ -87,6 +105,8 @@ class Resolver:
     """
 
     def __init__(self):
+        """Creates an empty resolver, ready to have instances registered."""
+
         self.g = nx.DiGraph()
         self.instances: MutableMapping[str, Instance] = {}
         self.outcomes: Mapping[str, Outcome] = {}

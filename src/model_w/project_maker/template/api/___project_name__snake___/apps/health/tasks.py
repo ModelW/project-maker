@@ -1,3 +1,5 @@
+"""Periodic Procrastinate tasks feeding the health checks."""
+
 from procrastinate.contrib.django import app
 from .models import Event
 from .resolver import build_resolver

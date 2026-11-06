@@ -94,9 +94,10 @@ def on_device(device: str, page: Page, playwright: Playwright):
     """
     devices = playwright.devices
 
-    assert (
-        device in devices
-    ), f"Device '{device}' not found in playwright devices.  Please use one of: {devices.keys()}"
+    assert device in devices, (
+        f"Device '{device}' not found in playwright devices.  "
+        f"Please use one of: {devices.keys()}"
+    )
 
     page.set_viewport_size(devices[device]["viewport"])
     page.wait_for_load_state("domcontentloaded")
@@ -106,14 +107,17 @@ def on_device(device: str, page: Page, playwright: Playwright):
 @given(parsers.cfparse("I am logged in as a Django admin"))
 def logged_in_as_django_admin(page: Page, front_server):
     """Log in as an admin to Django."""
-    on_page("back/admin", page, front_server)
+    on_page("back/___admin_prefix___/admin", page, front_server)
     page.locator('input[name="username"]').fill("good@user.com")
     page.locator('input[name="password"]').fill("correct")
     page.locator('input[type="submit"]').click()
 
 
-@given(parsers.cfparse("I am the following user:\n{datatable_vertical}"))
-def the_following_user(datatable_vertical: str, django_user_model: AbstractBaseUser):
+@given("I am the following user:")
+def the_following_user(
+    datatable: list[list[str]],
+    django_user_model: AbstractBaseUser,
+):
     """
     Create a user with the given details.
 
@@ -128,21 +132,25 @@ def the_following_user(datatable_vertical: str, django_user_model: AbstractBaseU
     ```
 
     """
-    datatable = utils.parse_datatable_string(datatable_vertical, vertical=True)
+    user = utils.parse_vertical_datatable(datatable)
 
-    is_superuser = utils.cast_to_bool(datatable.pop("is_admin", ""))
+    is_superuser = utils.cast_to_bool(user.pop("is_admin", ""))
 
     if is_superuser:
-        django_user_model.objects.create_superuser(**datatable)
+        django_user_model.objects.create_superuser(**user)
     else:
-        django_user_model.objects.create_user(**datatable)
+        django_user_model.objects.create_user(**user)
 
 
 # :: IF api__wagtail
 @given(parsers.cfparse("I am logged in as a CMS admin"))
-def logged_in_as_cms_admin(site: wagtail_models.Site, page: Page, front_server: str):
+def logged_in_as_cms_admin(
+    site: wagtail_models.Site,
+    page: Page,
+    front_server: str,
+):
     """Log in as an admin to the CMS."""
-    on_page("back/___cms_prefix___", page, front_server)
+    on_page("back/___admin_prefix___/cms", page, front_server)
     page.locator('input[name="username"]').fill("good@user.com")
     page.locator('input[name="password"]').fill("correct")
     page.locator('button[type="submit"]').click()
@@ -150,7 +158,8 @@ def logged_in_as_cms_admin(site: wagtail_models.Site, page: Page, front_server: 
 
 @given(
     parsers.cfparse(
-        "a {permanent_or_temporary} redirect exists from {source_path} to {target_path}",
+        "a {permanent_or_temporary} redirect exists from {source_path} "
+        "to {target_path}",
     ),
 )
 def create_redirect(permanent_or_temporary: str, source_path: str, target_path: str):
@@ -179,6 +188,21 @@ def create_demo_page(
     demo_page: cms_models.DemoPage,
 ) -> cms_models.DemoPage:
     """Create a demo page."""
+    # MW-166: returned so that later steps get the page, not None, through
+    # the target fixture
+    return demo_page
+
+
+@given(
+    parsers.cfparse('I have created a demo snippet titled "{title}"'),
+    target_fixture="demo_snippet",
+)
+def create_demo_snippet(title: str) -> cms_models.DemoSnippet:
+    """Create a demo snippet with the given title."""
+    return cms_models.DemoSnippet.objects.create(
+        title=title,
+        description="<p>I'm a DemoSnippet</p>",
+    )
 
 
 # :: ENDIF

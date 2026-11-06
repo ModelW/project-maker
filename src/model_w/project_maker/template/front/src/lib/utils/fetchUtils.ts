@@ -10,7 +10,9 @@ import { error, isHttpError, isRedirect, redirect } from "@sveltejs/kit";
  * @param {Promise<Response>} fetchPromise - A promise that resolves to a Response object, typically from calling `fetch`.
  * @returns {Promise<any>} - The JSON-parsed response body if the request is successful.
  */
-export async function fetchWithErrorHandling(fetchPromise: Promise<Response>): Promise<any> {
+export async function fetchWithErrorHandling(
+    fetchPromise: Promise<Response>
+): Promise<any> {
     try {
         const response = await fetchPromise;
         const redirectUrl = response.headers.get("X-Redirect-To");

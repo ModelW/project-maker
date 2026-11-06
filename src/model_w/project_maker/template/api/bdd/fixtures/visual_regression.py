@@ -31,7 +31,10 @@ def get_snapshots_difference(
     image_snapshot: ImageFile,
     threshold: float,
 ) -> int:
-    """Compare two images using a threshold, and return the number of pixels that differ."""
+    """
+    Compare two images using a threshold, and return the number of pixels that
+    differ.
+    """
     return pixelmatch(
         image_original,
         image_snapshot,
@@ -68,9 +71,7 @@ def assert_snapshot(
             file.write_bytes(image_data)
 
         elif not file.exists():
-            assert (
-                False
-            ), "Snapshot not found, use --update-snapshots to update it."
+            pytest.fail("Snapshot not found, use --update-snapshots to update it.")
 
         else:
             old_image = Image.open(file)
@@ -84,8 +85,11 @@ def assert_snapshot(
                     threshold=threshold,
                 )
             except ValueError as e:
-                message = f"Failed to compare snapshots: {e}. Will try and show the difference anyway..."
-                logger.exception(message)
+                logger.exception(
+                    "Failed to compare snapshots: %s. "
+                    "Will try and show the difference anyway...",
+                    e,
+                )
                 diff = abs(
                     old_image.size[0] * old_image.size[1]
                     - new_image.size[0] * new_image.size[1],

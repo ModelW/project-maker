@@ -39,8 +39,9 @@ export const accessLog: Handle = async ({ event, resolve }) => {
     const response = await resolve(event);
     const duration = Date.now() - start;
 
-    console.log(
-        `[${new Date().toISOString()}] ${ip} "${method} - ${url}" ${response.status} (${duration}ms) "${userAgent}"`
+    // Straight to stdout and not through console.log(), which Sentry captures
+    process.stdout.write(
+        `[${new Date().toISOString()}] ${ip} "${method} - ${url}" ${response.status} (${duration}ms) "${userAgent}"\n`
     );
 
     return response;

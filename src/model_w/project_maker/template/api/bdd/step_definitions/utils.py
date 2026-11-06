@@ -5,96 +5,168 @@ This file is for utility functions that step definitions may need.
 """
 
 import logging
-import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
+from playwright.sync_api import FrameLocator, Locator, Page
 from yaml import safe_load
 
 logger = logging.getLogger(__name__)
 
 
-def remove_model_w_template_engine_keywords(text: str) -> str:
+def get_region(page: Page, region: str) -> Page | Locator:
     """
-    Used to remove lines beginning with `# ::` as used in ModelW templates.
-
-    Note: The line may have whitespace before the `#` and after the `::`
-    """
-    return re.sub(r"^\s*# ::.*\n", "", text, flags=re.MULTILINE)
-
-
-def split_on_pipes(text: str) -> list[str]:
-    r"""
-    Splits a string on pipes and returns a list of the results.
-
-    Note: Escaped pipes are ignored (ie. `\|` is not treated as a pipe)
-          And leading and trailing whitespace is removed from each item
-          And empty start and end items are removed
+    Finds a region of the page by the name used in the feature files, through
+    its accessible role (as a visitor using assistive technologies would).
 
     Args:
-        text (str): The text to split
+        page: The Playwright page
+        region: The name of the region, e.g. "site header" or "mobile menu"
+    """
+    regions: dict[str, Callable[[], Page | Locator]] = {
+        "page": lambda: page,
+        "site header": lambda: page.get_by_role("banner"),
+        # The drawer has its own "Main" navigation, hence the scoping
+        "main navigation": lambda: page.get_by_role("banner").get_by_role(
+            "navigation",
+            name="Main",
+        ),
+        "site footer": lambda: page.get_by_role("contentinfo"),
+        "mobile menu": lambda: page.get_by_role("dialog", name="Menu"),
+    }
 
-    Returns:
-        List[str]: The list of items
+    assert region in regions, f"Unknown region '{region}', use one of {list(regions)}"
+
+    return regions[region]()
+
+
+def get_cms_preview(page: Page, preview: str) -> FrameLocator:
+    """
+    Finds the iframe of a preview in the Wagtail admin. They are all titled
+    "Preview" (like the block chooser's one), so they are told apart by URL.
+
+    Args:
+        page: The Playwright page
+        preview: Which preview, "page", "block" or "snippet"
+    """
+    iframes = {
+        "page": 'iframe[src*="/pages/"][src*="/preview/"]',
+        "block": 'iframe[src*="block-preview"]',
+        "snippet": 'iframe[src*="/snippets/"][src*="/preview/"]',
+    }
+
+    assert preview in iframes, (
+        f"Unknown preview '{preview}', use one of {list(iframes)}"
+    )
+
+    return page.frame_locator(iframes[preview])
+
+
+def wait_until(
+    check: Callable[[], bool],
+    message: Callable[[], str],
+    timeout: float = 5,
+    interval: float = 0.1,
+) -> None:
+    """
+    Waits for a condition that Playwright's `expect()` can't express (computed
+    sizes, scroll positions...) to become true.
+
+    Args:
+        check: Returns True once the condition is met
+        message: Gives the assertion message if it never is
+        timeout: How long to wait, in seconds
+        interval: How long to wait between two checks, in seconds
+    """
+    deadline = time.monotonic() + timeout
+
+    while not check():
+        assert time.monotonic() < deadline, message()
+        time.sleep(interval)
+
+
+def parse_datatable(
+    datatable: Sequence[Sequence[str]],
+    *,
+    is_yaml: bool = False,
+) -> list[dict[str, Any]]:
+    """
+    Parses a horizontal datatable into a list of dicts, one per row, keyed by the
+    cells of the header (first) row.
+
+    pytest-bdd gives the datatable of a step to its step function through the
+    `datatable` argument, as a list of rows, each row being a list of cells.
+
+    Args:
+        datatable: The datatable, as received in the `datatable` step argument
+        is_yaml: Parse each cell as YAML (eg. to get numbers and booleans)
 
     Example:
-        split_on_pipes("  | a | b | c |  ") -> ["a", "b", "c"]
-    """
-    values: list[str] = []
+    -------
+    ```gherkin
+        Given the following users:
+            | name | age |
+            | foo  | 1   |
+            | bar  | 22  |
+    ```
 
-    split = [item.strip() for item in re.split(r"(?<!\\)\|", text)]
-
-    # Remove splits from before the first pipe and after the last pipe
-    if len(split) >= 2:  # noqa: PLR2004
-        values = split[1:-1]
-
-    return values
-
-
-def parse_datatable_string(datatable_string: str, vertical=False, is_yaml=False):  # noqa: ANN001, FBT002
-    """
-    As pytest-bdd doesn't support data tables, we need to do it manually,
-    as data tables are very useful for testing, and we'd be seriously limited
-    without them.
+    Gives `[{"name": "foo", "age": "1"}, {"name": "bar", "age": "22"}]`.
 
     """
-    # Remove ModelW template engine keywords
-    datatable_string = remove_model_w_template_engine_keywords(datatable_string)
-    # Split the string into lines
-    lines = datatable_string.strip().split("\n")
-    # Remove leading and trailing whitespace from each line
-    lines = [line.strip() for line in lines]
+    if not datatable:
+        return []
 
-    if vertical:
-        data = [split_on_pipes(line) for line in lines]
-        data_dict: dict[str, str] = {}
-        for item in data:
-            key = item[0].strip()
-            value = item[1].strip() if len(item) > 1 else ""
-            if is_yaml:
-                value = safe_load(value)
-            data_dict[key] = value
+    headers, *rows = datatable
 
-        return data_dict
-    else:  # noqa: RET505
-        # Extract headers from the first line
-        headers = split_on_pipes(lines[0])
-
-        # Extract rows from the remaining lines
-        rows: list[dict[str, str]] = []
-        for line in lines[1:]:
-            values = split_on_pipes(line)
-            if is_yaml:
-                values = [safe_load(value) for value in values]
-            row = dict(zip(headers, values, strict=False))
-            rows.append(row)
-
-        return rows
+    return [
+        dict(
+            zip(
+                headers,
+                (safe_load(value) if is_yaml else value for value in row),
+                strict=False,
+            ),
+        )
+        for row in rows
+    ]
 
 
-def get_datatable_from_step_name(step_name: str):
-    """Returns the data table string from the step name."""
-    return step_name.split("\n", 1)[-1] if "\n" in step_name else None
+def parse_vertical_datatable(
+    datatable: Sequence[Sequence[str]],
+    *,
+    is_yaml: bool = False,
+) -> dict[str, Any]:
+    """
+    Parses a vertical datatable (one `| key | value |` row per item) into a dict.
+
+    pytest-bdd gives the datatable of a step to its step function through the
+    `datatable` argument, as a list of rows, each row being a list of cells.
+
+    Args:
+        datatable: The datatable, as received in the `datatable` step argument
+        is_yaml: Parse each value as YAML (eg. to get numbers and booleans)
+
+    Example:
+    -------
+    ```gherkin
+        Given I am the following user:
+            | email    | good2@user.com |
+            | password | correct        |
+    ```
+
+    Gives `{"email": "good2@user.com", "password": "correct"}`.
+
+    """
+    data: dict[str, Any] = {}
+
+    for row in datatable:
+        if not row:
+            continue
+
+        value = row[1] if len(row) > 1 else ""
+        data[row[0]] = safe_load(value) if is_yaml else value
+
+    return data
 
 
 def cast_to_bool(text: str) -> bool:
@@ -135,10 +207,11 @@ def cast_to_bool(text: str) -> bool:
     ]
 
     if text.lower() not in truthy + falsy:
-        msg = f"Cannot cast '{text}' to a boolean.  Please use one of {truthy} or {falsy}, or extend cast_to_bool()"
-        raise ValueError(
-            msg,
+        msg = (
+            f"Cannot cast '{text}' to a boolean.  Please use one of {truthy} or "
+            f"{falsy}, or extend cast_to_bool()"
         )
+        raise ValueError(msg)
 
     return text.lower() in truthy
 
@@ -160,7 +233,8 @@ def key_values_to_table(event: dict[str, str]) -> str:
 def event_a_subset_of_event_b(event_a: dict[str, str], event_b: dict[str, str]) -> bool:
     """
     Checks if event a is a subset of event b.
-    ie. all of the keys and values in event a are present in event b, but not necessarily vice versa.
+    ie. all of the keys and values in event a are present in event b, but not
+    necessarily vice versa.
     """
     return all(event_b.get(key, "") == value for key, value in event_a.items())
 
@@ -168,11 +242,12 @@ def event_a_subset_of_event_b(event_a: dict[str, str], event_b: dict[str, str]) 
 def event_a_is_equal_to_event_b(
     event_a: dict[str, str],
     event_b: dict[str, str],
-    ignore_keys: list[str] = [],
+    ignore_keys: Sequence[str] = (),
 ) -> bool:
     """
     Checks if event a is equal to event b.
-    ie. all of the keys and values in event a are present in event b, and vice versa.
+    ie. all of the keys and values in event a are present in event b, and vice
+    versa.
     However, any keys in ignore_keys are ignored.
     """
     event_a_minus_ignore_keys = {
@@ -262,4 +337,3 @@ def is_event_in_data_layer(
             i += 1
             time.sleep(1)
     return event_exists
-
