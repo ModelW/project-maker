@@ -13,7 +13,8 @@ import pytest_bdd
 from .fixtures import *  # noqa: F401, F403
 from .step_definitions import *  # noqa: F401, F403
 
-# Uses the global pytestmark variable to add the bdd marker and DB access to all tests in this file.
+# Uses the global pytestmark variable to add the bdd marker and DB access to all
+# tests in this file.
 # This means these tests can be specifically targetted with `pytest -m bdd`.
 pytestmark = [
     pytest.mark.django_db(transaction=True, serialized_rollback=True),

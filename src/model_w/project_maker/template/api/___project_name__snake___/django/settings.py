@@ -1,7 +1,13 @@
+"""
+Django settings, mostly derived from the environment by the Model W preset.
+"""
+
 from importlib import metadata
 
+import sentry_sdk
 from model_w.env_manager import EnvManager
 from model_w.preset.django import ModelWDjango
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Variables set by the EnvManager but declared here so IDEs don't complain
 DEBUG = False
@@ -21,7 +27,41 @@ def get_package_version() -> str:
         return "0.0.0"
 
 
-with EnvManager(ModelWDjango()) as env:
+class Preset(ModelWDjango):
+    """
+    The Model W preset, with a deeper Sentry integration than it provides
+    (profiling, logs and the release).
+    """
+
+    def pre_sentry(self, env: EnvManager):
+        """
+        Configures Sentry if the DSN is found (it replaces the preset's own
+        configuration). The logging integration is enabled by default, so log
+        records get sent as Sentry logs, which is why the access logs are
+        written to stdout directly.
+
+        Parameters
+        ----------
+        env
+            Environment manager
+        """
+
+        if env.get("SENTRY_DSN", None):
+            sentry_sdk.init(
+                integrations=[DjangoIntegration()],
+                send_default_pii=True,
+                environment=self._environment(env),
+                release=get_package_version(),
+                traces_sample_rate=self.sentry_sample_rate,
+                profile_session_sample_rate=self.sentry_sample_rate,
+                profile_lifecycle="trace",
+                enable_logs=True,
+            )
+
+        return []
+
+
+with EnvManager(Preset()) as env:
     # ---
     # Apps
     # ---

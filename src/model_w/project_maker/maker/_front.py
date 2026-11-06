@@ -1,18 +1,16 @@
-import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
-from node_edge import NodeEngine
 from pathspec import pathspec
 
-from ._base import BaseComponent
+from ._base import LOCAL_FILES, BaseComponent
 
 
 def make_path_specs() -> pathspec.PathSpec:
     """
-    We take the project's .gitignore file and tweak it to ignore anything that
-    isn't part of the front-end. We also drop the lockfile because we want
-    something fresh when the user gets to it.
+    Ignore anything that isn't part of the front-end, as well as local files
+    (see LOCAL_FILES) and the demo components, which are only there to test
+    the template itself.
     """
 
     lines = [
@@ -20,131 +18,126 @@ def make_path_specs() -> pathspec.PathSpec:
         "!/front/",
     ]
 
-    with open(Path(__file__).parent.parent / "template" / ".gitignore") as f:
-        lines.extend(f)
+    lines.extend(LOCAL_FILES)
 
-    lines.append("pnpm-lock.yaml")
-    lines.append("!/front/src/lib/")
     lines.append("DemoBlock.svelte")
     lines.append("DemoSubBlock.svelte")
     lines.append("DemoPage.svelte")
+    lines.append("/front/src/lib/components/cms/blocks/Heading.svelte")
 
-    return pathspec.PathSpec.from_lines("gitwildmatch", lines)
+    return pathspec.PathSpec.from_lines("gitignore", lines)
+
+
+#: Files that only make sense with Wagtail
+WAGTAIL_SPECS = pathspec.PathSpec.from_lines(
+    "gitignore",
+    [
+        "/front/src/lib/utils/cms.ts",
+        "/front/src/lib/utils/runScripts.ts",
+        "/front/src/lib/components/cms/",
+        "/front/src/routes/(site)/(cms)/",
+        "/front/src/routes/(preview)/",
+        "/front/src/params/cmsPath.ts",
+    ],
+)
+
+#: Files that only make sense with the demo snippet
+DEMO_SNIPPET_SPECS = pathspec.PathSpec.from_lines(
+    "gitignore",
+    ["/front/src/lib/components/cms/snippets/DemoSnippet.svelte"],
+)
+
+#: Files that only make sense with the API (its generated client)
+API_SPECS = pathspec.PathSpec.from_lines("gitignore", ["/front/src/lib/api/"])
+
+#: Files having an alternative implementation for projects without API, as
+#: (with API, without API)
+NO_API_ALTERNATIVES = [
+    (
+        Path("front/src/lib/session/provider.ts"),
+        Path("front/src/lib/session/provider.no-api.ts"),
+    ),
+    (
+        Path("front/src/lib/session/types.ts"),
+        Path("front/src/lib/session/types.no-api.ts"),
+    ),
+]
+NON_CMS_PAGE = Path("front/src/routes/(site)/non-cms/+page.svelte")
+INDEX_PAGE = Path("front/src/routes/(site)/+page.svelte")
 
 
 class FrontComponent(BaseComponent):
     path_specs = make_path_specs()
 
-    def __init__(self):
-        """
-        Since we use prettier for formatting code, we need a Node Edge
-        instance.
-        """
-
-        self.ne = NodeEngine(
-            {
-                "dependencies": {
-                    "prettier": "^2.8.0",
-                    "@prettier/plugin-php": "^0.19.0",
-                    "prettier-plugin-svelte": "^2.7.0",
-                }
-            }
-        )
-        self.prettier = None
-
-    def start(self) -> None:
-        """
-        Warming up Node Edge and getting a proxy to prettier.
-        """
-
-        self.ne.start()
-        self.prettier = self.ne.import_from("prettier")
-
-    def stop(self) -> None:
-        """
-        Kill Node Edge
-        """
-
-        self.ne.stop()
-
     def accept(self, path: Path, context: Mapping):
         """
-        Accept front-end files if the front-end is enabled. We do a little bit
-        of custom rules in case Wagtail is enabled or not: if it's enabled then
-        we add the catchall page with the ServerTemplatedComponent while
-        otherwise we just put a simple index page.
+        Accept front-end files if the front-end is enabled. Then some files
+        depend on the options:
+
+        - Without Wagtail, all the CMS-related code goes away (routes,
+          components, utils)
+        - The demo snippet's component only comes with the demo snippet
+        - The session provider depends on whether there is an API
         """
 
         if not context["front"]["enable"]:
             return False
 
+        # Explicit, as the exceptions of LOCAL_FILES (like !.env.test) would
+        # otherwise bring back files from outside of front/
+        if path.parts[0] != "front":
+            return False
+
         if self.path_specs.match_file(path):
             return False
-        
-        wagtail_enabled = context["api"]["enable"] and context["api"]["wagtail"]
 
-        if not wagtail_enabled and (
-            path.name
-            in [
-                "cms.ts",
-                "runScripts.ts",
-            ]
-            or path.parent.name
-            in [
-                "[...cmsPath]",
-            ]
-            or path.parent.parent.name
-            in [
-                "cms",
-                "(cms)",
-            ]
-        ):
+        api_enabled = bool(context["api"]["enable"])
+        wagtail_enabled = api_enabled and bool(context["api"]["wagtail"])
+        demo_snippet = wagtail_enabled and bool(context["api"].get("demo_snippet"))
+
+        if not wagtail_enabled and WAGTAIL_SPECS.match_file(path):
             return False
+
+        if not demo_snippet and DEMO_SNIPPET_SPECS.match_file(path):
+            return False
+
+        if not api_enabled and API_SPECS.match_file(path):
+            return False
+
+        for with_api, without_api in NO_API_ALTERNATIVES:
+            if path == (without_api if api_enabled else with_api):
+                return False
 
         return True
 
+    def target_sub_path(self, path: Path, context: Mapping) -> Path:
+        """
+        Without API, the placeholder session provider and types take the place
+        of the API ones. Without Wagtail, the non-CMS page becomes the home page.
+        """
+
+        api_enabled = bool(context["api"]["enable"])
+        wagtail_enabled = api_enabled and bool(context["api"]["wagtail"])
+
+        for with_api, without_api in NO_API_ALTERNATIVES:
+            if path == without_api:
+                return with_api
+
+        if path == NON_CMS_PAGE and not wagtail_enabled:
+            return INDEX_PAGE
+
+        return path
+
     def post_process(self, root: Path, path: Path, context: Mapping) -> None:
         """
-        Mainly, reformats everything using Prettier. But also does a lot of
-        renaming of .env and stuff.
+        Creates the .env from the .env-template. Formatting is done by the
+        Prettier component, once the whole project is generated.
         """
 
         file_path = root / path
 
         if file_path.name == ".env-template":
             new_path = file_path.parent / ".env"
-
-            with open(file_path, encoding="utf-8") as f, open(
-                new_path, "w", encoding="utf-8"
-            ) as g:
-                g.write(f.read())
-
-        if not re.compile(
-            r".*\.([jt]sx?|json|md|vue|php|html?|svelte|ya?ml|(s?c|le)ss)$",
-            re.IGNORECASE,
-        ).match(file_path.name):
-            return
-
-        info = self.prettier.getFileInfo(f"{file_path}")
-
-        if not (parser := info.get("inferredParser")):
-            return
-
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-
-        formatted = self.prettier.format(
-            content,
-            {
-                "parser": parser,
-                "trailingComma": "es5",
-                "tabWidth": 4,
-                "proseWrap": "always",
-            },
-        )
-
-        if formatted == content:
-            return
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(formatted)
+            new_path.write_text(
+                file_path.read_text(encoding="utf-8"), encoding="utf-8", newline="\n"
+            )

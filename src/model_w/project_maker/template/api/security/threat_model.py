@@ -49,10 +49,16 @@ tm.assumptions = [
     "CSRF protection enabled via Django middleware with proper token validation",
     "Redis and PostgreSQL accessible only within private network/VPC",
     "DigitalOcean App Platform provides network isolation and security groups",
-    "Public object storage (DigitalOcean Spaces) used only for non-sensitive media assets",
+    (
+        "Public object storage (DigitalOcean Spaces) used only for non-sensitive "
+        "media assets"
+    ),
     "Kerfu Foo manages deployment and secrets with secure access controls",
     "GitHub repository uses branch protection and requires code review",
-    "Django settings use appropriate security configurations (DEBUG=False in production)",
+    (
+        "Django settings use appropriate security configurations (DEBUG=False in "
+        "production)"
+    ),
     "SvelteKit implements proper client-side security controls",
     "All dependencies are regularly updated and monitored for vulnerabilities",
     "Database backups are encrypted and stored securely",

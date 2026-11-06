@@ -61,7 +61,10 @@ class Command(BaseCommand):
 
     def _user_confirmation(self) -> bool:
         """Ask the user for confirmation before proceeding."""
-        message = "Are you sure you want to start from scratch?  Existing data will be deleted. (y/n): "
+        message = (
+            "Are you sure you want to start from scratch?  "
+            "Existing data will be deleted. (y/n): "
+        )
         return input(message).lower() == "y"
 
     def _migrate_database(self) -> None:

@@ -1,3 +1,5 @@
+"""Custom Wagtail image and rendition models."""
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from wagtail.images.models import AbstractImage, AbstractRendition
@@ -23,6 +25,8 @@ class CustomImage(AbstractImage):
     )
 
     class Meta(AbstractImage.Meta):
+        """Human-readable names and the permission to choose images."""
+
         verbose_name = _("image")
         verbose_name_plural = _("images")
         permissions = [
@@ -43,4 +47,6 @@ class CustomRendition(AbstractRendition):
     )
 
     class Meta:
+        """A given image has only one rendition per filter and focal point."""
+
         unique_together = (("image", "filter_spec", "focal_point_key"),)

@@ -1,7 +1,24 @@
 PYTHON_BIN ?= poetry run python
 
+TEMPLATE_DIR = src/model_w/project_maker/template
+
 format:
-	$(PYTHON_BIN) -m monoformat --py-src-path src/model_w/project_maker/template/api/src .
+	$(PYTHON_BIN) -m ruff check --fix .
+	$(PYTHON_BIN) -m ruff format .
+	$(PYTHON_BIN) -m ruff format $(TEMPLATE_DIR)/api
+	cd $(TEMPLATE_DIR)/front && pnpm prettier --write .
+
+lint:
+	$(PYTHON_BIN) -m ruff check .
+	$(PYTHON_BIN) -m ruff format --check .
+	$(PYTHON_BIN) -m ruff format --check $(TEMPLATE_DIR)/api
+	cd $(TEMPLATE_DIR)/front && pnpm prettier --check .
+
+test:
+	$(PYTHON_BIN) -m pytest
+
+test_slow:
+	$(PYTHON_BIN) -m pytest -m slow
 
 check_release:
 ifndef VERSION

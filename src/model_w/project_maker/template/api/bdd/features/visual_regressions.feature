@@ -12,7 +12,12 @@ Feature: Visual regression checks
 
         Examples:
             | page_name |
+            # :: IF api__wagtail
             | non-cms   |
+            # :: ENDIF
+            # :: IFNOT api__wagtail
+            | home      |
+            # :: ENDIF
 
 
     Scenario Outline: Pages should not have any tablet visual regressions
@@ -22,7 +27,12 @@ Feature: Visual regression checks
 
         Examples:
             | page_name |
+            # :: IF api__wagtail
             | non-cms   |
+            # :: ENDIF
+            # :: IFNOT api__wagtail
+            | home      |
+            # :: ENDIF
 
 
     Scenario Outline: Pages should not have any mobile visual regressions
@@ -32,5 +42,10 @@ Feature: Visual regression checks
 
         Examples:
             | page_name |
+            # :: IF api__wagtail
             | non-cms   |
+            # :: ENDIF
+            # :: IFNOT api__wagtail
+            | home      |
+            # :: ENDIF
 

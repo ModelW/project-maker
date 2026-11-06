@@ -1,0 +1,2 @@
+# LF everywhere, including on Windows (the tooling and the containers expect it)
+* text=auto eol=lf

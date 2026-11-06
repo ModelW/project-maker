@@ -2,22 +2,21 @@
 Middleware for access logs.
 We don't use standard Granian logging, as we can't get the real IP address, as
 request headers aren't part of the atoms for Granian log configuration.
+
+Access logs are written straight to stdout rather than through the logging
+module: otherwise they would end up in Sentry (as breadcrumbs or events),
+which is noise we don't want.
 """
 
 import logging
+import sys
 import time
+from typing import TYPE_CHECKING
 
-import coloredlogs
-from django.http import HttpRequest, HttpResponse
 from ipware import get_client_ip
 
-logger = logging.getLogger(__name__)
-
-logger.propagate = False
-handler = logging.StreamHandler()
-formatter = coloredlogs.ColoredFormatter("%(message)s")
-handler.setFormatter(formatter)
-logger.handlers = [handler]
+if TYPE_CHECKING:
+    from django.http import HttpRequest, HttpResponse
 
 # Silence the django.server logger
 logging.getLogger("django.server").setLevel(logging.CRITICAL)
@@ -48,12 +47,8 @@ class RequestLogMiddleware:
             f'{response.status_code} ({int(run_time * 1000)}ms) "{user_agent}"'
         )
 
-        if response.status_code < 400:
-            logger.info(msg=msg)
-        elif response.status_code < 500:
-            logger.warning(msg=msg)
-        else:
-            logger.error(msg=msg)
+        sys.stdout.write(f"{msg}\n")
+        sys.stdout.flush()
 
         return response
 

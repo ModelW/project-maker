@@ -1,5 +1,6 @@
 ---
-# Run the performance tests in Docker in a way closely resembling the production environment.
+# Run the performance tests in Docker in a way closely resembling the production
+# environment.
 
 services:
 
@@ -53,6 +54,7 @@ services:
       retries: 5
       start_period: 5s
 
+# :: IF api__redis
   redis:
     image: redis:7-alpine
     healthcheck:
@@ -61,6 +63,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+# :: ENDIF
 
   api:
     build:
@@ -71,8 +74,10 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+# :: IF api__redis
       redis:
         condition: service_healthy
+# :: ENDIF
 # :: IF api~~wagtail
       createbuckets:
         condition: service_healthy
@@ -84,7 +89,7 @@ services:
     expose:
       - "8000"      
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://api:8000/back/admin/login/"]
+      test: ["CMD", "curl", "-f", "http://api:8000/back/___admin_prefix___/admin/login/"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -92,7 +97,12 @@ services:
     command: >
       sh -c "
       modelw-docker run python manage.py start_dev --noinput &&
+# :: IF api__channels
       modelw-docker run python -m granian --host 0.0.0.0 --port 8000 --workers 1 --threads 2 --interface asgi ___project_name__snake___.django.asgi:application
+# :: ENDIF
+# :: IFNOT api__channels
+      modelw-docker run python -m granian --host 0.0.0.0 --port 8000 --workers 1 --threads 2 --interface wsgi ___project_name__snake___.django.wsgi:application
+# :: ENDIF
       "
 
   front:

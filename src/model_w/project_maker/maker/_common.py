@@ -1,20 +1,25 @@
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 from pathspec import pathspec
 
-from ._base import BaseComponent
+from ._base import LOCAL_FILES, BaseComponent
 
 
 def make_path_specs() -> pathspec.PathSpec:
     """
-    We just want to copy all the files that are neither in api nor front
+    We just want to copy all the files that are neither in api nor front (but
+    the .github directory is welcome)
     """
 
     return pathspec.PathSpec.from_lines(
-        "gitwildmatch",
+        "gitignore",
         [
+            # First, so that its exceptions (like !.env.test) don't bring back
+            # files from the api/ and front/ folders
+            *LOCAL_FILES,
             "/*/",
+            "!/.github/",
         ],
     )
 
@@ -28,4 +33,11 @@ class CommonComponent(BaseComponent):
     path_specs = make_path_specs()
 
     def accept(self, path: Path, context: Mapping):
-        return not self.path_specs.match_file(path)
+        if self.path_specs.match_file(path):
+            return False
+
+        # The E2E suite lives in the API (and goes through the router)
+        if path == Path(".github/workflows/e2e.yml"):
+            return bool(context["api"]["enable"])
+
+        return True

@@ -1,7 +1,37 @@
+@use "sass:map";
+@use "../abstracts/variables";
+@use "../abstracts/mixins";
+
+:root {
+    /// The breakpoints, exposed as CSS variables so that JS can read them:
+    ///     getComputedStyle(document.documentElement).getPropertyValue("--md-breakpoint")
+    @each $key, $value in variables.$breakpoints {
+        --#{$key}-breakpoint: #{$value};
+    }
+
+    /// Height of the fixed site header when the page is not scrolled. The
+    /// content of the page is pushed down by that amount.
+    --header-height: 5rem;
+
+    /// Horizontal padding of the page container, wider on desktop
+    --container-padding: 1rem;
+
+    @include mixins.breakpoints-up(md) {
+        --container-padding: 2rem;
+    }
+}
+
 html,
 body {
-    // Layout
-    height: 100%;
     padding: 0;
     margin: 0;
+}
+
+/// Centers the content and limits its width, while keeping some breathing
+/// room on the sides on small screens.
+.container {
+    @include mixins.max-width(map.get(variables.$breakpoints, "xl"));
+
+    width: 100%;
+    padding-inline: var(--container-padding);
 }

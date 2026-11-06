@@ -1,3 +1,8 @@
+"""
+ASGI entry point of the project, routing HTTP to Django and WebSockets to
+Channels.
+"""
+
 import os
 
 from channels.auth import AuthMiddlewareStack

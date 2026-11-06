@@ -1,6 +1,7 @@
 import re
+from collections.abc import Iterator, Mapping, Sequence
 from io import StringIO
-from typing import Iterator, Mapping, NamedTuple, Optional, Sequence, TextIO
+from typing import NamedTuple, TextIO
 
 CONTROL_BLOCK_START = re.compile(r"^\s*(#|//) ::\s*")
 INLINE_REF = re.compile(
@@ -32,7 +33,7 @@ class Context:
     def __init__(self, data: Mapping):
         self.data = data
 
-    def resolve(self, ref: "Ref"):
+    def resolve(self, ref: Ref):
         """
         Fetches a value from the data based on the key path from the Ref. For
         example Ref(['a', 'b', 'c']) points to self.data['a']['b']['c'].
@@ -93,7 +94,7 @@ class IfBlock(NamedTuple):
     """
 
     condition: Ref
-    content: "Block"
+    content: Block
     negated: bool = False
 
     def execute(self, context: Context) -> str:
@@ -104,7 +105,7 @@ class IfBlock(NamedTuple):
         which fancily maps standard and negated conditions without branching.
 
         **Truth Table:**
-        
+
         | Resolved Condition | self.negated | Condition != negated | Action            |
         |--------------------|--------------|----------------------|-------------------|
         | True               | False        | True                 | Execute Content   |
@@ -116,7 +117,7 @@ class IfBlock(NamedTuple):
             context (Context): The runtime context containing variables and state.
 
         Returns:
-            str: The output of the executed content block, or an empty string 
+            str: The output of the executed content block, or an empty string
                  if the condition evaluates to false.
         """
 
@@ -217,7 +218,7 @@ def parse_block(bl: BlockLine, text: TextIO) -> IfBlock:
             )
 
 
-def detect_block_line(line: str) -> Optional[BlockLine]:
+def detect_block_line(line: str) -> BlockLine | None:
     """
     If we're on a block line, let's try to detect the block's content and
     arguments. For now it's super simplistic.
@@ -294,8 +295,8 @@ def parse_text(text: TextIO) -> Block:
     for line in text:
         try:
             lines.append(decompose_line(line, text))
-        except EndBlock:
-            raise ParseError("Unexpected block end")
+        except EndBlock as e:
+            raise ParseError("Unexpected block end") from e
 
     return Block(lines)
 

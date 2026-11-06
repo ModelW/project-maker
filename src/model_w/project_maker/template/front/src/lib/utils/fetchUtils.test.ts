@@ -76,13 +76,18 @@ describe("fetchWithErrorHandling", () => {
     it("should handle permanent redirects from API response headers", async () => {
         const mockResponse = {
             status: 301,
-            headers: new Map([["X-Redirect-To", "https://example.com/custom-redirect"]]),
+            headers: new Map([
+                ["X-Redirect-To", "https://example.com/custom-redirect"],
+            ]),
             json: vi.fn().mockResolvedValue({}),
         } as unknown as Response;
 
         await fetchWithErrorHandling(Promise.resolve(mockResponse));
 
-        expect(redirect).toHaveBeenCalledWith(301, "https://example.com/custom-redirect");
+        expect(redirect).toHaveBeenCalledWith(
+            301,
+            "https://example.com/custom-redirect"
+        );
     });
 
     it("should handle temporary redirects from API response headers", async () => {

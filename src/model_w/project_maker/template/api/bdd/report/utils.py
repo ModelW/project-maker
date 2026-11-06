@@ -1,5 +1,8 @@
-from html import unescape, escape
-from typing import TypedDict
+"""Helpers for the BDD report: singleton and data table/HTML formatting."""
+
+from collections.abc import Sequence
+from html import escape, unescape
+from typing import ClassVar, TypedDict
 
 
 class SingletonMeta(type):
@@ -16,7 +19,7 @@ class SingletonMeta(type):
     ```
     """
 
-    _instances = {}
+    _instances: ClassVar[dict[type, object]] = {}
 
     def __call__(cls, *args, **kwargs):
         """
@@ -31,23 +34,24 @@ class SingletonMeta(type):
 
 
 class DatatableRow(TypedDict):
+    """A row of a data table, as expected by the Cucumber report."""
+
     cells: list[str]
 
 
 class ReportDatatable(TypedDict):
+    """A data table, as expected by the Cucumber report."""
+
     rows: list[DatatableRow]
 
 
-def datatable_to_arguments(
-    datatable: dict[str, str] | list[dict[str, str]],
-) -> ReportDatatable:
+def datatable_to_arguments(datatable: Sequence[Sequence[str]]) -> ReportDatatable:
     """
-    Converts a datatable to a format that can be displayed nicely in the report.
-    The standard format for a datatable is a dictionary of rows and cells.
+    Converts the datatable of a step (as given by pytest-bdd, a list of rows,
+    each being a list of cells) to the format of the Cucumber report.
 
-    Note: We can accept horizontal and vertical datatables.
-          A vertical datatable is a dictionary of key-value pairs.
-          A horizontal datatable is a list of dictionaries.
+    The rows are kept as written in the feature file, so horizontal and
+    vertical datatables are both displayed as they read in the feature file.
 
     Example:
     ```gherkin
@@ -63,23 +67,12 @@ def datatable_to_arguments(
     ```
 
     Args:
-        datatable (dict[str, str] | list[dict[str, str]]): The datatable to convert
+        datatable (Sequence[Sequence[str]]): The datatable to convert
 
     Returns:
-        dict[rows:
+        ReportDatatable: `{"rows": [{"cells": [...]}, ...]}`
     """
-    if isinstance(datatable, dict):
-        keys = [unescape(key) for key in datatable.keys()]
-        values = [unescape(value) for value in datatable.values()]
-        rows = [{"cells": keys}, {"cells": values}]
-    else:
-        rows = [
-            {"cells": [unescape(key) for key in row.keys()]} for row in datatable[:1]
-        ]
-        rows.extend(
-            [{"cells": [unescape(key) for key in row.values()]} for row in datatable],
-        )
-    return {"rows": rows}
+    return {"rows": [{"cells": [unescape(cell) for cell in row]} for row in datatable]}
 
 
 def generate_a11y_report(results: dict) -> str:
