@@ -1,0 +1,130 @@
+images:
+    # :: IF api__enable
+    - id: api
+      context: api
+    # :: ENDIF
+    # :: IF front__enable
+    - id: front
+      context: front
+      envs: [sentry-build]
+    # :: ENDIF
+
+components:
+    # :: IF api__enable
+    # Serves with granian, in ASGI with Channels and WSGI otherwise
+    - id: api
+      image: api
+      envs: [django]
+      size_hint: ram >= 1g
+    - id: api-migrate
+      image: api
+      envs: [django]
+      size_hint: ram >= 1g
+    # Procrastinate (the health check expects a worker to be running)
+    - id: api-worker
+      image: api
+      envs: [django]
+      size_hint: ram >= 1g
+      run_command: modelw-docker run python manage.py procrastinate worker
+    # :: ENDIF
+    # :: IF front__enable
+    - id: front
+      image: front
+      envs: [front]
+      size_hint: ram >= 1g
+    # :: ENDIF
+
+# Single origin: /back goes to the API, everything else to the front
+ingresses:
+    # :: IF api__enable
+    # :: IF front__enable
+    - match:
+          prefix: "/back"
+      target:
+          component: api
+          port: 8000
+    # :: ENDIF
+    # :: IFNOT front__enable
+    - match:
+          prefix: "/"
+      target:
+          component: api
+          port: 8000
+    # :: ENDIF
+    # :: ENDIF
+    # :: IF front__enable
+    - match:
+          prefix: "/"
+      target:
+          component: front
+          port: 3000
+    # :: ENDIF
+
+# :: IF api__enable
+hooks:
+    - when: "pre-deploy"
+      component: api-migrate
+      run_command: modelw-docker run python manage.py migrate
+
+# :: ENDIF
+domains:
+    - id: main
+
+# :: IF api__enable
+resources:
+    # :: IF api__redis
+    redis_clusters:
+        - id: redis
+          version: "8"
+    # :: ENDIF
+    pg_clusters:
+        - id: psql
+          version: "18"
+    pg_databases:
+        - id: psql
+          cluster: psql
+
+# :: ENDIF
+envs:
+    # :: IF api__enable
+    django:
+        SECRET_KEY: "${{ secrets::SECRET_KEY }}"
+
+        DATABASE_URL: "${{ resources::pg_databases.psql.url }}"
+        # :: IF api__redis
+        REDIS_URL: "${{ resources::redis_clusters.redis.url }}"
+        # :: ENDIF
+
+        BASE_URL: "${{ resources::app.url }}"
+        ENVIRONMENT: "${{ deployment::env.name }}"
+        SENTRY_DSN: "${{ vars::API_SENTRY_DSN }}"
+        # :: IF api__wagtail
+
+        # Media files, in a DigitalOcean Spaces bucket
+        STORAGES_MODE: "do"
+        STORAGE_MAKE_FILES_PUBLIC: "yes"
+        DO_REGION: "${{ vars::DO_REGION }}"
+        AWS_ACCESS_KEY_ID: "${{ vars::AWS_ACCESS_KEY_ID }}"
+        AWS_SECRET_ACCESS_KEY: "${{ secrets::AWS_SECRET_ACCESS_KEY }}"
+        AWS_STORAGE_BUCKET_NAME: "${{ vars::AWS_STORAGE_BUCKET_NAME }}"
+        AWS_S3_CUSTOM_DOMAIN: "${{ vars::AWS_S3_CUSTOM_DOMAIN }}"
+        # :: ENDIF
+    # :: ENDIF
+    # :: IF front__enable
+
+    # Validated in front/src/env.ts
+    front:
+        # :: IF api__enable
+        # Private shortcut to the API, for the server side of the front
+        API_URL: "${{ components::api.private_url }}"
+        # :: ENDIF
+        SENTRY_DSN: "${{ vars::FRONT_SENTRY_DSN }}"
+        SENTRY_ENVIRONMENT: "${{ deployment::env.name }}"
+
+    # Source maps upload, build time only (read in front/vite.config.ts)
+    sentry-build:
+        SENTRY_AUTH_TOKEN: "${{ secrets::SENTRY_AUTH_TOKEN }}"
+        SENTRY_ORG: "${{ vars::SENTRY_ORG }}"
+        SENTRY_PROJECT: "${{ vars::FRONT_SENTRY_PROJECT }}"
+        SENTRY_URL: "${{ vars::SENTRY_URL }}"
+    # :: ENDIF

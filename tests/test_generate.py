@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pathspec
 import pytest
+import yaml
 
 from model_w.project_maker.__main__ import build_context, build_maker
 from model_w.project_maker.maker._base import LOCAL_FILES
@@ -296,6 +297,52 @@ def test_expected_files(project):
         else:
             assert "/login/?next=" in config
             assert "/back/" not in config
+
+
+def test_snow_matches_options(project):
+    """
+    The deployment only declares the components and resources the options
+    need, and gives each component the variables it expects.
+    """
+
+    combo, root = project
+    snow = yaml.safe_load((root / "snow.yml").read_text())
+    wagtail = combo.api and combo.wagtail
+    redis = wagtail or (combo.api and combo.channels)
+
+    images = {i["id"] for i in snow["images"]}
+    components = {c["id"] for c in snow["components"]}
+    ingresses = {
+        i["match"]["prefix"]: i["target"]["component"] for i in snow["ingresses"]
+    }
+    resources = snow.get("resources") or {}
+    envs = snow["envs"]
+
+    api = {"api", "api-migrate", "api-worker"} if combo.api else set()
+    front = {"front"} if combo.front else set()
+    assert images == {"api"} & api | front
+    assert components == api | front
+
+    if combo.front and combo.api:
+        assert ingresses == {"/back": "api", "/": "front"}
+    else:
+        assert ingresses == {"/": "api" if combo.api else "front"}
+
+    assert ("redis_clusters" in resources) is redis
+    assert ("pg_databases" in resources) is combo.api
+
+    if combo.api:
+        assert ("REDIS_URL" in envs["django"]) is redis
+        assert ("AWS_STORAGE_BUCKET_NAME" in envs["django"]) is wagtail
+
+    if combo.front:
+        # Same variables as the ones validated in src/env.ts
+        expected = {"SENTRY_DSN", "SENTRY_ENVIRONMENT"} | (
+            {"API_URL"} if combo.api else set()
+        )
+        assert set(envs["front"]) == expected
+        env_ts = (root / "front" / "src" / "env.ts").read_text()
+        assert all(f"{name}:" in env_ts for name in expected)
 
 
 def test_no_local_files(project):

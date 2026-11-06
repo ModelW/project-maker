@@ -2,10 +2,11 @@
 @use "variables";
 @use "functions";
 
-// All media queries use the range syntax (`width < X`) rather than
-// `max-width: X - 1px`. The latter leaves a gap between X - 1px and X that
-// fractional viewport widths (zoom, high-DPI screens) can fall into, in which
-// case neither the "up" nor the "down" rules apply.
+// "Below X" is written `not all and (min-width: X)`, the exact complement of
+// "X and above". The range syntax (`width < X`) would be cleaner but is too
+// recent (iOS 16.4), and `max-width: X - 1px` leaves a gap that fractional
+// viewport widths (zoom, high-DPI screens) fall into, in which case neither
+// the "up" nor the "down" rules apply.
 
 /// Mixin to media query all screens above and **including** given breakpoint.
 /// @param {string} $breakpoint A breakpoint key inside $breakpoints map
@@ -17,7 +18,7 @@
 @mixin breakpoints-up($breakpoint) {
     $breakpoint-value: functions.validate-breakpoint($breakpoint);
 
-    @media (width >= $breakpoint-value) {
+    @media (min-width: $breakpoint-value) {
         @content;
     }
 }
@@ -31,7 +32,7 @@
 @mixin breakpoints-down($breakpoint) {
     $breakpoint-value: functions.validate-breakpoint($breakpoint);
 
-    @media (width < $breakpoint-value) {
+    @media not all and (min-width: $breakpoint-value) {
         @content;
     }
 }
@@ -47,12 +48,14 @@
     $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
 
     @if not $next-breakpoint {
-        @media (width >= $breakpoint-value) {
+        @media (min-width: $breakpoint-value) {
             @content;
         }
     } @else {
-        @media ($breakpoint-value <= width < $next-breakpoint) {
-            @content;
+        @media (min-width: $breakpoint-value) {
+            @media not all and (min-width: $next-breakpoint) {
+                @content;
+            }
         }
     }
 }
@@ -72,8 +75,10 @@
         @error "Invalid breakpoint range: '#{$breakpoint1}' must be smaller than '#{$breakpoint2}'.";
     }
 
-    @media ($breakpoint1-value <= width < $breakpoint2-value) {
-        @content;
+    @media (min-width: $breakpoint1-value) {
+        @media not all and (min-width: $breakpoint2-value) {
+            @content;
+        }
     }
 }
 
@@ -88,11 +93,11 @@
     $next-breakpoint: functions.next-value(variables.$breakpoints, $breakpoint);
 
     @if not $next-breakpoint {
-        @media (width < $breakpoint-value) {
+        @media not all and (min-width: $breakpoint-value) {
             @content;
         }
     } @else {
-        @media (width < $breakpoint-value) or (width >= $next-breakpoint) {
+        @media not all and (min-width: $breakpoint-value), (min-width: $next-breakpoint) {
             @content;
         }
     }

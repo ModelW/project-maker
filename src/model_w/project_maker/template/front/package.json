@@ -16,6 +16,7 @@
     "dependencies": {
         "@fullerstack/nax-ipware": "^0.10.0",
         "@model-w/preset-sveltekit": "~2026.10.0",
+        "@sentry/profiling-node": "11.3.x",
         "@sentry/sveltekit": "11.3.x",
         "valibot": "1.5.x"
     },

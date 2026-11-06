@@ -1,20 +1,14 @@
+// Sentry gets initialized in instrumentation.server.ts, before any app code
 import { sequence } from "@sveltejs/kit/hooks";
 // :: IF api__enable
 import type { HandleFetch } from "@sveltejs/kit";
 // :: ENDIF
-import type { HandleServerError } from "@sveltejs/kit";
+import type { Handle, HandleServerError } from "@sveltejs/kit";
 import * as Sentry from "@sentry/sveltekit";
 // :: IF api__enable
 import { API_URL } from "$app/env/private";
 // :: ENDIF
-import { SENTRY_DSN, SENTRY_ENVIRONMENT } from "$app/env/public";
 import { accessLog } from "$lib/utils/access_log";
-
-Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: SENTRY_ENVIRONMENT,
-    tracesSampleRate: 1,
-});
 
 // :: IF api__enable
 /**
@@ -125,4 +119,19 @@ const errorHandler: HandleServerError = ({ error, event }) => {
 
 export const handleError = Sentry.handleErrorWithSentry(errorHandler);
 
-export const handle = sequence(Sentry.sentryHandle(), accessLog);
+/**
+ * Allows in-browser JS profiling, which Sentry's browser profiling needs.
+ *
+ * See https://docs.sentry.io/platforms/javascript/guides/sveltekit/profiling/browser-profiling/
+ */
+const documentPolicy: Handle = async ({ event, resolve }) => {
+    const response = await resolve(event);
+
+    if (response.headers.get("content-type")?.includes("text/html")) {
+        response.headers.set("Document-Policy", "js-profiling");
+    }
+
+    return response;
+};
+
+export const handle = sequence(documentPolicy, Sentry.sentryHandle(), accessLog);

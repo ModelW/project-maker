@@ -51,6 +51,34 @@ balancer (`api/bdd/_infrastructure/mock-digital-ocean-router.conf`).
 origin. The only time the API is reached directly is when the front-end's
 server talks to it, through `API_URL` (front side).
 
+### Deployment
+
+The deployment is described in [`snow.yml`](./snow.yml): images, components,
+routing, resources and the environment variables of each component. Values
+come from the deployment itself (database, URLs, environment name), or from
+the variables and secrets to set for each environment:
+
+| Name                      | Kind   | Purpose                                    |
+| ------------------------- | ------ | ------------------------------------------ |
+# :: IF api__enable
+| `SECRET_KEY`              | secret | Django's secret key                        |
+| `API_SENTRY_DSN`          | var    | Sentry DSN of the API (empty to disable)   |
+# :: ENDIF
+# :: IF api__wagtail
+| `DO_REGION`               | var    | Region of the media bucket (e.g. `ams3`)   |
+| `AWS_ACCESS_KEY_ID`       | var    | Access key of the media bucket             |
+| `AWS_SECRET_ACCESS_KEY`   | secret | Secret key of the media bucket             |
+| `AWS_STORAGE_BUCKET_NAME` | var    | Name of the media bucket                   |
+| `AWS_S3_CUSTOM_DOMAIN`    | var    | Public domain of the media bucket          |
+# :: ENDIF
+# :: IF front__enable
+| `FRONT_SENTRY_DSN`        | var    | Sentry DSN of the front (empty to disable) |
+| `SENTRY_AUTH_TOKEN`       | secret | Uploads the front's source maps to Sentry  |
+| `SENTRY_ORG`              | var    | Sentry organization (source maps)          |
+| `FRONT_SENTRY_PROJECT`    | var    | Sentry project of the front (source maps)  |
+| `SENTRY_URL`              | var    | Sentry instance URL (source maps)          |
+# :: ENDIF
+
 ### Writing more of it
 
 If you feel like the Model W documentation is not enough:

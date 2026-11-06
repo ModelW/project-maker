@@ -14,6 +14,9 @@ importers:
       '@model-w/preset-sveltekit':
         specifier: ~2026.10.0
         version: 2026.10.1(7a8a92f3cc5cf1377a5f741dd5d72882)
+      '@sentry/profiling-node':
+        specifier: 11.3.x
+        version: 11.3.0(rollup@4.67.4)
       '@sentry/sveltekit':
         specifier: 11.3.x
         version: 11.3.0(@sveltejs/kit@2.70.3(@opentelemetry/api@1.10.0)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(@typescript-eslint/types@8.71.2))(vite@8.3.5(@types/node@24.19.2)(sass@1.105.2)))(svelte@5.57.3(@typescript-eslint/types@8.71.2))(typescript@5.9.3)(vite@8.3.5(@types/node@24.19.2)(sass@1.105.2)))(rollup@4.67.4)(svelte@5.57.3(@typescript-eslint/types@8.71.2))(vite@8.3.5(@types/node@24.19.2)(sass@1.105.2))
@@ -777,6 +780,10 @@ packages:
     resolution: {integrity: sha512-V+RKyL5LavKdgjzDbaUjZwK0PKPLJVWFqPJzEeZxDnaYC4trYE7b+9VQ3ikoEMMJR26fpMHyhXCWxsiaZaaZ3g==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
 
+  '@sentry/node-cpu-profiler@2.4.4':
+    resolution: {integrity: sha512-FaYbFWxEyTTVqXLJccokJCkwx2cTuvTiRaM9kA+O4HbZVT49xYXqSV9cNLI5UqJhgdHiZDhelBd5LB4wj7IIRA==}
+    engines: {node: '>=18'}
+
   '@sentry/node@11.3.0':
     resolution: {integrity: sha512-pCpdOI+erDY2DdQN2cnlRTbC1xgLgv+vXdGJGNw0DANszVMxw+TVyFZbUZNkun5pv8P1Ma0X0LoxFJCXQNGOug==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
@@ -786,6 +793,10 @@ packages:
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
     peerDependencies:
       '@opentelemetry/api': ^1.9.0
+
+  '@sentry/profiling-node@11.3.0':
+    resolution: {integrity: sha512-lHiOv3D+BgXKyPZxI28QmyFm8tRiIQqIctQnUNfQwTRRUD/2hJmJ0iddG66hAzFc+UiUtoGov3Zssd5TvIYhSw==}
+    engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
 
   '@sentry/replay-canvas@11.3.0':
     resolution: {integrity: sha512-69afmS8SbNKUk7ncerpM8iuylNeVz8Wn8j043+jr7+Kgy+a5Ip4Noom0ejRk0uSyNcuuCyBHify8f4ZNJgGGqw==}
@@ -1469,6 +1480,10 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
+
+  node-abi@3.101.0:
+    resolution: {integrity: sha512-bkb/RkuWCE64eWu1PCh3Fu2pGc9mKRs+kOE+FU2bGHRYlQa86/D321DSATV54AsCQMKz3/xSt9sRgraZTpqdhQ==}
+    engines: {node: '>=10'}
 
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
@@ -2342,6 +2357,11 @@ snapshots:
     dependencies:
       '@sentry/core': 11.3.0
 
+  '@sentry/node-cpu-profiler@2.4.4':
+    dependencies:
+      detect-libc: 2.1.2
+      node-abi: 3.101.0
+
   '@sentry/node@11.3.0(rollup@4.67.4)':
     dependencies:
       '@opentelemetry/api': 1.10.0
@@ -2361,6 +2381,16 @@ snapshots:
       '@opentelemetry/api': 1.10.0
       '@sentry/conventions': 0.25.0
       '@sentry/core': 11.3.0
+
+  '@sentry/profiling-node@11.3.0(rollup@4.67.4)':
+    dependencies:
+      '@sentry/core': 11.3.0
+      '@sentry/node': 11.3.0(rollup@4.67.4)
+      '@sentry/node-cpu-profiler': 2.4.4
+    transitivePeerDependencies:
+      - '@babel/core'
+      - rollup
+      - webpack
 
   '@sentry/replay-canvas@11.3.0':
     dependencies:
@@ -3045,6 +3075,10 @@ snapshots:
   nanoid@3.3.20: {}
 
   natural-compare@1.4.0: {}
+
+  node-abi@3.101.0:
+    dependencies:
+      semver: 7.8.6
 
   node-addon-api@7.1.1:
     optional: true
