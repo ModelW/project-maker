@@ -5,7 +5,12 @@ import type { Me } from "$lib/session/types";
 import { createMemorySessionCache, createMetaRouter, type RouteRule } from "./router";
 
 const ANON: Me = { type: "anonymous" };
-const USER: Me = { type: "authenticated", email: "a@b.c", firstName: "A", lastName: "B" };
+const USER: Me = {
+    type: "authenticated",
+    email: "a@b.c",
+    firstName: "A",
+    lastName: "B",
+};
 
 function setup(rules: RouteRule[], me: Me = ANON) {
     const fetchMe = vi.fn(() => Promise.resolve(me));
@@ -30,7 +35,9 @@ function setup(rules: RouteRule[], me: Me = ANON) {
 
 describe("createMetaRouter", () => {
     it("doesn't fetch the session for public routes", async () => {
-        const { resolve, fetchMe } = setup([{ match: /^\/private/, requiresAuth: true }]);
+        const { resolve, fetchMe } = setup([
+            { match: /^\/private/, requiresAuth: true },
+        ]);
 
         await expect(resolve("/public")).resolves.toEqual({ me: null });
         expect(fetchMe).not.toHaveBeenCalled();
@@ -46,7 +53,10 @@ describe("createMetaRouter", () => {
     });
 
     it("lets authenticated visitors in and remembers them", async () => {
-        const { resolve, fetchMe } = setup([{ match: /^\/private/, requiresAuth: true }], USER);
+        const { resolve, fetchMe } = setup(
+            [{ match: /^\/private/, requiresAuth: true }],
+            USER
+        );
 
         await expect(resolve("/private/a")).resolves.toEqual({ me: USER });
         await expect(resolve("/private/b")).resolves.toEqual({ me: USER });
@@ -54,7 +64,10 @@ describe("createMetaRouter", () => {
     });
 
     it("refetches the session on each visit when asked to", async () => {
-        const { resolve, fetchMe } = setup([{ match: /^\/fresh/, refreshSession: true }], USER);
+        const { resolve, fetchMe } = setup(
+            [{ match: /^\/fresh/, refreshSession: true }],
+            USER
+        );
 
         await resolve("/fresh");
         await resolve("/fresh");

@@ -1,13 +1,9 @@
-import re
 from collections.abc import Mapping
 from pathlib import Path
 
-from node_edge import NodeEngine
 from pathspec import pathspec
 
 from ._base import LOCAL_FILES, BaseComponent
-
-TEMPLATE_FRONT = Path(__file__).parent.parent / "template" / "front"
 
 
 def make_path_specs() -> pathspec.PathSpec:
@@ -73,45 +69,6 @@ INDEX_PAGE = Path("front/src/routes/(site)/+page.svelte")
 class FrontComponent(BaseComponent):
     path_specs = make_path_specs()
 
-    def __init__(self):
-        """
-        Since we use prettier for formatting code, we need a Node Edge
-        instance.
-        """
-
-        self.ne = NodeEngine(
-            {
-                "dependencies": {
-                    "prettier": "3.9.x",
-                    "prettier-plugin-svelte": "4.1.x",
-                }
-            }
-        )
-        self.prettier = None
-        self.plugins: list[str] = []
-
-    def start(self) -> None:
-        """
-        Warming up Node Edge and getting a proxy to prettier.
-
-        Prettier 3 doesn't auto-load plugins and would otherwise look for
-        them next to the generated files (which have no node_modules yet),
-        so we point it at the absolute path of the plugin installed in the
-        Node Edge environment.
-        """
-
-        self.ne.start()
-        self.prettier = self.ne.import_from("prettier")
-        node_modules = self.ne.ensure_env_dir() / "node_modules"
-        self.plugins = [f"{node_modules / 'prettier-plugin-svelte' / 'plugin.js'}"]
-
-    def stop(self) -> None:
-        """
-        Kill Node Edge
-        """
-
-        self.ne.stop()
-
     def accept(self, path: Path, context: Mapping):
         """
         Accept front-end files if the front-end is enabled. Then some files
@@ -168,74 +125,12 @@ class FrontComponent(BaseComponent):
 
     def post_process(self, root: Path, path: Path, context: Mapping) -> None:
         """
-        Mainly, reformats everything using Prettier. But also does a lot of
-        renaming of .env and stuff.
+        Creates the .env from the .env-template. Formatting is done by the
+        Prettier component, once the whole project is generated.
         """
 
         file_path = root / path
 
         if file_path.name == ".env-template":
             new_path = file_path.parent / ".env"
-
-            with (
-                open(file_path, encoding="utf-8") as f,
-                open(new_path, "w", encoding="utf-8") as g,
-            ):
-                g.write(f.read())
-
-        if not re.compile(
-            r".*\.([jt]sx?|json|md|vue|php|html?|svelte|ya?ml|(s?c|le)ss)$",
-            re.IGNORECASE,
-        ).match(file_path.name):
-            return
-
-        info = self.ne.resolve(
-            self.prettier.getFileInfo(
-                f"{file_path}",
-                {
-                    "ignorePath": f"{TEMPLATE_FRONT / '.prettierignore'}",
-                    "plugins": self.plugins,
-                },
-            )
-        )
-
-        if info.get("ignored") or not (parser := info.get("inferredParser")):
-            return
-
-        # Config comes from the template (and not the generated project) as
-        # files are processed in no particular order, so the generated
-        # .prettierrc might not exist yet.
-        options = self.ne.resolve(
-            self.prettier.resolveConfig(
-                f"{file_path}",
-                {"config": f"{TEMPLATE_FRONT / '.prettierrc'}"},
-            )
-        )
-        options = dict(options or {})
-        options.update(parser=parser, plugins=self.plugins, filepath=f"{file_path}")
-
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-
-        formatted = self.ne.resolve(self.prettier.format(content, options))
-
-        if formatted == content:
-            return
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(formatted)
-
-    def finalize(self, root: Path, context: Mapping) -> None:
-        """
-        The API component may have regenerated the TypeScript client after
-        the files got formatted, so it gets formatted now.
-        """
-
-        client = root / "front" / "src" / "lib" / "api" / "client"
-
-        if not context["front"]["enable"] or not client.is_dir():
-            return
-
-        for file in client.rglob("*"):
-            if file.is_file():
-                self.post_process(root, file.relative_to(root), context)
+            new_path.write_text(file_path.read_text(encoding="utf-8"), encoding="utf-8")

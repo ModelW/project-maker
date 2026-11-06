@@ -1,0 +1,10 @@
+# The front has its own configuration and ignore file, run Prettier from there
+front/
+
+# Django templates (Prettier doesn't understand the template language)
+**/templates/
+**/migrations/
+
+# Test reports
+api/bdd/report/
+api/bdd/performance/results/

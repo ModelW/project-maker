@@ -20,7 +20,13 @@ from rich import print as rich_print
 from rich.prompt import Confirm, Prompt
 
 from .errors import ProjectMakerError
-from .maker import ApiComponent, CommonComponent, FrontComponent, Maker
+from .maker import (
+    ApiComponent,
+    CommonComponent,
+    FrontComponent,
+    Maker,
+    PrettierComponent,
+)
 from .namer import generate_declinations
 
 
@@ -227,6 +233,8 @@ def build_maker(*, lock: bool = True, ts_client: bool | None = None) -> Maker:
             ApiComponent(lock=lock, ts_client=ts_client),
             FrontComponent(),
             CommonComponent(),
+            # Last, to format everything once all the files are there
+            PrettierComponent(),
         ]
     )
 

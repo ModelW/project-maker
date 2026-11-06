@@ -86,7 +86,11 @@ async function patchRequest(request: Request, patch: RequestPatch): Promise<Requ
  *
  * Other requests are left untouched.
  */
-export const handleFetch: HandleFetch = async function handleFetch({ event, request, fetch }) {
+export const handleFetch: HandleFetch = async function handleFetch({
+    event,
+    request,
+    fetch,
+}) {
     const internalApiOrigin = "http://api";
     const url = new URL(request.url, internalApiOrigin);
     const isApiQuery =

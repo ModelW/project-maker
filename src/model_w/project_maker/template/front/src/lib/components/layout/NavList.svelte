@@ -162,7 +162,12 @@
                     onclick={() => toggle(i)}
                 >
                     {item.label}
-                    <svg class="chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                    <svg
+                        class="chevron"
+                        viewBox="0 0 12 12"
+                        aria-hidden="true"
+                        focusable="false"
+                    >
                         <path
                             d="M2 4l4 4 4-4"
                             fill="none"

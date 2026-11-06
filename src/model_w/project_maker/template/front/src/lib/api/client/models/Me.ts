@@ -33,7 +33,8 @@ import {
  *
  * @export
  */
-export type Me = ({ type: "anonymous" } & AnonUserOut) | ({ type: "authenticated" } & AuthUserOut);
+export type Me =
+    ({ type: "anonymous" } & AnonUserOut) | ({ type: "authenticated" } & AuthUserOut);
 
 export function MeFromJSON(json: any): Me {
     return MeFromJSONTyped(json, false);
@@ -61,15 +62,22 @@ export function MeToJSON(json: any): any {
     return MeToJSONTyped(json, false);
 }
 
-export function MeToJSONTyped(value?: Me | null, ignoreDiscriminator: boolean = false): any {
+export function MeToJSONTyped(
+    value?: Me | null,
+    ignoreDiscriminator: boolean = false
+): any {
     if (value == null) {
         return value;
     }
     switch (value["type"]) {
         case "anonymous":
-            return Object.assign({}, AnonUserOutToJSON(value), { type: "anonymous" } as const);
+            return Object.assign({}, AnonUserOutToJSON(value), {
+                type: "anonymous",
+            } as const);
         case "authenticated":
-            return Object.assign({}, AuthUserOutToJSON(value), { type: "authenticated" } as const);
+            return Object.assign({}, AuthUserOutToJSON(value), {
+                type: "authenticated",
+            } as const);
         default:
             return value;
     }

@@ -15,7 +15,11 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
     /** The ID of the snippet being previewed, if it exists already */
     const snippetId = url.searchParams.get("id");
     /** The snippet data being previewed (read from the session by the backend). */
-    const snippetData = (await fetchSnippetData(fetch, snippetType, snippetId)) as PageType;
+    const snippetData = (await fetchSnippetData(
+        fetch,
+        snippetType,
+        snippetId
+    )) as PageType;
 
     return {
         snippetData,

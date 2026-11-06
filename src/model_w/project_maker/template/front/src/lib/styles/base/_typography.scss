@@ -7,12 +7,13 @@
     --font-body: Charter, "Bitstream Charter", "Sitka Text", Cambria, serif;
 
     /// Neo-Grotesque
-    --font-heading: Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
+    --font-heading:
+        Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
 
     /// Monospace Code
     --font-code:
-        ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono",
-        monospace;
+        ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+        "DejaVu Sans Mono", monospace;
 }
 
 body {

@@ -13,7 +13,11 @@
  */
 
 import * as runtime from "../runtime";
-import { type AuthUserIn, AuthUserInFromJSON, AuthUserInToJSON } from "../models/AuthUserIn";
+import {
+    type AuthUserIn,
+    AuthUserInFromJSON,
+    AuthUserInToJSON,
+} from "../models/AuthUserIn";
 import { type Me, MeFromJSON, MeToJSON } from "../models/Me";
 
 export interface LoginRequest {
@@ -30,7 +34,9 @@ export class MeApi extends runtime.BaseAPI {
     /**
      * Creates request options for login without sending the request
      */
-    async loginRequestOpts(requestParameters: LoginRequest): Promise<runtime.RequestOpts> {
+    async loginRequestOpts(
+        requestParameters: LoginRequest
+    ): Promise<runtime.RequestOpts> {
         if (requestParameters["authUserIn"] == null) {
             throw new runtime.RequiredError(
                 "authUserIn",
@@ -66,7 +72,9 @@ export class MeApi extends runtime.BaseAPI {
         const requestOptions = await this.loginRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => MeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) =>
+            MeFromJSON(jsonValue)
+        );
     }
 
     /**
@@ -109,14 +117,18 @@ export class MeApi extends runtime.BaseAPI {
         const requestOptions = await this.logoutRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => MeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) =>
+            MeFromJSON(jsonValue)
+        );
     }
 
     /**
      * Log out the current user and return unauthenticated status.
      * Logout User
      */
-    async logout(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Me> {
+    async logout(
+        initOverrides?: RequestInit | runtime.InitOverrideFunction
+    ): Promise<Me> {
         const response = await this.logoutRaw(initOverrides);
         return await response.value();
     }
@@ -149,14 +161,18 @@ export class MeApi extends runtime.BaseAPI {
         const requestOptions = await this.whoamiRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => MeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) =>
+            MeFromJSON(jsonValue)
+        );
     }
 
     /**
      * Return the authenticated user\'s data or indicate unauthenticated status.
      * Me
      */
-    async whoami(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Me> {
+    async whoami(
+        initOverrides?: RequestInit | runtime.InitOverrideFunction
+    ): Promise<Me> {
         const response = await this.whoamiRaw(initOverrides);
         return await response.value();
     }

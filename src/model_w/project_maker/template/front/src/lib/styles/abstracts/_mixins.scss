@@ -97,7 +97,8 @@
             @content;
         }
     } @else {
-        @media not all and (min-width: $breakpoint-value), (min-width: $next-breakpoint) {
+        @media not all and (min-width: $breakpoint-value),
+            (min-width: $next-breakpoint) {
             @content;
         }
     }

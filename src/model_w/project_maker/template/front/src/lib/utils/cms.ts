@@ -86,7 +86,9 @@ export function collectBlockTypes(data: unknown): string[] {
  * @param neededTypes Block types to load (all of them if not specified)
  * @returns The components, by block type (e.g. `{ DemoBlock: DemoBlock }`)
  */
-export async function getBlockComponents(neededTypes?: string[]): Promise<BlockComponents> {
+export async function getBlockComponents(
+    neededTypes?: string[]
+): Promise<BlockComponents> {
     const blockComponents: BlockComponents = {};
 
     /**

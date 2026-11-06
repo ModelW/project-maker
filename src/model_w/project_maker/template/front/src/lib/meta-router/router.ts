@@ -109,7 +109,9 @@ export const noopSessionCache: SessionCache = {
 };
 
 function matches(rule: RouteRule, url: URL): boolean {
-    return rule.match instanceof RegExp ? rule.match.test(url.pathname) : rule.match(url);
+    return rule.match instanceof RegExp
+        ? rule.match.test(url.pathname)
+        : rule.match(url);
 }
 
 /**

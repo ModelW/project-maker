@@ -18,7 +18,13 @@
     });
 </script>
 
-<Drawer bind:open direction="right" ariaLabel="Menu" class="mobile-menu" data-testid="mobile menu">
+<Drawer
+    bind:open
+    direction="right"
+    ariaLabel="Menu"
+    class="mobile-menu"
+    data-testid="mobile menu"
+>
     {#snippet trigger(props)}
         <button
             {...props}

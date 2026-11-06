@@ -53,7 +53,9 @@ export type Menus = Record<MenuName, MenuItem[]>;
  * @param _fetch SvelteKit's fetch, to be used if the menu comes from the API
  */
 // eslint-disable-next-line @typescript-eslint/require-await
-export async function getHeaderMenu(_fetch: typeof globalThis.fetch): Promise<MenuItem[]> {
+export async function getHeaderMenu(
+    _fetch: typeof globalThis.fetch
+): Promise<MenuItem[]> {
     return [
         { label: "Home", href: "/" },
         // :: IF api__testing
@@ -78,7 +80,9 @@ export async function getHeaderMenu(_fetch: typeof globalThis.fetch): Promise<Me
  * @param _fetch SvelteKit's fetch, to be used if the menu comes from the API
  */
 // eslint-disable-next-line @typescript-eslint/require-await
-export async function getFooterMenu(_fetch: typeof globalThis.fetch): Promise<MenuItem[]> {
+export async function getFooterMenu(
+    _fetch: typeof globalThis.fetch
+): Promise<MenuItem[]> {
     return [
         {
             label: "___project_name__natural___",
@@ -109,6 +113,9 @@ export async function getFooterMenu(_fetch: typeof globalThis.fetch): Promise<Me
  * @param fetch SvelteKit's fetch
  */
 export async function getMenus(fetch: typeof globalThis.fetch): Promise<Menus> {
-    const [header, footer] = await Promise.all([getHeaderMenu(fetch), getFooterMenu(fetch)]);
+    const [header, footer] = await Promise.all([
+        getHeaderMenu(fetch),
+        getFooterMenu(fetch),
+    ]);
     return { header, footer };
 }

@@ -1,5 +1,6 @@
 ---
-# Run the performance tests in Docker in a way closely resembling the production environment.
+# Run the performance tests in Docker in a way closely resembling the production
+# environment.
 
 services:
 

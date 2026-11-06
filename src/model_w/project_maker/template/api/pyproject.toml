@@ -58,6 +58,8 @@ addopts = ["--output", "bdd/report/results/media", "--screenshot", "on", "--full
 
 [tool.ruff]
 target-version = "py314"
+# Black's standard, same as Prettier's printWidth
+line-length = 88
 
 [tool.ruff.lint.per-file-ignores]
 # pytest and pytest-bdd (through pluggy and inspect.signature) evaluate the

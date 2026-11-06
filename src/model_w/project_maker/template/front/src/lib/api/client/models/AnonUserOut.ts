@@ -31,7 +31,8 @@ export interface AnonUserOut {
 export const AnonUserOutTypeEnum = {
     Anonymous: "anonymous",
 } as const;
-export type AnonUserOutTypeEnum = (typeof AnonUserOutTypeEnum)[keyof typeof AnonUserOutTypeEnum];
+export type AnonUserOutTypeEnum =
+    (typeof AnonUserOutTypeEnum)[keyof typeof AnonUserOutTypeEnum];
 
 /**
  * Check if a given object implements the AnonUserOut interface.
@@ -44,7 +45,10 @@ export function AnonUserOutFromJSON(json: any): AnonUserOut {
     return AnonUserOutFromJSONTyped(json, false);
 }
 
-export function AnonUserOutFromJSONTyped(json: any, ignoreDiscriminator: boolean): AnonUserOut {
+export function AnonUserOutFromJSONTyped(
+    json: any,
+    ignoreDiscriminator: boolean
+): AnonUserOut {
     if (json == null) {
         return json;
     }

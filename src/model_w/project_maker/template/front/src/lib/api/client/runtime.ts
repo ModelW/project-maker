@@ -23,7 +23,9 @@ export interface ConfigurationParameters {
     password?: string; // parameter for basic security
     apiKey?: string | Promise<string> | ((name: string) => string | Promise<string>); // parameter for apiKey security
     accessToken?:
-        string | Promise<string> | ((name?: string, scopes?: string[]) => string | Promise<string>); // parameter for oauth2 security
+        | string
+        | Promise<string>
+        | ((name?: string, scopes?: string[]) => string | Promise<string>); // parameter for oauth2 security
     headers?: HTTPHeaders; //header params we want to use on every request
     credentials?: RequestCredentials; //value for the credentials param we want to use on each request
 }
@@ -36,7 +38,9 @@ export class Configuration {
     }
 
     get basePath(): string {
-        return this.configuration.basePath != null ? this.configuration.basePath : BASE_PATH;
+        return this.configuration.basePath != null
+            ? this.configuration.basePath
+            : BASE_PATH;
     }
 
     get fetchApi(): FetchAPI | undefined {
@@ -71,7 +75,9 @@ export class Configuration {
         ((name?: string, scopes?: string[]) => string | Promise<string>) | undefined {
         const accessToken = this.configuration.accessToken;
         if (accessToken) {
-            return typeof accessToken === "function" ? accessToken : async () => accessToken;
+            return typeof accessToken === "function"
+                ? accessToken
+                : async () => accessToken;
         }
         return undefined;
     }
@@ -105,7 +111,10 @@ export class BaseAPI {
         return next;
     }
 
-    withPreMiddleware<T extends BaseAPI>(this: T, ...preMiddlewares: Array<Middleware["pre"]>): T {
+    withPreMiddleware<T extends BaseAPI>(
+        this: T,
+        ...preMiddlewares: Array<Middleware["pre"]>
+    ): T {
         const middlewares = preMiddlewares.map((pre) => ({ pre }));
         return this.withMiddleware<T>(...middlewares);
     }
@@ -165,7 +174,9 @@ export class BaseAPI {
         );
 
         const initOverrideFn =
-            typeof initOverrides === "function" ? initOverrides : async () => initOverrides;
+            typeof initOverrides === "function"
+                ? initOverrides
+                : async () => initOverrides;
 
         const initParams = {
             method: context.method,
@@ -336,7 +347,8 @@ export const COLLECTION_FORMATS = {
 export type FetchAPI = WindowOrWorkerGlobalScope["fetch"];
 
 export type Json = any;
-export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
+export type HTTPMethod =
+    "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
 export type HTTPHeaders = { [key: string]: string };
 export type HTTPQuery = {
     [key: string]:
@@ -355,7 +367,8 @@ export type HTTPRequestInit = {
     credentials?: RequestCredentials;
     body?: HTTPBody;
 };
-export type ModelPropertyNaming = "camelCase" | "snake_case" | "PascalCase" | "original";
+export type ModelPropertyNaming =
+    "camelCase" | "snake_case" | "PascalCase" | "original";
 
 export type InitOverrideFunction = (requestContext: {
     init: HTTPRequestInit;
@@ -458,7 +471,11 @@ export function parseDate(value: Date | string): Date {
         date.setHours(0, 0, 0, 0);
         // Out-of-range components (or a day the local zone skipped) silently roll over,
         // which would hand back a date the server never sent.
-        if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+        if (
+            date.getFullYear() !== year ||
+            date.getMonth() !== month ||
+            date.getDate() !== day
+        ) {
             return new Date(NaN);
         }
         return date;
@@ -589,7 +606,10 @@ export class BlobApiResponse {
  */
 export function parseContentDispositionFilename(headers: Headers): string | undefined {
     const params = parseHeaderParameters(headers.get("Content-Disposition") ?? "");
-    return basename(decodeExtValue(params.get("filename*"))) ?? basename(params.get("filename"));
+    return (
+        basename(decodeExtValue(params.get("filename*"))) ??
+        basename(params.get("filename"))
+    );
 }
 
 /** The decoded RFC 5987 ext-value, or undefined when it is not UTF-8 or its percent-encoding is malformed. */
@@ -616,7 +636,9 @@ function parseHeaderParameters(value: string): Map<string, string> {
         if (!params.has(name)) {
             params.set(
                 name,
-                match[2] !== undefined ? match[2].replace(/\\(.)/g, "$1") : match[3].trim()
+                match[2] !== undefined
+                    ? match[2].replace(/\\(.)/g, "$1")
+                    : match[3].trim()
             );
         }
     }

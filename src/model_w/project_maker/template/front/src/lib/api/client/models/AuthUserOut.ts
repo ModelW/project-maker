@@ -43,7 +43,8 @@ export interface AuthUserOut {
 export const AuthUserOutTypeEnum = {
     Authenticated: "authenticated",
 } as const;
-export type AuthUserOutTypeEnum = (typeof AuthUserOutTypeEnum)[keyof typeof AuthUserOutTypeEnum];
+export type AuthUserOutTypeEnum =
+    (typeof AuthUserOutTypeEnum)[keyof typeof AuthUserOutTypeEnum];
 
 /**
  * Check if a given object implements the AuthUserOut interface.
@@ -71,7 +72,10 @@ export function AuthUserOutFromJSON(json: any): AuthUserOut {
     return AuthUserOutFromJSONTyped(json, false);
 }
 
-export function AuthUserOutFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthUserOut {
+export function AuthUserOutFromJSONTyped(
+    json: any,
+    ignoreDiscriminator: boolean
+): AuthUserOut {
     if (json == null) {
         return json;
     }

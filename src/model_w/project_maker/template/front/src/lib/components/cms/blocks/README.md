@@ -1,8 +1,9 @@
 # All blocks for the CMS site
 
-Add all blocks here with the same name (case-sensitive) as Wagtail's `block.type`. That's all
-there is to do: the block registry (`getBlockComponents()` in `$lib/utils/cms.ts`) finds the
-components by their file name, and the `StreamField` component renders them.
+Add all blocks here with the same name (case-sensitive) as Wagtail's `block.type`.
+That's all there is to do: the block registry (`getBlockComponents()` in
+`$lib/utils/cms.ts`) finds the components by their file name, and the `StreamField`
+component renders them.
 
 ## Example
 
@@ -34,5 +35,5 @@ And the page renders the StreamField with:
 <StreamField blocks={cmsData.demo_blocks} />
 ```
 
-Blocks nested in a block (a `StreamBlock` or a `ListBlock` of blocks) are rendered the same way,
-with another `<StreamField>` inside the block's component.
+Blocks nested in a block (a `StreamBlock` or a `ListBlock` of blocks) are rendered the
+same way, with another `<StreamField>` inside the block's component.

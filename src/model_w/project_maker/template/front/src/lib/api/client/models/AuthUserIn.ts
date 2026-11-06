@@ -42,7 +42,10 @@ export function AuthUserInFromJSON(json: any): AuthUserIn {
     return AuthUserInFromJSONTyped(json, false);
 }
 
-export function AuthUserInFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthUserIn {
+export function AuthUserInFromJSONTyped(
+    json: any,
+    ignoreDiscriminator: boolean
+): AuthUserIn {
     if (json == null) {
         return json;
     }

@@ -42,6 +42,8 @@ pyyaml = "^6.0.3"
 
 [tool.ruff]
 target-version = "py314"
+# Black's standard, same as Prettier's printWidth
+line-length = 88
 extend-exclude = ["src/model_w/project_maker/template"]
 
 [tool.ruff.lint]
