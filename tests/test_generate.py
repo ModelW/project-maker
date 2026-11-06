@@ -553,6 +553,13 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
     database = f"pm_start_{combo.id.replace('-', '_')}"
     url = urlsplit(server_url)
 
+    # "localhost" can resolve to different servers over IPv4 and IPv6 (the
+    # Windows runners come with their own PostgreSQL), so the database must
+    # be created and used through the same address
+    if url.hostname == "localhost":
+        url = url._replace(netloc=url.netloc.replace("localhost", "127.0.0.1"))
+        server_url = urlunsplit(url)
+
     run(["poetry", "install", "--no-interaction"], api, env)
     run(
         [
@@ -602,7 +609,10 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
                     "run",
                     "python",
                     "-c",
-                    "import demo_thing.django.settings",
+                    "import os\n"
+                    "settings = 'demo_thing.django.settings'\n"
+                    "os.environ['DJANGO_SETTINGS_MODULE'] = settings\n"
+                    "__import__(settings)",
                 ]
             ),
             cwd=api,
