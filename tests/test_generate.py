@@ -592,13 +592,17 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
     try:
         run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
     except AssertionError as e:
-        diagnostic = subprocess.run(
+        # manage.py hides the errors of the settings (it carries on with
+        # Django's defaults, so the visible error is unrelated): importing
+        # them directly shows the real one
+        settings = subprocess.run(
             resolve(
                 [
                     "poetry",
                     "run",
                     "python",
-                    f"{Path(__file__).parent / 'diagnose_api_env.py'}",
+                    "-c",
+                    "import demo_thing.django.settings",
                 ]
             ),
             cwd=api,
@@ -606,11 +610,7 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
             capture_output=True,
             text=True,
         )
-        written = [line.split("@")[-1] for line in lines if "DATABASE_URL" in line]
-        pytest.fail(
-            f"{e}\n\nDiagnostic:\n{diagnostic.stdout}{diagnostic.stderr}"
-            f"Written: {written}"
-        )
+        pytest.fail(f"{e}\n\nThe settings say:\n{settings.stderr[-2000:]}")
 
 
 @pytest.mark.slow

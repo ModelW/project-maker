@@ -2283,14 +2283,14 @@ PyYAML = ">=6.0.1"
 
 [[package]]
 name = "modelw-preset-django"
-version = "2026.10.0"
+version = "2026.10.1"
 description = "Model W preset for Django"
 optional = false
 python-versions = "<3.15,>=3.14"
 groups = ["main"]
 files = [
-    {file = "modelw_preset_django-2026.10.0-py3-none-any.whl", hash = "sha256:5a9dc6e8126b5ad9d72330e801dd54ebff1d4a6ad6658d7c0ef536fbbc9df303"},
-    {file = "modelw_preset_django-2026.10.0.tar.gz", hash = "sha256:618b642cd86e50e100a347b4ec8334c695474eaa245c99404090fbe3dd7f1aaa"},
+    {file = "modelw_preset_django-2026.10.1-py3-none-any.whl", hash = "sha256:29d5dd640ff2849531daf033208fb2159d2fda33064e22a51a84f39a84727c7c"},
+    {file = "modelw_preset_django-2026.10.1.tar.gz", hash = "sha256:893b35851de9eef94c4c6924a375ce85f8b5b4d1d9871c104943b63dd2362791"},
 ]
 
 [package.dependencies]
@@ -4198,4 +4198,4 @@ wand = ["Wand (>=0.6,<1.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.14"
-content-hash = "e88bbbcff6b1f07aa90029b119b70a36973ca9653a412f2261d372c417927e8b"
+content-hash = "6d6d6199a576bda4313f9b9f87c91258959b0adfd4ce7fe6406d6bd2ae87ca21"
