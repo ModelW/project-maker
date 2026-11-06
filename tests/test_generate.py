@@ -592,25 +592,15 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
     try:
         run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
     except AssertionError as e:
-        # Which .env the API really loads, from within manage.py's process
-        # (the .env is found from the call stack)
-        script = (
-            "import os, runpy, sys\n"
-            "import model_w.env_manager._dotenv as d\n"
-            "original = d.find_dotenv\n"
-            "def find(*args, **kwargs):\n"
-            "    found = original(*args, **kwargs)\n"
-            "    print('find_dotenv:', found, 'prefix:', sys.prefix)\n"
-            "    return found\n"
-            "d.find_dotenv = find\n"
-            "sys.argv = ['manage.py', 'shell', '-c', 'import os; "
-            "from django.conf import settings; "
-            'print("URL:", (os.environ.get("DATABASE_URL") or "").split("@")[-1]); '
-            'print("ENGINE:", settings.DATABASES.get("default", {}).get("ENGINE"))\']\n'
-            "runpy.run_path('manage.py', run_name='__main__')\n"
-        )
         diagnostic = subprocess.run(
-            resolve(["poetry", "run", "python", "-c", script]),
+            resolve(
+                [
+                    "poetry",
+                    "run",
+                    "python",
+                    f"{Path(__file__).parent / 'diagnose_api_env.py'}",
+                ]
+            ),
             cwd=api,
             env=env,
             capture_output=True,
