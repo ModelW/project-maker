@@ -542,6 +542,27 @@ def wait_for_page(url: str, proc: subprocess.Popen, log: Path, timeout=180) -> s
     pytest.fail(f"{url} never answered ({last}):\n{log.read_text(encoding='utf-8')}")
 
 
+def api_python(api: Path) -> str:
+    """
+    The Python of the API's venv. Not "poetry run python": Poetry hands over
+    to the command with os.execvp, which Windows only emulates (the command
+    gets spawned with its arguments unquoted and Poetry exits right away with
+    0), hiding errors and making servers look stopped.
+    """
+
+    result = subprocess.run(
+        resolve(["poetry", "env", "info", "--path"]),
+        cwd=api,
+        env=poetry_env(),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    venv = Path(result.stdout.strip().splitlines()[-1])
+
+    return f"{venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')}"
+
+
 def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
     """
     What a developer does before starting the API: install it, create its
@@ -561,11 +582,10 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
         server_url = urlunsplit(url)
 
     run(["poetry", "install", "--no-interaction"], api, env)
+    python = api_python(api)
     run(
         [
-            "poetry",
-            "run",
-            "python",
+            python,
             "-c",
             "import sys, psycopg\n"
             "with psycopg.connect(sys.argv[1], autocommit=True) as c:\n"
@@ -597,7 +617,7 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
     dotenv.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
     try:
-        run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
+        run([python, "manage.py", "migrate", "--noinput"], api, env)
     except AssertionError as e:
         # manage.py hides the errors of the settings (it carries on with
         # Django's defaults, so the visible error is unrelated): importing
@@ -605,9 +625,7 @@ def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
         settings = subprocess.run(
             resolve(
                 [
-                    "poetry",
-                    "run",
-                    "python",
+                    python,
                     "-c",
                     "import os\n"
                     "settings = 'demo_thing.django.settings'\n"
@@ -646,9 +664,7 @@ def test_project_starts(locked_project, tmp_path):
             proc = stack.enter_context(
                 serve(
                     [
-                        "poetry",
-                        "run",
-                        "python",
+                        api_python(api),
                         "manage.py",
                         "runserver",
                         "127.0.0.1:8000",
