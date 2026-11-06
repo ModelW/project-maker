@@ -1,0 +1,3 @@
+title: Procrastinate
+depends_on:
+    - whealth.database

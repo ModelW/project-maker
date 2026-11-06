@@ -13,7 +13,6 @@ packages = [
 python = "~3.14"
 modelw-preset-django = {extras = [
     "psycopg",
-    "health",
     "ninja",
     "procrastinate",
     # :: IF api__channels
@@ -25,8 +24,8 @@ modelw-preset-django = {extras = [
 ], version = ">=2026.10.0,<2026.11.0"}
 drf-spectacular = {extras = ["sidecar"], version = "*"}
 # Health check modules
-markdown = "*"
-networkx = "*"
+psutil = "*"
+whealth = {git = "https://github.com/ModelW/whealth.git", rev = "develop", subdirectory = "packages/whealth"}
 
 [tool.poetry.group.dev.dependencies]
 black = "*"

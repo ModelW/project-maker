@@ -33,11 +33,12 @@ with EnvManager(ModelWDjango()) as env:
         "___project_name__snake___.apps.realtime",
         # :: ENDIF
         "procrastinate.contrib.django",
+        "whealth",
         # :: IF api__wagtail
         "___project_name__snake___.apps.cms",
         # :: ENDIF
         "___project_name__snake___.apps.people",
-        "___project_name__snake___.apps.health",
+        "___project_name__snake___.apps.monitoring",
     ]
 
     # ---

@@ -31,7 +31,7 @@ api = NinjaAPI(
 api.add_router("/me", people_router)
 
 urlpatterns = [
-    path("back/_/ht/", include("___project_name__snake___.apps.health.urls")),
+    path("back/whealth/", include("whealth.urls")),
     path("back/admin/", admin.site.urls),
     path("back/api/", api.urls),
     # :: IF api__wagtail

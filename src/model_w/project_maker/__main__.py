@@ -253,9 +253,8 @@ def main(argv: Optional[Sequence[str]] = None):
         context["api"]["redis"] = (
             context["api"]["wagtail"] or context["api"]["channels"]
         )
-        # Make procrastinate mandatory, as health check will need it.
-        # When health check is it's own library, this can be removed, and we can bring
-        # it in with the health check app.
+        # Make procrastinate mandatory, as Whealth schedules its checks
+        # through a periodic procrastinate task.
         context["api"]["procrastinate"] = True
 
         if context["api"]["wagtail"]:
