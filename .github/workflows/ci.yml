@@ -76,8 +76,13 @@ jobs:
                   pnpm install --frozen-lockfile
                   pnpm prettier --check .
 
+    # Generation and static checks of every combination, on every OS
     test:
-        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v6
 
@@ -101,9 +106,14 @@ jobs:
             - name: Run tests
               run: poetry run pytest
 
-    # Installs, lints, type-checks, tests and builds some generated projects
+    # Installs, lints, type-checks, tests and builds some generated projects,
+    # then starts them like a developer would, on every OS
     test-slow:
-        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v6
 
@@ -126,8 +136,30 @@ jobs:
               with:
                   node-version: "24"
 
+            # The TypeScript client generation (openapi-generator)
+            - name: Set up Java
+              uses: actions/setup-java@v5
+              with:
+                  distribution: temurin
+                  java-version: "21"
+
+            # The generated API's database and cache, like on a developer's
+            # machine (no Docker)
+            - name: Set up PostgreSQL
+              id: postgres
+              uses: ikalnytskyi/action-setup-postgres@v8
+              with:
+                  postgres-version: "17"
+
+            - name: Set up Redis
+              uses: shogo82148/actions-setup-redis@v1
+              with:
+                  redis-version: "7"
+
             - name: Install dependencies
               run: poetry install
 
             - name: Run slow tests
               run: poetry run pytest -m slow
+              env:
+                  PM_TEST_DATABASE_URL: ${{ steps.postgres.outputs.connection-uri }}

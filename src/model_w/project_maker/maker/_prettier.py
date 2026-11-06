@@ -52,6 +52,7 @@ class PrettierComponent(BaseComponent):
         Node Edge environment.
         """
 
+        self.report("Starting Prettier")
         self.ne.start()
         self.prettier = self.ne.import_from("prettier")
         node_modules = self.ne.ensure_env_dir() / "node_modules"
@@ -82,6 +83,8 @@ class PrettierComponent(BaseComponent):
         context
             Global context of the generation
         """
+
+        self.report("Formatting with Prettier")
 
         for file in self.files(root):
             self.format(root, file)
@@ -159,4 +162,4 @@ class PrettierComponent(BaseComponent):
         formatted = self.ne.resolve(self.prettier.format(content, options))
 
         if formatted != content:
-            file.write_text(formatted, encoding="utf-8")
+            file.write_text(formatted, encoding="utf-8", newline="\n")

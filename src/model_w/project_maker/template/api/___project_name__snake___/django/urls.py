@@ -36,16 +36,19 @@ api = NinjaAPI(
 api.add_router("/me", people_router)
 
 urlpatterns = [
-    path("back/_/ht/", include("___project_name__snake___.apps.health.urls")),
-    path("back/admin/", admin.site.urls),
+    path(
+        "back/___admin_prefix___/ht/",
+        include("___project_name__snake___.apps.health.urls"),
+    ),
+    path("back/___admin_prefix___/admin/", admin.site.urls),
     path("back/api/", api.urls),
     # :: IF api__wagtail
     path(
-        "back/___cms_prefix___/block-preview/",
+        "back/___admin_prefix___/cms/block-preview/",
         ApiStreamFieldBlockPreview.as_view(),
         name="wagtailadmin_block_preview",
     ),
-    path("back/___cms_prefix___/", include(wagtailadmin_urls)),
+    path("back/___admin_prefix___/cms/", include(wagtailadmin_urls)),
     path("back/api/cms/", cms_api_router.urls),
     path("back/documents/", include(wagtaildocs_urls)),
     path("", include(wagtail_urls)),

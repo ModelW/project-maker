@@ -98,9 +98,9 @@ export async function getFooterMenu(
             label: "Administration",
             children: [
                 // :: IF api__wagtail
-                { label: "CMS", href: "/back/___cms_prefix___/" },
+                { label: "CMS", href: "/back/___admin_prefix___/cms/" },
                 // :: ENDIF
-                { label: "Django admin", href: "/back/admin/" },
+                { label: "Django admin", href: "/back/___admin_prefix___/admin/" },
             ],
         },
         // :: ENDIF

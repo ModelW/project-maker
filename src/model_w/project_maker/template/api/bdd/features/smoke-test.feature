@@ -9,7 +9,7 @@ Feature: Smoke test for the site
         Given I am logged in as a Django admin
         Then I should see the text "welcome"
         And I should not see the text "log in"
-        And I should be at a URL with "back/admin/"
+        And I should be at a URL with "back/___admin_prefix___/admin/"
         And I should see the following Django admin models:
             | Group name                       | Model name         |
             | Authentication and Authorization | Groups             |
@@ -23,7 +23,7 @@ Feature: Smoke test for the site
             | email    | good2@user.com |
             | is_admin | no             |
             | password | correct        |
-        And I am on the /back/admin page
+        And I am on the /back/___admin_prefix___/admin page
         When I log in with good2@user.com and correct
         Then I should see the text "Please enter the correct email address and password for a staff account"
 
@@ -82,7 +82,7 @@ Feature: Smoke test for the site
         # :: ENDIF
         # Links to the back-end are full page loads, not front-end routes
         When I press the "Django admin" link in the site footer
-        Then I should be at a URL with "back/admin/login/?next=/back/admin/"
+        Then I should be at a URL with "back/___admin_prefix___/admin/login/?next=/back/___admin_prefix___/admin/"
 
     # MW-166: no existing scenario runs at a mobile width
     Scenario: Shows the mobile site layout
@@ -109,7 +109,7 @@ Feature: Smoke test for the site
         Given I am logged in as a CMS admin
         Then I should not see the text "Sign in to Wagtail"
         But I should see the page title as "Dashboard - Wagtail"
-        And I should be at a URL with "___cms_prefix___"
+        And I should be at a URL with "___admin_prefix___/cms"
     # :: ENDIF
 
     # :: IF api__wagtail
@@ -141,7 +141,7 @@ Feature: Smoke test for the site
     @previews
     Scenario Outline: Anonymous visitors are sent to the CMS login from previews
         When I request "<path>" without following redirects
-        Then I should be redirected to "/back/___cms_prefix___/login/", to come back to "<path>"
+        Then I should be redirected to "/back/___admin_prefix___/cms/login/", to come back to "<path>"
 
         Examples:
             | path                 |

@@ -35,6 +35,7 @@ tomlkit = "^0.15.2"
 node-edge = "^1.0.0"
 ruff = ">=0.14"
 pathspec = "^1.1.1"
+textual = "^8.2.8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.2.0"

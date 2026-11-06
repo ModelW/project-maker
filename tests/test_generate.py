@@ -4,16 +4,29 @@ result is complete and clean.
 
 The fast tier (default) only generates the projects and checks them
 statically. The slow tier (``pytest -m slow``) also installs the generated
-front-ends and runs their own linters, type checks and tests, which requires
-network access, ``pnpm`` and ``poetry``.
+front-ends and runs their own linters, type checks and tests, then starts the
+projects like a developer would. It requires network access, ``pnpm``,
+``poetry`` and Java (the TypeScript client generation). Starting projects with
+an API also needs PostgreSQL and Redis: set ``PM_TEST_DATABASE_URL`` to a
+server URL (like ``postgresql://postgres:postgres@localhost:5432/postgres``)
+with the right to create databases, and run Redis on localhost.
 """
 
+import contextlib
+import os
 import re
+import shutil
+import signal
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import pathspec
 import pytest
@@ -23,12 +36,13 @@ from model_w.project_maker.__main__ import build_context, build_maker
 from model_w.project_maker.maker._base import LOCAL_FILES
 from model_w.project_maker.namer import generate_declinations
 from model_w.project_maker.template import INLINE_REF
+from model_w.project_maker.wizard.preview import planned_files, template_files
 
 TEMPLATE = (
     Path(__file__).parent.parent / "src" / "model_w" / "project_maker" / "template"
 )
 PROJECT_NAME = "Demo Thing"
-CMS_PREFIX = "cms-admin"
+ADMIN_PREFIX = "quiet-otter"
 
 
 @dataclass(frozen=True)
@@ -95,7 +109,7 @@ def make_context(combo: Combo) -> dict:
         wagtail=combo.wagtail,
         channels=combo.channels,
         demo_snippet=combo.demo_snippet,
-        cms_prefix=CMS_PREFIX,
+        admin_prefix=ADMIN_PREFIX,
         dev_id="Dev <dev@example.com>",
         secret_key="not-secret",
     )
@@ -143,7 +157,7 @@ def text_files(root: Path) -> Iterator[Path]:
 
 def rel_files(root: Path) -> set[str]:
     return {
-        f"{p.relative_to(root)}"
+        p.relative_to(root).as_posix()
         for p in root.rglob("*")
         if p.is_file() and ".git" not in p.relative_to(root).parts
     }
@@ -160,28 +174,16 @@ def test_template_references_are_known():
         Combo(front=True, api=True, wagtail=True, channels=True, demo_snippet=True)
     )
     unknown = set()
-    skipped = {
-        "node_modules",
-        ".svelte-kit",
-        "__pycache__",
-        ".venv",
-        ".idea",
-        "results",
-    }
 
-    for path in TEMPLATE.rglob("*"):
-        rel = path.relative_to(TEMPLATE)
-
-        if skipped & set(rel.parts):
-            continue
-
+    # Without the local clutter (dependencies, build outputs...)
+    for rel in template_files():
+        path = TEMPLATE / rel
         sources = [f"{rel}"]
 
-        if path.is_file():
-            try:
-                sources.append(path.read_text(encoding="utf-8"))
-            except UnicodeDecodeError:
-                pass
+        try:
+            sources.append(path.read_text(encoding="utf-8"))
+        except UnicodeDecodeError:
+            pass
 
         for source in sources:
             for m in INLINE_REF.finditer(source):
@@ -291,9 +293,9 @@ def test_expected_files(project):
         config = (root / "front/src/lib/meta-router/config.ts").read_text()
 
         if wagtail:
-            assert f"/back/{CMS_PREFIX}/login/" in config
+            assert f"/back/{ADMIN_PREFIX}/cms/login/" in config
         elif combo.api:
-            assert "/back/admin/login/" in config
+            assert f"/back/{ADMIN_PREFIX}/admin/login/" in config
         else:
             assert "/login/?next=" in config
             assert "/back/" not in config
@@ -345,6 +347,47 @@ def test_snow_matches_options(project):
         assert all(f"{name}:" in env_ts for name in expected)
 
 
+def test_api_runs_in_debug_locally(project):
+    """
+    The local .env (created from .env-template) enables the debug mode, which
+    the development needs (debug toolbar, API docs, TS client generation).
+    """
+
+    combo, root = project
+
+    if not combo.api:
+        pytest.skip("No API")
+
+    lines = (root / "api" / ".env").read_text(encoding="utf-8").splitlines()
+
+    assert "DEBUG=yes" in lines
+
+
+def test_components_stay_in_their_folder(project):
+    """
+    Each component only brings files from its own folder: no api/ without
+    API, no front/ without front-end.
+    """
+
+    combo, root = project
+    top = {Path(f).parts[0] for f in rel_files(root)}
+
+    assert ("api" in top) is combo.api
+    assert ("front" in top) is combo.front
+
+
+def test_wizard_preview_matches_generation(project):
+    """
+    The wizard previews the files of the project with the generation's rules,
+    so it must list exactly the files that get generated.
+    """
+
+    combo, root = project
+    planned = {f"{p}" for p in planned_files(make_context(combo), lock=False)}
+
+    assert planned == rel_files(root)
+
+
 def test_no_local_files(project):
     """
     Files that only exist locally in the template (caches, dependencies,
@@ -387,8 +430,28 @@ def locked_project(request, tmp_path_factory) -> tuple[Combo, Path]:
     return combo, generate(combo, target, lock=True)
 
 
-def run(cmd: list[str], cwd: Path) -> None:
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+def resolve(cmd: list[str]) -> list[str]:
+    """On Windows, the .cmd shims (like pnpm's) must be resolved explicitly"""
+
+    return [shutil.which(cmd[0]) or cmd[0], *cmd[1:]]
+
+
+def poetry_env() -> dict[str, str]:
+    """Poetry must use the generated project's venv, not the one of the tests"""
+
+    return {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+
+
+def run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
+    result = subprocess.run(
+        resolve(cmd),
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+    )
     assert result.returncode == 0, f"{cmd} failed:\n{result.stdout}\n{result.stderr}"
 
 
@@ -416,3 +479,172 @@ def test_api_lock_is_consistent(locked_project):
         pytest.skip("No API")
 
     run(["poetry", "check", "--lock"], root / "api")
+
+
+@contextmanager
+def serve(cmd: list[str], cwd: Path, log: Path, env: dict[str, str] | None = None):
+    """
+    Runs a server in the background for the duration of the block, then
+    kills it with all its children (pnpm starts node, poetry starts python).
+    """
+
+    with open(log, "w", encoding="utf-8") as out:
+        if os.name == "nt":
+            flags = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+        else:
+            flags = {"start_new_session": True}
+
+        proc = subprocess.Popen(
+            resolve(cmd),
+            cwd=cwd,
+            env=env,
+            stdout=out,
+            stderr=subprocess.STDOUT,
+            **flags,
+        )
+
+        try:
+            yield proc
+        finally:
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", f"{proc.pid}"],
+                    capture_output=True,
+                )
+            else:
+                # Already gone if it crashed
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(proc.pid, signal.SIGTERM)
+
+            proc.wait(timeout=30)
+
+
+def wait_for_page(url: str, proc: subprocess.Popen, log: Path, timeout=180) -> str:
+    """Waits until the URL answers a 200, then returns the page"""
+
+    deadline = time.monotonic() + timeout
+    last = ""
+
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            pytest.fail(f"The server stopped:\n{log.read_text(encoding='utf-8')}")
+
+        try:
+            with urllib.request.urlopen(url, timeout=30) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            last = f"HTTP {e.code}"
+        except OSError as e:
+            last = f"{e}"
+
+        time.sleep(1)
+
+    pytest.fail(f"{url} never answered ({last}):\n{log.read_text(encoding='utf-8')}")
+
+
+def prepare_api(api: Path, combo: Combo, server_url: str) -> None:
+    """
+    What a developer does before starting the API: install it, create its
+    database and fill the .env (database, and a media bucket for Wagtail,
+    which isn't used to show the admin), then migrate.
+    """
+
+    env = poetry_env()
+    database = f"pm_start_{combo.id.replace('-', '_')}"
+    url = urlsplit(server_url)
+
+    run(["poetry", "install", "--no-interaction"], api, env)
+    run(
+        [
+            "poetry",
+            "run",
+            "python",
+            "-c",
+            "import sys, psycopg\n"
+            "with psycopg.connect(sys.argv[1], autocommit=True) as c:\n"
+            "    c.execute(f'DROP DATABASE IF EXISTS {sys.argv[2]}')\n"
+            "    c.execute(f'CREATE DATABASE {sys.argv[2]}')",
+            server_url,
+            database,
+        ],
+        api,
+        env,
+    )
+
+    dotenv = api / ".env"
+    lines = [
+        line
+        for line in dotenv.read_text(encoding="utf-8").splitlines()
+        if not line.startswith("DATABASE_URL=")
+    ]
+    lines.append(f"DATABASE_URL={urlunsplit(url._replace(path=f'/{database}'))}")
+
+    if combo.wagtail:
+        lines += [
+            "AWS_ACCESS_KEY_ID=x",
+            "AWS_SECRET_ACCESS_KEY=x",
+            "AWS_STORAGE_BUCKET_NAME=x",
+            "AWS_S3_CUSTOM_DOMAIN=localhost/x",
+        ]
+
+    dotenv.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    run(["poetry", "run", "python", "manage.py", "migrate", "--noinput"], api, env)
+
+
+@pytest.mark.slow
+def test_project_starts(locked_project, tmp_path):
+    """
+    Starts the project in development like a developer would (the API's
+    runserver, the front's dev server), with the generated configuration:
+    the front serves its pages, and the API's admin answers both directly and
+    through the front's proxy (single origin).
+    """
+
+    combo, root = locked_project
+    server_url = os.environ.get("PM_TEST_DATABASE_URL")
+
+    if combo.api and not server_url:
+        pytest.skip("Starting the API needs PM_TEST_DATABASE_URL (see above)")
+
+    with contextlib.ExitStack() as stack:
+        if combo.api:
+            api = root / "api"
+            prepare_api(api, combo, server_url)
+            log = tmp_path / "api.log"
+            proc = stack.enter_context(
+                serve(
+                    [
+                        "poetry",
+                        "run",
+                        "python",
+                        "manage.py",
+                        "runserver",
+                        "127.0.0.1:8000",
+                        "--noreload",
+                    ],
+                    api,
+                    log,
+                    poetry_env(),
+                )
+            )
+            admin = f"/back/{ADMIN_PREFIX}/admin/login/"
+
+            assert "Django" in wait_for_page(f"http://127.0.0.1:8000{admin}", proc, log)
+
+            if combo.wagtail:
+                cms = f"http://127.0.0.1:8000/back/{ADMIN_PREFIX}/cms/login/"
+                assert "Wagtail" in wait_for_page(cms, proc, log)
+
+        if combo.front:
+            front = root / "front"
+            run(["pnpm", "install", "--frozen-lockfile", "--prefer-offline"], front)
+            log = tmp_path / "front.log"
+            proc = stack.enter_context(serve(["pnpm", "dev"], front, log))
+            page = "/non-cms" if combo.wagtail else "/"
+            html = wait_for_page(f"http://127.0.0.1:3000{page}", proc, log)
+
+            assert PROJECT_NAME in html
+
+            if combo.api:
+                proxied = wait_for_page(f"http://127.0.0.1:3000{admin}", proc, log)
+                assert "Django" in proxied

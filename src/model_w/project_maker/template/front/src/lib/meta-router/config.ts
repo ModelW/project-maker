@@ -33,11 +33,11 @@ export function loginUrl(next: URL): string {
     const nextParam = encodeURIComponent(`${next.pathname}${next.search}`);
 
     // :: IF api__wagtail
-    return `/back/___cms_prefix___/login/?next=${nextParam}`;
+    return `/back/___admin_prefix___/cms/login/?next=${nextParam}`;
     // :: ENDIF
     // :: IF api__enable
     // :: IFNOT api__wagtail
-    return `/back/admin/login/?next=${nextParam}`;
+    return `/back/___admin_prefix___/admin/login/?next=${nextParam}`;
     // :: ENDIF
     // :: ENDIF
     // :: IFNOT api__enable

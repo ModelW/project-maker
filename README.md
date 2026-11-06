@@ -9,7 +9,18 @@ The goal is to be extremely simple:
 uvx --from modelw-project-maker --python 3.14 project_maker
 ```
 
-This will ask you a few questions and create the project's directory for you.
+This opens a wizard in your terminal:
+
+-   On the left, the options: the project's name, its location (with a folder
+    picker) and the components to include. The names derived from the
+    project's name (Python package, folder) can be overridden, and are checked
+    as you type.
+-   On the right, a live preview: where the project goes, its names, its URLs,
+    what `snow.yml` deploys and the tree of the files that will be generated.
+
+Create the project with <kbd>Ctrl</kbd>+<kbd>G</kbd> (or the button), then
+follow the steps of the generation. The default location is `~/dev`, change
+it with `--dev-dir` or the `MODEL_W_DEV_DIR` environment variable.
 
 ## Prerequisites
 

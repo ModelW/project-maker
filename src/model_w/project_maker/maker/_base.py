@@ -1,4 +1,5 @@
-from collections.abc import Mapping, Sequence
+import shutil
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from subprocess import PIPE, Popen
 
@@ -38,11 +39,34 @@ LOCAL_FILES = [
 ]
 
 
+#: Receives the description of each step of the generation, as it starts
+Progress = Callable[[str], None]
+
+
+def no_progress(step: str) -> None:
+    """Default progress callback, which ignores the steps"""
+
+
 class BaseComponent:
     """
     A component is away to configure the behavior of the Maker (see the related
     docstring).
     """
+
+    #: Set by the Maker during the generation, see report()
+    progress: Progress = staticmethod(no_progress)
+
+    def report(self, step: str) -> None:
+        """
+        Tells whoever follows the generation that a (long) step starts.
+
+        Parameters
+        ----------
+        step
+            Human-readable description of the step
+        """
+
+        self.progress(step)
 
     def accept(self, path: Path, context: Mapping):
         raise NotImplementedError
@@ -108,6 +132,10 @@ class Exec:
         self.cwd = Path(cwd)
 
     def exec(self, cmd: Sequence[str], env: Mapping[str, str] | None = None):
+        # Resolved explicitly: on Windows, Popen doesn't find the .cmd/.bat
+        # shims (like the ones of npm or pipx) from their bare name
+        path = env.get("PATH") if env else None
+        cmd = [shutil.which(cmd[0], path=path) or cmd[0], *cmd[1:]]
         p = Popen(cmd, cwd=self.cwd, stdout=PIPE, stderr=PIPE, env=env)
         out, err = p.communicate()
 
@@ -134,7 +162,13 @@ class Maker:
     def __init__(self, components: Sequence[BaseComponent]):
         self.components: Sequence[BaseComponent] = components
 
-    def make(self, source: Path, target: Path, context: Mapping):
+    def make(
+        self,
+        source: Path,
+        target: Path,
+        context: Mapping,
+        progress: Progress = no_progress,
+    ):
         """
         Copies the whole tree from source into the target, while rendering
         what needs to be.
@@ -147,6 +181,8 @@ class Maker:
             Target to populate
         context
             Context to be used in template
+        progress
+            Called with the description of each step as it starts
         """
 
         if target.exists() and (not target.is_dir() or [*target.iterdir()]):
@@ -154,7 +190,10 @@ class Maker:
 
         try:
             for component in self.components:
+                component.progress = progress
                 component.start()
+
+            progress("Rendering the template")
 
             for file in source.rglob("*"):
                 if not file.is_file():
@@ -180,7 +219,9 @@ class Maker:
         finally:
             for component in self.components:
                 component.stop()
+                component.progress = no_progress
 
+        progress("Creating the Git repository")
         self.init_git(target)
 
     def init_git(self, target):
@@ -249,7 +290,8 @@ class Maker:
             with open(file, encoding="utf-8") as f:
                 target_content = render(f, file_context)
 
-            with open(target_path, encoding="utf-8", mode="w") as t:
+            # LF everywhere, including on Windows (no newline translation)
+            with open(target_path, encoding="utf-8", mode="w", newline="\n") as t:
                 t.write(target_content)
         except UnicodeDecodeError:
             with open(file, mode="rb") as f, open(target_path, "wb") as t:

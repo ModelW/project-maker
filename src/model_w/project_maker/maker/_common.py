@@ -15,9 +15,11 @@ def make_path_specs() -> pathspec.PathSpec:
     return pathspec.PathSpec.from_lines(
         "gitignore",
         [
+            # First, so that its exceptions (like !.env.test) don't bring back
+            # files from the api/ and front/ folders
+            *LOCAL_FILES,
             "/*/",
             "!/.github/",
-            *LOCAL_FILES,
         ],
     )
 

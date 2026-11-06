@@ -77,7 +77,7 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://api:8000/back/admin/login/"]
+      test: ["CMD", "curl", "-f", "http://api:8000/back/___admin_prefix___/admin/login/"]
       interval: 5s
       timeout: 5s
       retries: 20

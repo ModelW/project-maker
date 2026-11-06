@@ -2,7 +2,20 @@
 
 This handles the API and back-office admin.
 
-All the URLs pointing to this are prefixed by `/back`.
+All the URLs pointing to this are prefixed by `/back`. The admin URLs are also
+hidden behind a prefix (`___admin_prefix___`), which keeps them away from the
+bots trying `/back/admin/`:
+
+-   `/back/___admin_prefix___/admin/` &mdash; Django admin
+# :: IF api__wagtail
+-   `/back/___admin_prefix___/cms/` &mdash; Wagtail admin
+# :: ENDIF
+-   `/back/___admin_prefix___/ht/` &mdash; Health checks (point your monitoring
+    there)
+-   `/back/api/` &mdash; The API (its documentation is at `/back/api/docs` in
+    development)
+
+To change the prefix, replace it everywhere (`git grep ___admin_prefix___`).
 
 ## Components
 

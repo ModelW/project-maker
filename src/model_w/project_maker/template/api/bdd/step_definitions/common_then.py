@@ -673,7 +673,7 @@ def should_be_redirected_to_login(
 
     Example:
     ```gherkin
-        Then I should be redirected to "/back/admin/login/", to come back to "/me"
+        Then I should be redirected to "/back/login/", to come back to "/me"
     ```
     """
     assert response.status == HTTPStatus.TEMPORARY_REDIRECT, (

@@ -205,7 +205,9 @@ def open_demo_page_in_editor(
     front_server: str,
 ):
     """Opens the editor of the demo page in the Wagtail admin."""
-    on_page(f"back/___cms_prefix___/pages/{demo_page.pk}/edit/", page, front_server)
+    on_page(
+        f"back/___admin_prefix___/cms/pages/{demo_page.pk}/edit/", page, front_server
+    )
 
 
 @when("I open the demo snippet in the CMS editor")
@@ -216,7 +218,7 @@ def open_demo_snippet_in_editor(
 ):
     """Opens the editor of the demo snippet in the Wagtail admin."""
     on_page(
-        f"back/___cms_prefix___/snippets/cms/demosnippet/edit/{demo_snippet.pk}/",
+        f"back/___admin_prefix___/cms/snippets/cms/demosnippet/edit/{demo_snippet.pk}/",
         page,
         front_server,
     )

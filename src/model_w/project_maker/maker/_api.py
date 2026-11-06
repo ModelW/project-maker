@@ -24,7 +24,7 @@ def strip_copy(x):
 
 
 def clean_pyproject(path: Path) -> None:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = parse(f.read())
 
     for section_key in ["dependencies", "dev-dependencies"]:
@@ -46,7 +46,7 @@ def clean_pyproject(path: Path) -> None:
 
             section.update(to_update)
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(dumps(data))
 
 
@@ -126,6 +126,11 @@ class ApiComponent(BaseComponent):
         if not context["api"]["enable"]:
             return False
 
+        # Explicit, as the exceptions of LOCAL_FILES (like !.env.test) would
+        # otherwise bring back files from outside of api/
+        if path.parts[0] != "api":
+            return False
+
         if self.path_specs.match_file(path):
             return False
 
@@ -167,7 +172,7 @@ class ApiComponent(BaseComponent):
             new_path = file_path.parent / ".env"
 
             with (
-                open(new_path, "w", encoding="utf-8") as f,
+                open(new_path, "w", encoding="utf-8", newline="\n") as f,
                 open(file_path, encoding="utf-8") as g,
             ):
                 f.write(g.read())
@@ -187,12 +192,15 @@ class ApiComponent(BaseComponent):
         e = Exec(api)
 
         # No cache, which would otherwise be left behind in the project
+        self.report("Fixing and formatting the API with Ruff")
         ruff = [sys.executable, "-m", "ruff"]
         e.exec([*ruff, "check", "--no-cache", "--fix", "--exit-zero", "."])
         e.exec([*ruff, "format", "--no-cache", "."])
 
+        env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+
         if self.lock:
-            env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+            self.report("Locking the API's dependencies")
 
             try:
                 e.exec(["poetry", "lock"], env=env)
@@ -208,7 +216,7 @@ class ApiComponent(BaseComponent):
         The template ships a client generated from its own schema, but the
         project's one is regenerated so that it matches the project exactly.
         This requires installing the API, which the developer will need to do
-        anyway. Formatting is done by the front-end component.
+        anyway. Formatting is done by the Prettier component.
 
         Parameters
         ----------
@@ -229,11 +237,13 @@ class ApiComponent(BaseComponent):
         dotenv_aside = e.cwd / ".env.generating"
 
         try:
+            self.report("Installing the API")
             e.exec(["poetry", "install", "--no-interaction"], env=env)
 
             if dotenv.exists():
                 dotenv.rename(dotenv_aside)
 
+            self.report("Generating the front's TypeScript API client")
             e.exec(
                 ["poetry", "run", "python", "manage.py", "generate_ts_client"],
                 env=env,

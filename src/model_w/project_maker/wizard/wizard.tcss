@@ -1,0 +1,163 @@
+#main {
+    height: 1fr;
+}
+
+#form {
+    width: 1fr;
+    min-width: 50;
+    border: round $primary;
+    padding: 0 1;
+}
+
+#preview {
+    width: 1fr;
+    border: round $secondary;
+}
+
+.section {
+    margin-top: 1;
+    text-style: bold;
+    color: $accent;
+}
+
+/* Margins are written in full: in Textual, a more specific margin-top would
+   override the whole margin (and lose the indentation) */
+
+#form Label,
+#form Checkbox {
+    margin: 1 0 0 0;
+}
+
+#form Label {
+    color: $text-muted;
+}
+
+#form Input {
+    margin: 0;
+}
+
+#form .level-1 {
+    margin: 0 0 0 4;
+}
+
+#form Checkbox.level-1 {
+    margin: 1 0 0 4;
+}
+
+#form .level-2 {
+    margin: 0 0 0 8;
+}
+
+#form Label.level-1 {
+    margin: 1 0 0 4;
+}
+
+#form Checkbox.level-2,
+#form Label.level-2 {
+    margin: 1 0 0 8;
+}
+
+#form Input.-invalid {
+    background: $error 25%;
+}
+
+.error {
+    color: $error;
+    padding-left: 1;
+}
+
+#location,
+#admin-prefix {
+    height: auto;
+}
+
+#admin-prefix Input {
+    width: 1fr;
+}
+
+#admin-prefix Button {
+    margin-left: 1;
+}
+
+#parent {
+    width: 1fr;
+}
+
+#location {
+    margin-top: 1;
+}
+
+#create {
+    margin: 2 0 1 0;
+    width: 100%;
+}
+
+#overview-scroll {
+    height: auto;
+    max-height: 60%;
+    padding: 0 1;
+}
+
+#files {
+    height: 1fr;
+    min-height: 8;
+    border-top: solid $secondary;
+}
+
+/* --- Folder picker --- */
+
+FolderPicker {
+    align: center middle;
+}
+
+#picker {
+    width: 80%;
+    height: 80%;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+#picker-tree {
+    height: 1fr;
+    margin-top: 1;
+}
+
+.title {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+.buttons Button {
+    margin-left: 1;
+}
+
+.spacer {
+    width: 1fr;
+}
+
+/* --- Progress --- */
+
+#progress {
+    padding: 1 2;
+}
+
+#progress-steps {
+    height: auto;
+}
+
+#progress-outcome {
+    height: auto;
+    margin-top: 1;
+}
+
+#progress-error {
+    height: 1fr;
+    border: round $error;
+    margin-top: 1;
+}

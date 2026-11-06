@@ -83,6 +83,11 @@ class FrontComponent(BaseComponent):
         if not context["front"]["enable"]:
             return False
 
+        # Explicit, as the exceptions of LOCAL_FILES (like !.env.test) would
+        # otherwise bring back files from outside of front/
+        if path.parts[0] != "front":
+            return False
+
         if self.path_specs.match_file(path):
             return False
 
@@ -133,4 +138,6 @@ class FrontComponent(BaseComponent):
 
         if file_path.name == ".env-template":
             new_path = file_path.parent / ".env"
-            new_path.write_text(file_path.read_text(encoding="utf-8"), encoding="utf-8")
+            new_path.write_text(
+                file_path.read_text(encoding="utf-8"), encoding="utf-8", newline="\n"
+            )

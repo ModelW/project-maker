@@ -107,7 +107,7 @@ def on_device(device: str, page: Page, playwright: Playwright):
 @given(parsers.cfparse("I am logged in as a Django admin"))
 def logged_in_as_django_admin(page: Page, front_server):
     """Log in as an admin to Django."""
-    on_page("back/admin", page, front_server)
+    on_page("back/___admin_prefix___/admin", page, front_server)
     page.locator('input[name="username"]').fill("good@user.com")
     page.locator('input[name="password"]').fill("correct")
     page.locator('input[type="submit"]').click()
@@ -150,7 +150,7 @@ def logged_in_as_cms_admin(
     front_server: str,
 ):
     """Log in as an admin to the CMS."""
-    on_page("back/___cms_prefix___", page, front_server)
+    on_page("back/___admin_prefix___/cms", page, front_server)
     page.locator('input[name="username"]').fill("good@user.com")
     page.locator('input[name="password"]').fill("correct")
     page.locator('button[type="submit"]').click()
