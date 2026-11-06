@@ -6,7 +6,8 @@
  * browser).
  *
  * Variables are only optional while building (see `required()`), which is
- * the equivalent of the API's `BUILD_MODE`.
+ * the equivalent of the API's `BUILD_MODE`. The Sentry ones are also optional
+ * in development (see `requiredOutsideDev()`).
  *
  * Build-time-only variables (Sentry source maps upload) are read in
  * `vite.config.ts`, not here.
@@ -15,7 +16,7 @@
  */
 
 import { defineEnvVars } from "@sveltejs/kit/env";
-import { building } from "$app/env";
+import { building, dev } from "$app/env";
 import * as v from "valibot";
 
 /**
@@ -30,6 +31,18 @@ function required<T extends v.GenericSchema<string>>(schema: T): T {
     return building ? (v.optional(schema) as unknown as T) : schema;
 }
 
+/**
+ * Makes a variable mandatory when the app runs in production, but optional in
+ * development and while it's being built. Unlike `required()`, it is typed as
+ * possibly undefined, since it really can be when the app runs.
+ *
+ * @param schema Validation of the variable when it is defined
+ */
+function requiredOutsideDev<T extends v.GenericSchema<string>>(schema: T) {
+    const optional = v.optional(schema);
+    return dev || building ? optional : (schema as unknown as typeof optional);
+}
+
 export const variables = defineEnvVars({
     // :: IF api__enable
     API_URL: {
@@ -41,11 +54,12 @@ export const variables = defineEnvVars({
     SENTRY_DSN: {
         public: true,
         description: "DSN of the Sentry project, empty to disable error reporting",
-        schema: required(v.string()),
+        // Explicitly empty is fine (e.g. in the test environments)
+        schema: requiredOutsideDev(v.union([v.literal(""), v.pipe(v.string(), v.url())])),
     },
     SENTRY_ENVIRONMENT: {
         public: true,
         description: "Name of the environment in Sentry (e.g. production, staging)",
-        schema: required(v.string()),
+        schema: requiredOutsideDev(v.string()),
     },
 });

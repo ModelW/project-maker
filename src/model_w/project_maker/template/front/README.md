@@ -27,7 +27,9 @@ invalid, the app refuses to start. They are only optional while building.
 # :: ENDIF
 
 - `SENTRY_DSN` (public) &mdash; Sentry DSN, empty to disable error reporting
+  (optional in development)
 - `SENTRY_ENVIRONMENT` (public) &mdash; Name of the environment in Sentry
+  (optional in development)
 
 Import them from `$app/env/private` (server-only code) or `$app/env/public`.
 To add one, declare it in `src/env.ts` first.
